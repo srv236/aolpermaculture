@@ -10,7 +10,6 @@ type Props = {
   readOnly?: boolean;
   height?: number | string;
   initialCenter?: google.maps.LatLngLiteral;
-  /** Additional polygons rendered read-only (e.g. parent farm boundary or sibling plots) */
   overlays?: Array<{ wkt: string; color?: string; label?: string }>;
 };
 
@@ -18,7 +17,7 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const polygonRef = useRef<google.maps.Polygon | null>(null);
-  const drawingMgrRef = useRef<google.maps.drawing.DrawingManager | null>(null);
+  const drawingMgrRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,75 +37,62 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
         });
         mapRef.current = map;
 
-        // Overlays
         for (const o of overlays || []) {
           const p = parseWkt(o.wkt);
           if (!p) continue;
           new g.maps.Polygon({
-            paths: p,
-            map,
-            fillColor: o.color || "#f4d35e",
-            fillOpacity: 0.15,
-            strokeColor: o.color || "#f4d35e",
-            strokeWeight: 1.5,
-            clickable: false,
+            paths: p, map,
+            fillColor: o.color || "#f4d35e", fillOpacity: 0.15,
+            strokeColor: o.color || "#f4d35e", strokeWeight: 1.5, clickable: false,
           });
         }
 
+        const baseStyle: google.maps.PolygonOptions = {
+          fillColor: "#4ade80", fillOpacity: 0.25,
+          strokeColor: "#15803d", strokeWeight: 2,
+          editable: !readOnly, clickable: true,
+        };
+
+        function emit(poly: google.maps.Polygon) {
+          if (!onChange) return;
+          const arr = poly.getPath().getArray().map((ll) => ({ lat: ll.lat(), lng: ll.lng() }));
+          onChange(toWkt(arr));
+        }
+        function attachEdit(poly: google.maps.Polygon) {
+          const path = poly.getPath();
+          const handler = () => emit(poly);
+          g.maps.event.addListener(path, "set_at", handler);
+          g.maps.event.addListener(path, "insert_at", handler);
+          g.maps.event.addListener(path, "remove_at", handler);
+        }
+
         if (initialPath) {
-          drawExistingPolygon(g, map, initialPath);
+          const poly = new g.maps.Polygon({ ...baseStyle, paths: initialPath, map });
+          polygonRef.current = poly;
+          if (!readOnly) attachEdit(poly);
         }
 
         if (!readOnly) {
-          const dm = new g.maps.drawing.DrawingManager({
-            drawingMode: initialPath ? null : g.maps.drawing.OverlayType.POLYGON,
+          const gAny = g as any;
+          const dm = new gAny.maps.drawing.DrawingManager({
+            drawingMode: polygonRef.current ? null : gAny.maps.drawing.OverlayType.POLYGON,
             drawingControl: !polygonRef.current,
             drawingControlOptions: {
               position: g.maps.ControlPosition.TOP_CENTER,
-              drawingModes: [g.maps.drawing.OverlayType.POLYGON],
+              drawingModes: [gAny.maps.drawing.OverlayType.POLYGON],
             },
-            polygonOptions: polygonStyle(),
+            polygonOptions: baseStyle,
           });
           dm.setMap(map);
           drawingMgrRef.current = dm;
           g.maps.event.addListener(dm, "polygoncomplete", (poly: google.maps.Polygon) => {
             polygonRef.current?.setMap(null);
             polygonRef.current = poly;
-            attachEditListeners(g, poly);
+            attachEdit(poly);
             dm.setDrawingMode(null);
             dm.setOptions({ drawingControl: false });
-            emit();
+            emit(poly);
           });
-        }
-
-        function drawExistingPolygon(gg: typeof google, m: google.maps.Map, path: google.maps.LatLngLiteral[]) {
-          const poly = new gg.maps.Polygon({ ...polygonStyle(), paths: path, map: m, editable: !readOnly });
-          polygonRef.current = poly;
-          if (!readOnly) attachEditListeners(gg, poly);
-        }
-
-        function attachEditListeners(gg: typeof google, poly: google.maps.Polygon) {
-          const path = poly.getPath();
-          gg.maps.event.addListener(path, "set_at", emit);
-          gg.maps.event.addListener(path, "insert_at", emit);
-          gg.maps.event.addListener(path, "remove_at", emit);
-        }
-
-        function polygonStyle(): google.maps.PolygonOptions {
-          return {
-            fillColor: "#4ade80",
-            fillOpacity: 0.25,
-            strokeColor: "#15803d",
-            strokeWeight: 2,
-            editable: !readOnly,
-            clickable: true,
-          };
-        }
-
-        function emit() {
-          if (!polygonRef.current || !onChange) return;
-          const arr = polygonRef.current.getPath().getArray().map((ll) => ({ lat: ll.lat(), lng: ll.lng() }));
-          onChange(toWkt(arr));
         }
       })
       .catch((e) => setError(e.message));
@@ -117,15 +103,18 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
   function clearPolygon() {
     polygonRef.current?.setMap(null);
     polygonRef.current = null;
-    drawingMgrRef.current?.setOptions({ drawingControl: true });
-    drawingMgrRef.current?.setDrawingMode((window as any).google.maps.drawing.OverlayType.POLYGON);
+    const dm = drawingMgrRef.current;
+    if (dm) {
+      dm.setOptions({ drawingControl: true });
+      dm.setDrawingMode((window as any).google.maps.drawing.OverlayType.POLYGON);
+    }
     onChange?.(null);
   }
 
   return (
     <div className="space-y-2">
       <div ref={mapEl} style={{ width: "100%", height }} className="rounded-md border bg-muted" />
-      {error && <div className="text-xs text-destructive">{error}</div>}
+      {error && <div className="text-xs text-destructive">Map error: {error}</div>}
       {!readOnly && (
         <div className="flex justify-end">
           <Button type="button" variant="ghost" size="sm" onClick={clearPolygon}>
