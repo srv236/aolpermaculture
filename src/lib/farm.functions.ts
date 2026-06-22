@@ -32,11 +32,11 @@ export const upsertFarm = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const payload: any = { ...data.values };
     if (data.id) {
-      const { error } = await context.supabase.from("farms").update(payload).eq("id", data.id);
+      const { error } = await context.supabase.from("farms").update(payload as any).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("farms").insert(payload).select("id").single();
+    const { data: ins, error } = await context.supabase.from("farms").insert(payload as any).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -67,11 +67,11 @@ export const upsertPlot = createServerFn({ method: "POST" })
   .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const { error } = await context.supabase.from("plots").update(data.values).eq("id", data.id);
+      const { error } = await context.supabase.from("plots").update(data.values as any).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("plots").insert(data.values).select("id").single();
+    const { data: ins, error } = await context.supabase.from("plots").insert(data.values as any).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -103,11 +103,11 @@ export const upsertCrop = createServerFn({ method: "POST" })
   .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const { error } = await context.supabase.from("crops").update(data.values).eq("id", data.id);
+      const { error } = await context.supabase.from("crops").update(data.values as any).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("crops").insert(data.values).select("id").single();
+    const { data: ins, error } = await context.supabase.from("crops").insert(data.values as any).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -141,11 +141,11 @@ export const upsertSowing = createServerFn({ method: "POST" })
   .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const { error } = await context.supabase.from("sowing_records").update(data.values).eq("id", data.id);
+      const { error } = await context.supabase.from("sowing_records").update(data.values as any).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("sowing_records").insert(data.values).select("id").single();
+    const { data: ins, error } = await context.supabase.from("sowing_records").insert(data.values as any).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -179,11 +179,11 @@ export const upsertHarvest = createServerFn({ method: "POST" })
   .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const { error } = await context.supabase.from("harvest_records").update(data.values).eq("id", data.id);
+      const { error } = await context.supabase.from("harvest_records").update(data.values as any).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("harvest_records").insert(data.values).select("id").single();
+    const { data: ins, error } = await context.supabase.from("harvest_records").insert(data.values as any).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
