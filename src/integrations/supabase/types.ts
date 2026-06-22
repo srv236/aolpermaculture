@@ -14,16 +14,389 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      crops: {
+        Row: {
+          created_at: string
+          crop_category: string | null
+          crop_name: string
+          description: string | null
+          growing_days: number | null
+          id: string
+          is_active: boolean
+          typical_yield_per_acre: number | null
+          updated_at: string
+          variety_name: string | null
+          yield_unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          crop_category?: string | null
+          crop_name: string
+          description?: string | null
+          growing_days?: number | null
+          id?: string
+          is_active?: boolean
+          typical_yield_per_acre?: number | null
+          updated_at?: string
+          variety_name?: string | null
+          yield_unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          crop_category?: string | null
+          crop_name?: string
+          description?: string | null
+          growing_days?: number | null
+          id?: string
+          is_active?: boolean
+          typical_yield_per_acre?: number | null
+          updated_at?: string
+          variety_name?: string | null
+          yield_unit?: string | null
+        }
+        Relationships: []
+      }
+      farms: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          district: string | null
+          established_year: number | null
+          farming_type: string | null
+          geopolygon: string | null
+          id: string
+          is_active: boolean
+          latitude: number | null
+          longitude: number | null
+          name: string
+          notes: string | null
+          owner_name: string | null
+          state: string | null
+          total_acreage: number | null
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          district?: string | null
+          established_year?: number | null
+          farming_type?: string | null
+          geopolygon?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          notes?: string | null
+          owner_name?: string | null
+          state?: string | null
+          total_acreage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          district?: string | null
+          established_year?: number | null
+          farming_type?: string | null
+          geopolygon?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          notes?: string | null
+          owner_name?: string | null
+          state?: string | null
+          total_acreage?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      harvest_records: {
+        Row: {
+          created_at: string
+          estimated_remaining_yield: number | null
+          harvest_date: string
+          harvest_sequence_number: number | null
+          harvest_time_end: string | null
+          harvest_time_start: string | null
+          id: string
+          notes: string | null
+          plot_id: string
+          quality_grade: string | null
+          quantity_harvested: number
+          sowing_id: string | null
+          updated_at: string
+          variety_id: string
+        }
+        Insert: {
+          created_at?: string
+          estimated_remaining_yield?: number | null
+          harvest_date: string
+          harvest_sequence_number?: number | null
+          harvest_time_end?: string | null
+          harvest_time_start?: string | null
+          id?: string
+          notes?: string | null
+          plot_id: string
+          quality_grade?: string | null
+          quantity_harvested: number
+          sowing_id?: string | null
+          updated_at?: string
+          variety_id: string
+        }
+        Update: {
+          created_at?: string
+          estimated_remaining_yield?: number | null
+          harvest_date?: string
+          harvest_sequence_number?: number | null
+          harvest_time_end?: string | null
+          harvest_time_start?: string | null
+          id?: string
+          notes?: string | null
+          plot_id?: string
+          quality_grade?: string | null
+          quantity_harvested?: number
+          sowing_id?: string | null
+          updated_at?: string
+          variety_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "harvest_records_plot_id_fkey"
+            columns: ["plot_id"]
+            isOneToOne: false
+            referencedRelation: "plots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "harvest_records_sowing_id_fkey"
+            columns: ["sowing_id"]
+            isOneToOne: false
+            referencedRelation: "sowing_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "harvest_records_variety_id_fkey"
+            columns: ["variety_id"]
+            isOneToOne: false
+            referencedRelation: "crops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plots: {
+        Row: {
+          acreage: number | null
+          aspect: string | null
+          created_at: string
+          elevation: number | null
+          farm_id: string
+          geopolygon: string | null
+          id: string
+          irrigation_type: string | null
+          is_active: boolean
+          notes: string | null
+          plot_number: string
+          slope_percent: number | null
+          soil_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          acreage?: number | null
+          aspect?: string | null
+          created_at?: string
+          elevation?: number | null
+          farm_id: string
+          geopolygon?: string | null
+          id?: string
+          irrigation_type?: string | null
+          is_active?: boolean
+          notes?: string | null
+          plot_number: string
+          slope_percent?: number | null
+          soil_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acreage?: number | null
+          aspect?: string | null
+          created_at?: string
+          elevation?: number | null
+          farm_id?: string
+          geopolygon?: string | null
+          id?: string
+          irrigation_type?: string | null
+          is_active?: boolean
+          notes?: string | null
+          plot_number?: string
+          slope_percent?: number | null
+          soil_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plots_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sowing_records: {
+        Row: {
+          area_utilized_percent: number | null
+          created_at: string
+          estimated_harvest_interval_days: number | null
+          expected_final_harvest: string | null
+          expected_first_harvest: string | null
+          id: string
+          is_continuous_harvest: boolean
+          is_replanting: boolean
+          notes: string | null
+          original_sowing_id: string | null
+          planting_date: string
+          plot_id: string
+          quantity_planted: number | null
+          quantity_unit: string | null
+          seed_source: string | null
+          status: Database["public"]["Enums"]["sowing_status"]
+          updated_at: string
+          variety_id: string
+        }
+        Insert: {
+          area_utilized_percent?: number | null
+          created_at?: string
+          estimated_harvest_interval_days?: number | null
+          expected_final_harvest?: string | null
+          expected_first_harvest?: string | null
+          id?: string
+          is_continuous_harvest?: boolean
+          is_replanting?: boolean
+          notes?: string | null
+          original_sowing_id?: string | null
+          planting_date: string
+          plot_id: string
+          quantity_planted?: number | null
+          quantity_unit?: string | null
+          seed_source?: string | null
+          status?: Database["public"]["Enums"]["sowing_status"]
+          updated_at?: string
+          variety_id: string
+        }
+        Update: {
+          area_utilized_percent?: number | null
+          created_at?: string
+          estimated_harvest_interval_days?: number | null
+          expected_final_harvest?: string | null
+          expected_first_harvest?: string | null
+          id?: string
+          is_continuous_harvest?: boolean
+          is_replanting?: boolean
+          notes?: string | null
+          original_sowing_id?: string | null
+          planting_date?: string
+          plot_id?: string
+          quantity_planted?: number | null
+          quantity_unit?: string | null
+          seed_source?: string | null
+          status?: Database["public"]["Enums"]["sowing_status"]
+          updated_at?: string
+          variety_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sowing_records_original_sowing_id_fkey"
+            columns: ["original_sowing_id"]
+            isOneToOne: false
+            referencedRelation: "sowing_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sowing_records_plot_id_fkey"
+            columns: ["plot_id"]
+            isOneToOne: false
+            referencedRelation: "plots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sowing_records_variety_id_fkey"
+            columns: ["variety_id"]
+            isOneToOne: false
+            referencedRelation: "crops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "editor" | "viewer"
+      sowing_status: "planned" | "active" | "completed" | "failed" | "abandoned"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +523,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "editor", "viewer"],
+      sowing_status: ["planned", "active", "completed", "failed", "abandoned"],
+    },
   },
 } as const
