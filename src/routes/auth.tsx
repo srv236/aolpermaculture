@@ -22,8 +22,9 @@ function AuthPage() {
   const { redirect } = useSearch({ from: "/auth" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<"signin" | "forgot">("signin");
+  const [mode, setMode] = useState<"signin" | "forgot" | "signup">("signin");
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -34,6 +35,21 @@ function AuthPage() {
     toast.success("Welcome back");
     navigate({ to: (redirect as any) || "/farms" });
   }
+
+  async function signUp(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    const { error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Account created — signing you in...");
+    await supabase.auth.signInWithPassword({ email, password });
+    navigate({ to: "/farms" });
+  }
+
 
   async function sendReset(e: React.FormEvent) {
     e.preventDefault();
