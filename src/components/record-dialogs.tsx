@@ -1,0 +1,260 @@
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { listCrops, listPlots, upsertSowing, upsertHarvest } from "@/lib/farm.functions";
+import { toast } from "sonner";
+
+type SowingForm = {
+  id?: string;
+  plot_id: string;
+  variety_id: string;
+  planting_date: string;
+  quantity_planted?: number | null;
+  quantity_unit?: string;
+  seed_source?: string;
+  expected_first_harvest?: string;
+  expected_final_harvest?: string;
+  status: "planned" | "active" | "completed" | "failed" | "abandoned";
+  is_continuous_harvest?: boolean;
+  estimated_harvest_interval_days?: number | null;
+  is_replanting?: boolean;
+  original_sowing_id?: string | null;
+  area_utilized_percent?: number | null;
+  notes?: string;
+};
+
+export function SowingFormDialog({
+  open, onOpenChange, initial, farmId,
+}: { open: boolean; onOpenChange: (v: boolean) => void; initial?: Partial<SowingForm> | null; farmId?: string }) {
+  const [f, setF] = useState<SowingForm>(() => ({
+    plot_id: "", variety_id: "", planting_date: new Date().toISOString().slice(0, 10),
+    status: "planned", is_continuous_harvest: false, is_replanting: false, ...initial,
+  }));
+  const qc = useQueryClient();
+  const listPlotsFn = useServerFn(listPlots);
+  const listCropsFn = useServerFn(listCrops);
+  const upsert = useServerFn(upsertSowing);
+  const plots = useQuery({ queryKey: ["plots", farmId], queryFn: () => listPlotsFn({ data: { farmId } }) });
+  const crops = useQuery({ queryKey: ["crops"], queryFn: () => listCropsFn() });
+
+  const mut = useMutation({
+    mutationFn: (v: SowingForm) => upsert({ data: { id: v.id, values: stripId(v) } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sowing"] });
+      onOpenChange(false);
+      toast.success(initial?.id ? "Sowing updated" : "Sowing recorded");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function set<K extends keyof SowingForm>(k: K, v: SowingForm[K]) { setF((p) => ({ ...p, [k]: v })); }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-2xl">{initial?.id ? "Edit sowing" : "Record a sowing"}</DialogTitle>
+          <DialogDescription>What was planted, where, and when.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Plot *">
+            <Select value={f.plot_id} onValueChange={(v) => set("plot_id", v)}>
+              <SelectTrigger><SelectValue placeholder="Select plot" /></SelectTrigger>
+              <SelectContent>
+                {plots.data?.map((p: any) => (
+                  <SelectItem key={p.id} value={p.id}>{p.plot_number}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Crop variety *">
+            <Select value={f.variety_id} onValueChange={(v) => set("variety_id", v)}>
+              <SelectTrigger><SelectValue placeholder="Select crop" /></SelectTrigger>
+              <SelectContent>
+                {crops.data?.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.crop_name} — {c.variety_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Planting date *">
+            <Input type="date" value={f.planting_date} onChange={(e) => set("planting_date", e.target.value)} />
+          </Field>
+          <Field label="Status">
+            <Select value={f.status} onValueChange={(v) => set("status", v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["planned","active","completed","failed","abandoned"].map((s) =>
+                  <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Quantity planted">
+            <Input type="number" step="0.01" value={f.quantity_planted ?? ""} onChange={(e) => set("quantity_planted", e.target.value ? +e.target.value : null)} />
+          </Field>
+          <Field label="Unit">
+            <Input value={f.quantity_unit || ""} onChange={(e) => set("quantity_unit", e.target.value)} placeholder="g, kg, seeds" />
+          </Field>
+          <Field label="Seed source">
+            <Input value={f.seed_source || ""} onChange={(e) => set("seed_source", e.target.value)} />
+          </Field>
+          <Field label="Area utilized %">
+            <Input type="number" step="1" value={f.area_utilized_percent ?? ""} onChange={(e) => set("area_utilized_percent", e.target.value ? +e.target.value : null)} />
+          </Field>
+          <Field label="Expected first harvest">
+            <Input type="date" value={f.expected_first_harvest || ""} onChange={(e) => set("expected_first_harvest", e.target.value)} />
+          </Field>
+          <Field label="Expected final harvest">
+            <Input type="date" value={f.expected_final_harvest || ""} onChange={(e) => set("expected_final_harvest", e.target.value)} />
+          </Field>
+          <Field label="Continuous harvest" className="flex items-center justify-between">
+            <Switch checked={f.is_continuous_harvest || false} onCheckedChange={(v) => set("is_continuous_harvest", v)} />
+          </Field>
+          {f.is_continuous_harvest && (
+            <Field label="Harvest interval (days)">
+              <Input type="number" value={f.estimated_harvest_interval_days ?? ""} onChange={(e) => set("estimated_harvest_interval_days", e.target.value ? +e.target.value : null)} />
+            </Field>
+          )}
+          <Field label="Replanting" className="flex items-center justify-between">
+            <Switch checked={f.is_replanting || false} onCheckedChange={(v) => set("is_replanting", v)} />
+          </Field>
+          <Field label="Notes" className="md:col-span-2">
+            <Textarea rows={2} value={f.notes || ""} onChange={(e) => set("notes", e.target.value)} />
+          </Field>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button disabled={mut.isPending || !f.plot_id || !f.variety_id} onClick={() => mut.mutate(f)}>
+            {mut.isPending ? "Saving..." : "Save sowing"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------- HARVEST ----------
+type HarvestForm = {
+  id?: string;
+  plot_id: string;
+  variety_id: string;
+  sowing_id?: string | null;
+  harvest_date: string;
+  harvest_time_start?: string;
+  harvest_time_end?: string;
+  quantity_harvested: number;
+  quality_grade?: string;
+  harvest_sequence_number?: number | null;
+  estimated_remaining_yield?: number | null;
+  notes?: string;
+};
+
+export function HarvestFormDialog({
+  open, onOpenChange, initial, farmId,
+}: { open: boolean; onOpenChange: (v: boolean) => void; initial?: Partial<HarvestForm> | null; farmId?: string }) {
+  const [f, setF] = useState<HarvestForm>(() => ({
+    plot_id: "", variety_id: "", harvest_date: new Date().toISOString().slice(0, 10),
+    quantity_harvested: 0, ...initial,
+  }));
+  const qc = useQueryClient();
+  const listPlotsFn = useServerFn(listPlots);
+  const listCropsFn = useServerFn(listCrops);
+  const upsert = useServerFn(upsertHarvest);
+  const plots = useQuery({ queryKey: ["plots", farmId], queryFn: () => listPlotsFn({ data: { farmId } }) });
+  const crops = useQuery({ queryKey: ["crops"], queryFn: () => listCropsFn() });
+
+  const mut = useMutation({
+    mutationFn: (v: HarvestForm) => upsert({ data: { id: v.id, values: stripId(v) } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["harvest"] });
+      onOpenChange(false);
+      toast.success(initial?.id ? "Harvest updated" : "Harvest recorded");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function set<K extends keyof HarvestForm>(k: K, v: HarvestForm[K]) { setF((p) => ({ ...p, [k]: v })); }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-2xl">{initial?.id ? "Edit harvest" : "Record a harvest"}</DialogTitle>
+          <DialogDescription>What was harvested today.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Plot *">
+            <Select value={f.plot_id} onValueChange={(v) => set("plot_id", v)}>
+              <SelectTrigger><SelectValue placeholder="Select plot" /></SelectTrigger>
+              <SelectContent>
+                {plots.data?.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.plot_number}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Crop variety *">
+            <Select value={f.variety_id} onValueChange={(v) => set("variety_id", v)}>
+              <SelectTrigger><SelectValue placeholder="Select crop" /></SelectTrigger>
+              <SelectContent>
+                {crops.data?.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.crop_name} — {c.variety_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Harvest date *">
+            <Input type="date" value={f.harvest_date} onChange={(e) => set("harvest_date", e.target.value)} />
+          </Field>
+          <Field label="Quality grade">
+            <Select value={f.quality_grade || ""} onValueChange={(v) => set("quality_grade", v)}>
+              <SelectTrigger><SelectValue placeholder="Select grade" /></SelectTrigger>
+              <SelectContent>
+                {["A","B","C","mixed"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Start time">
+            <Input type="time" value={f.harvest_time_start || ""} onChange={(e) => set("harvest_time_start", e.target.value)} />
+          </Field>
+          <Field label="End time">
+            <Input type="time" value={f.harvest_time_end || ""} onChange={(e) => set("harvest_time_end", e.target.value)} />
+          </Field>
+          <Field label="Quantity (kg) *">
+            <Input type="number" step="0.01" value={f.quantity_harvested ?? 0} onChange={(e) => set("quantity_harvested", e.target.value ? +e.target.value : 0)} />
+          </Field>
+          <Field label="Picking number">
+            <Input type="number" value={f.harvest_sequence_number ?? ""} onChange={(e) => set("harvest_sequence_number", e.target.value ? +e.target.value : null)} placeholder="for continuous harvest" />
+          </Field>
+          <Field label="Estimated remaining yield (kg)">
+            <Input type="number" step="0.01" value={f.estimated_remaining_yield ?? ""} onChange={(e) => set("estimated_remaining_yield", e.target.value ? +e.target.value : null)} />
+          </Field>
+          <Field label="Notes" className="md:col-span-2">
+            <Textarea rows={2} value={f.notes || ""} onChange={(e) => set("notes", e.target.value)} />
+          </Field>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button disabled={mut.isPending || !f.plot_id || !f.variety_id} onClick={() => mut.mutate(f)}>
+            {mut.isPending ? "Saving..." : "Save harvest"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={className}>
+      <Label className="mb-1.5 block text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}
+function stripId<T extends { id?: string }>(v: T) { const { id, ...rest } = v; return rest; }
