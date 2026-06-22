@@ -75,41 +75,60 @@ function AuthPage() {
         </div>
         <Card className="p-8">
           <h1 className="font-serif text-2xl mb-1">
-            {mode === "signin" ? "Sign in" : "Reset your password"}
+            {mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Reset your password"}
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
             {mode === "signin"
               ? "Internal tool — use the credentials your admin gave you."
+              : mode === "signup"
+              ? "First time setup or invited self-signup."
               : "We'll email you a link to set a new password."}
           </p>
-          <form onSubmit={mode === "signin" ? signIn : sendReset} className="space-y-4">
+          <form
+            onSubmit={mode === "signin" ? signIn : mode === "signup" ? signUp : sendReset}
+            className="space-y-4"
+          >
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <Label htmlFor="name">Full name</Label>
+                <Input id="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" autoComplete="email" required
                      value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            {mode === "signin" && (
+            {mode !== "forgot" && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <button type="button" onClick={() => setMode("forgot")}
-                          className="text-xs text-muted-foreground hover:text-foreground">
-                    Forgot?
-                  </button>
+                  {mode === "signin" && (
+                    <button type="button" onClick={() => setMode("forgot")}
+                            className="text-xs text-muted-foreground hover:text-foreground">
+                      Forgot?
+                    </button>
+                  )}
                 </div>
-                <Input id="password" type="password" autoComplete="current-password" required
+                <Input id="password" type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"} required minLength={mode === "signup" ? 8 : undefined}
                        value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             )}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Please wait..." : mode === "signin" ? "Sign in" : "Send reset link"}
+              {busy ? "Please wait..." : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
             </Button>
-            {mode === "forgot" && (
-              <button type="button" onClick={() => setMode("signin")}
-                      className="text-xs text-muted-foreground hover:text-foreground w-full text-center">
-                Back to sign in
-              </button>
-            )}
+            <div className="text-center text-xs text-muted-foreground">
+              {mode === "signin" && (
+                <button type="button" onClick={() => setMode("signup")} className="hover:text-foreground">
+                  No account? Create one
+                </button>
+              )}
+              {mode !== "signin" && (
+                <button type="button" onClick={() => setMode("signin")} className="hover:text-foreground">
+                  Back to sign in
+                </button>
+              )}
+            </div>
           </form>
         </Card>
       </div>
