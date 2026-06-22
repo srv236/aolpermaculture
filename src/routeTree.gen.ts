@@ -16,6 +16,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedFarmsRouteImport } from './routes/_authenticated/farms'
 import { Route as AuthenticatedCropsRouteImport } from './routes/_authenticated/crops'
 import { Route as AuthenticatedFarmsFarmIdRouteImport } from './routes/_authenticated/farms_.$farmId'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -52,6 +53,11 @@ const AuthenticatedFarmsFarmIdRoute =
     path: '/farms/$farmId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/crops': typeof AuthenticatedCropsRoute
   '/farms': typeof AuthenticatedFarmsRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/farms/$farmId': typeof AuthenticatedFarmsFarmIdRoute
 }
 export interface FileRoutesByTo {
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/crops': typeof AuthenticatedCropsRoute
   '/farms': typeof AuthenticatedFarmsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/farms/$farmId': typeof AuthenticatedFarmsFarmIdRoute
 }
 export interface FileRoutesById {
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/_authenticated/crops': typeof AuthenticatedCropsRoute
   '/_authenticated/farms': typeof AuthenticatedFarmsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/farms_/$farmId': typeof AuthenticatedFarmsFarmIdRoute
 }
 export interface FileRouteTypes {
@@ -87,9 +96,17 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/crops'
     | '/farms'
+    | '/admin/users'
     | '/farms/$farmId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/reset-password' | '/crops' | '/farms' | '/' | '/farms/$farmId'
+  to:
+    | '/auth'
+    | '/reset-password'
+    | '/crops'
+    | '/farms'
+    | '/'
+    | '/admin/users'
+    | '/farms/$farmId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -98,6 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crops'
     | '/_authenticated/farms'
     | '/_authenticated/'
+    | '/_authenticated/admin/users'
     | '/_authenticated/farms_/$farmId'
   fileRoutesById: FileRoutesById
 }
@@ -158,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFarmsFarmIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -165,6 +190,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCropsRoute: typeof AuthenticatedCropsRoute
   AuthenticatedFarmsRoute: typeof AuthenticatedFarmsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedFarmsFarmIdRoute: typeof AuthenticatedFarmsFarmIdRoute
 }
 
@@ -172,6 +198,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCropsRoute: AuthenticatedCropsRoute,
   AuthenticatedFarmsRoute: AuthenticatedFarmsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedFarmsFarmIdRoute: AuthenticatedFarmsFarmIdRoute,
 }
 
