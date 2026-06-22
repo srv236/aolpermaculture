@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedFarmsRouteImport } from './routes/_authenticated/farms'
+import { Route as AuthenticatedFarmsFarmIdRouteImport } from './routes/_authenticated/farms_.$farmId'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -39,18 +40,26 @@ const AuthenticatedFarmsRoute = AuthenticatedFarmsRouteImport.update({
   path: '/farms',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFarmsFarmIdRoute =
+  AuthenticatedFarmsFarmIdRouteImport.update({
+    id: '/farms_/$farmId',
+    path: '/farms/$farmId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/farms': typeof AuthenticatedFarmsRoute
+  '/farms/$farmId': typeof AuthenticatedFarmsFarmIdRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/farms': typeof AuthenticatedFarmsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/farms/$farmId': typeof AuthenticatedFarmsFarmIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +68,13 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/farms': typeof AuthenticatedFarmsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/farms_/$farmId': typeof AuthenticatedFarmsFarmIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/reset-password' | '/farms'
+  fullPaths: '/' | '/auth' | '/reset-password' | '/farms' | '/farms/$farmId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/reset-password' | '/farms' | '/'
+  to: '/auth' | '/reset-password' | '/farms' | '/' | '/farms/$farmId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -72,6 +82,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/farms'
     | '/_authenticated/'
+    | '/_authenticated/farms_/$farmId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -117,17 +128,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFarmsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/farms_/$farmId': {
+      id: '/_authenticated/farms_/$farmId'
+      path: '/farms/$farmId'
+      fullPath: '/farms/$farmId'
+      preLoaderRoute: typeof AuthenticatedFarmsFarmIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedFarmsRoute: typeof AuthenticatedFarmsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedFarmsFarmIdRoute: typeof AuthenticatedFarmsFarmIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFarmsRoute: AuthenticatedFarmsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedFarmsFarmIdRoute: AuthenticatedFarmsFarmIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
