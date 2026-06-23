@@ -23,7 +23,7 @@ export function loadGoogleMaps(): Promise<typeof google> {
     const s = document.createElement("script");
     const params = new URLSearchParams({
       key,
-      libraries: "drawing,geometry",
+      libraries: "geometry",
       loading: "async",
       callback: "__initGoogleMaps",
     });
