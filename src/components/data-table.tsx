@@ -12,8 +12,15 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ArrowUpDown, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Cloud, Loader2 } from "lucide-react";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import { useServerFn } from "@tanstack/react-start";
+import { uploadToDrive } from "@/lib/drive.functions";
+import { toast } from "sonner";
 
 type Props<T> = {
   data: T[];
@@ -51,8 +58,11 @@ export function DataTable<T extends Record<string, any>>({
     initialState: { pagination: { pageSize: 10 } },
   });
 
-  function downloadCsv() {
-    const rows = table.getFilteredRowModel().rows.map((r) => {
+  const [uploading, setUploading] = useState(false);
+  const driveUpload = useServerFn(uploadToDrive);
+
+  function getRows() {
+    return table.getFilteredRowModel().rows.map((r) => {
       const o: Record<string, any> = {};
       for (const c of table.getVisibleLeafColumns()) {
         const key = (c.columnDef.meta as any)?.csvKey || c.id;
@@ -60,12 +70,57 @@ export function DataTable<T extends Record<string, any>>({
       }
       return o;
     });
-    const csv = Papa.unparse(rows);
-    const blob = new Blob([csv], { type: "text/csv" });
+  }
+
+  function triggerDownload(blob: Blob, ext: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `${csvFilename || "export"}.csv`; a.click();
+    a.href = url; a.download = `${csvFilename || "export"}.${ext}`; a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadCsv() {
+    triggerDownload(new Blob([Papa.unparse(getRows())], { type: "text/csv" }), "csv");
+  }
+
+  function downloadXlsx() {
+    const ws = XLSX.utils.json_to_sheet(getRows());
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
+    triggerDownload(
+      new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      "xlsx",
+    );
+  }
+
+  async function exportToDrive() {
+    setUploading(true);
+    try {
+      const ws = XLSX.utils.json_to_sheet(getRows());
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+      const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const contentBase64 = btoa(bin);
+      const r = await driveUpload({
+        data: {
+          filename: `${csvFilename || "export"}.xlsx`,
+          contentBase64,
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+      });
+      toast.success("Saved to Google Drive", {
+        description: r.name,
+        action: r.webViewLink ? { label: "Open", onClick: () => window.open(r.webViewLink, "_blank") } : undefined,
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Drive export failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
@@ -81,9 +136,20 @@ export function DataTable<T extends Record<string, any>>({
         ) : null}
         <div className="flex-1" />
         {toolbar}
-        <Button type="button" variant="outline" size="sm" onClick={downloadCsv}>
-          <Download className="size-3.5 mr-1.5" /> CSV
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" size="sm" disabled={uploading}>
+              {uploading ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Download className="size-3.5 mr-1.5" />}
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={downloadCsv}><FileText className="size-3.5 mr-2" /> Download CSV</DropdownMenuItem>
+            <DropdownMenuItem onClick={downloadXlsx}><FileSpreadsheet className="size-3.5 mr-2" /> Download Excel (.xlsx)</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={exportToDrive} disabled={uploading}><Cloud className="size-3.5 mr-2" /> Save to Google Drive</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="border rounded-md bg-card overflow-x-auto">
         <Table>
