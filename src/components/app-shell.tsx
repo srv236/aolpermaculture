@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe } from "@/lib/farm.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { Leaf, Sprout, Wheat, Users, LogOut } from "lucide-react";
+import { Sprout, Wheat, Users, LogOut } from "lucide-react";
+import logoAsset from "@/assets/aol-logo.png.asset.json";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -39,12 +40,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="w-60 shrink-0 bg-sidebar text-sidebar-foreground flex flex-col">
-        <div className="p-5 flex items-center gap-2 border-b border-sidebar-border">
-          <div className="size-9 rounded-md bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center">
-            <Leaf className="size-4" />
-          </div>
-          <div>
-            <div className="font-serif text-lg leading-tight">Farmbook</div>
+        <div className="p-5 flex items-center gap-3 border-b border-sidebar-border">
+          <img src={logoAsset.url} alt="AOL Permaculture" className="size-10 rounded-full shrink-0 bg-white/95 p-0.5" />
+          <div className="min-w-0">
+            <div className="font-serif text-base leading-tight truncate">AOL Permaculture</div>
             <div className="text-[10px] uppercase tracking-wider opacity-60">Farm Management</div>
           </div>
         </div>

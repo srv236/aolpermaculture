@@ -73,8 +73,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Farmbook — Farm Management" },
-      { name: "description", content: "Internal farm management tool for plots, sowings and harvests." },
+      { title: "AOL Permaculture — Farm Management" },
+      { name: "description", content: "Internal farm management tool for AOL Permaculture — plots, sowings and harvests." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
