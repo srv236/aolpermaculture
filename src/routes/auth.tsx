@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Leaf } from "lucide-react";
+import logoAsset from "@/assets/aol-logo.png.asset.json";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -67,11 +67,12 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-6"
          style={{ backgroundImage: "radial-gradient(circle at 20% 10%, oklch(0.94 0.04 130 / 0.5), transparent 40%), radial-gradient(circle at 80% 90%, oklch(0.85 0.08 60 / 0.3), transparent 50%)" }}>
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-2 mb-8 justify-center">
-          <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
-            <Leaf className="size-5" />
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <img src={logoAsset.url} alt="AOL Permaculture" className="size-20 rounded-full shadow-sm" />
+          <div className="text-center">
+            <div className="font-serif text-2xl font-semibold leading-tight">AOL Permaculture</div>
+            <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground mt-1">Farm Management</div>
           </div>
-          <div className="font-serif text-2xl font-semibold">Farmbook</div>
         </div>
         <Card className="p-8">
           <h1 className="font-serif text-2xl mb-1">
