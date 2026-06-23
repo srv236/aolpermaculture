@@ -139,6 +139,16 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
         });
         mapRef.current = map;
 
+        // When the container becomes visible or resizes (Tabs/Dialog mount),
+        // trigger a resize so Google Maps re-lays tiles and recenters.
+        const ro = new ResizeObserver(() => {
+          if (!mapEl.current) return;
+          g.maps.event.trigger(map, "resize");
+          map.setCenter(ctr!);
+        });
+        ro.observe(mapEl.current);
+        (mapRef as any).__ro = ro;
+
         for (const o of overlays || []) {
           const p = parseWkt(o.wkt);
           if (!p) continue;
@@ -161,7 +171,7 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
         }
       })
       .catch((e) => setError(e.message));
-    return () => { cancelled = true; clearDraft(); };
+    return () => { cancelled = true; clearDraft(); (mapRef as any).__ro?.disconnect?.(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
