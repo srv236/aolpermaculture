@@ -80,7 +80,7 @@ function AuthPage() {
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
             {mode === "signin"
-              ? "Internal tool — use the credentials your admin gave you."
+              ? "Use the credentials your admin gave you."
               : mode === "signup"
               ? "First time setup or invited self-signup."
               : "We'll email you a link to set a new password."}
