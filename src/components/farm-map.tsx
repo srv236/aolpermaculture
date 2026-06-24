@@ -21,6 +21,7 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
   const draftPolylineRef = useRef<google.maps.Polyline | null>(null);
   const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
   const googleRef = useRef<typeof google | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [drawing, setDrawing] = useState(false);
 
@@ -128,7 +129,9 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
         if (cancelled || !mapEl.current) return;
         googleRef.current = g;
         const initialPath = parseWkt(value) || undefined;
-        const ctr = initialPath ? centroid(initialPath) : initialCenter || { lat: 12.82, lng: 77.5 };
+        const overlayPaths = (overlays || []).map((o) => parseWkt(o.wkt)).filter(Boolean) as google.maps.LatLngLiteral[][];
+        const allPaths = [initialPath, ...overlayPaths].filter(Boolean) as google.maps.LatLngLiteral[][];
+        const ctr = initialPath ? centroid(initialPath) : initialCenter || centroid(allPaths[0] || []) || { lat: 12.82, lng: 77.5 };
         const map = new g.maps.Map(mapEl.current, {
           center: ctr!,
           zoom: initialPath ? 17 : 14,
@@ -139,18 +142,29 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
         });
         mapRef.current = map;
 
-        // When the container becomes visible or resizes (Tabs/Dialog mount),
-        // trigger a resize so Google Maps re-lays tiles and recenters.
-        const ro = new ResizeObserver(() => {
+        const refreshMap = () => requestAnimationFrame(() => {
           if (!mapEl.current) return;
           g.maps.event.trigger(map, "resize");
-          map.setCenter(ctr!);
+          const bounds = new g.maps.LatLngBounds();
+          allPaths.forEach((path) => path.forEach((point) => bounds.extend(point)));
+          if (!bounds.isEmpty()) {
+            map.fitBounds(bounds, 32);
+            g.maps.event.addListenerOnce(map, "idle", () => {
+              const zoom = map.getZoom();
+              if (zoom && zoom > 19) map.setZoom(19);
+            });
+          } else {
+            map.setCenter(ctr!);
+          }
         });
-        ro.observe(mapEl.current);
-        (mapRef as any).__ro = ro;
 
-        for (const o of overlays || []) {
-          const p = parseWkt(o.wkt);
+        // When the container becomes visible or resizes (Tabs/Dialog mount),
+        // trigger a resize so Google Maps re-lays tiles and recenters.
+        resizeObserverRef.current = new ResizeObserver(refreshMap);
+        resizeObserverRef.current.observe(mapEl.current);
+
+        for (const [index, o] of (overlays || []).entries()) {
+          const p = overlayPaths[index];
           if (!p) continue;
           new g.maps.Polygon({
             paths: p, map,
@@ -169,9 +183,13 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
           polygonRef.current = poly;
           if (!readOnly) attachEdit(poly);
         }
+
+        refreshMap();
+        window.setTimeout(refreshMap, 150);
+        window.setTimeout(refreshMap, 500);
       })
       .catch((e) => setError(e.message));
-    return () => { cancelled = true; clearDraft(); (mapRef as any).__ro?.disconnect?.(); };
+    return () => { cancelled = true; clearDraft(); resizeObserverRef.current?.disconnect(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
