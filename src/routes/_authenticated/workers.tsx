@@ -138,7 +138,7 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
           <DialogDescription>Sevaks are farm personnel — separate from the website user accounts under Users.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-2">
-          <div><Label>Worker ID</Label><Input value={f.worker_code || ""} onChange={(e) => set("worker_code", e.target.value)} placeholder="e.g. W-001" /></div>
+          <div><Label>Sevak ID</Label><Input value={f.worker_code || ""} onChange={(e) => set("worker_code", e.target.value)} placeholder="e.g. W-001" /></div>
           <div><Label>Full name *</Label><Input value={f.full_name} onChange={(e) => set("full_name", e.target.value)} /></div>
           <div className="md:col-span-2">
             <Label>Type *</Label>
