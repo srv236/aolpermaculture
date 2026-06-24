@@ -381,6 +381,54 @@ export type Database = {
         }
         Relationships: []
       }
+      workers: {
+        Row: {
+          created_at: string
+          email: string | null
+          end_date: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          phone: string | null
+          role: string | null
+          start_date: string | null
+          updated_at: string
+          worker_code: string | null
+          worker_type: Database["public"]["Enums"]["worker_type"]
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          end_date?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          start_date?: string | null
+          updated_at?: string
+          worker_code?: string | null
+          worker_type: Database["public"]["Enums"]["worker_type"]
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          end_date?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          start_date?: string | null
+          updated_at?: string
+          worker_code?: string | null
+          worker_type?: Database["public"]["Enums"]["worker_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -397,6 +445,11 @@ export type Database = {
     Enums: {
       app_role: "admin" | "editor" | "viewer"
       sowing_status: "planned" | "active" | "completed" | "failed" | "abandoned"
+      worker_type:
+        | "short_term_sevak"
+        | "long_term_sevak"
+        | "labourer"
+        | "permanent_staff"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -526,6 +579,12 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "editor", "viewer"],
       sowing_status: ["planned", "active", "completed", "failed", "abandoned"],
+      worker_type: [
+        "short_term_sevak",
+        "long_term_sevak",
+        "labourer",
+        "permanent_staff",
+      ],
     },
   },
 } as const
