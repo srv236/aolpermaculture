@@ -86,7 +86,7 @@ function WorkersPage() {
           data={workers.data || []} columns={columns}
           searchKeys={["full_name", "worker_code", "role", "phone", "email"]}
           searchPlaceholder="Search sevaks..." csvFilename="sevaks"
-          toolbar={canEdit && <Button size="sm" onClick={() => setAdding(true)}><Plus className="size-3.5 mr-1" /> Add sevak</Button>}
+          toolbar={canEdit && <Button size="sm" onClick={() => setAdding(true)}><Plus className="size-3.5 mr-1" /> Add Sevak</Button>}
         />
         {(adding || editing) && (
           <WorkerDialog open onOpenChange={(v) => { if (!v) { setAdding(false); setEditing(null); } }} initial={editing} />
@@ -134,7 +134,7 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-serif text-2xl">{initial ? "Edit sevak" : "Add a sevak"}</DialogTitle>
+          <DialogTitle className="font-serif text-2xl">{initial ? "Edit Sevak" : "Add a Sevak"}</DialogTitle>
           <DialogDescription>Sevaks are farm personnel — separate from the website user accounts under Users.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-2">
