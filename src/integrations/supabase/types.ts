@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance: {
+        Row: {
+          created_at: string
+          date: string
+          farm_id: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["attendance_status"]
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          farm_id: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          farm_id?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crops: {
         Row: {
           created_at: string
@@ -55,6 +103,50 @@ export type Database = {
           yield_unit?: string | null
         }
         Relationships: []
+      }
+      farm_visitors: {
+        Row: {
+          count: number
+          created_at: string
+          date: string
+          description: string | null
+          farm_id: string
+          id: string
+          updated_at: string
+          visitor_name: string
+          visitor_type: Database["public"]["Enums"]["visitor_type"]
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          date: string
+          description?: string | null
+          farm_id: string
+          id?: string
+          updated_at?: string
+          visitor_name: string
+          visitor_type?: Database["public"]["Enums"]["visitor_type"]
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          date?: string
+          description?: string | null
+          farm_id?: string
+          id?: string
+          updated_at?: string
+          visitor_name?: string
+          visitor_type?: Database["public"]["Enums"]["visitor_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_visitors_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       farms: {
         Row: {
@@ -444,7 +536,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
+      attendance_status: "present" | "absent" | "half_day" | "leave" | "holiday"
       sowing_status: "planned" | "active" | "completed" | "failed" | "abandoned"
+      visitor_type:
+        | "farmer"
+        | "government"
+        | "previous_sevak"
+        | "students"
+        | "other"
       worker_type:
         | "short_term_sevak"
         | "long_term_sevak"
@@ -578,7 +677,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "editor", "viewer"],
+      attendance_status: ["present", "absent", "half_day", "leave", "holiday"],
       sowing_status: ["planned", "active", "completed", "failed", "abandoned"],
+      visitor_type: [
+        "farmer",
+        "government",
+        "previous_sevak",
+        "students",
+        "other",
+      ],
       worker_type: [
         "short_term_sevak",
         "long_term_sevak",
