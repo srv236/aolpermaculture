@@ -73,9 +73,9 @@ function AttendancePage() {
   const farms = useQuery({ queryKey: ["farms"], queryFn: () => farmsFn() });
 
   // default farm
-  if (!farmId && farms.data?.length) {
-    setFarmId(farms.data[0].id);
-  }
+  useEffect(() => {
+    if (!farmId && farms.data?.length) setFarmId(farms.data[0].id);
+  }, [farmId, farms.data]);
 
   const workersFn = useServerFn(listWorkers);
   const workers = useQuery({ queryKey: ["workers"], queryFn: () => workersFn() });
