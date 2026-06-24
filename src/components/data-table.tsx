@@ -204,11 +204,36 @@ export function DataTable<T extends Record<string, any>>({
               Export
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={downloadCsv}><FileText className="size-3.5 mr-2" /> Download CSV</DropdownMenuItem>
-            <DropdownMenuItem onClick={downloadXlsx}><FileSpreadsheet className="size-3.5 mr-2" /> Download Excel (.xlsx)</DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Download</DropdownMenuLabel>
+            <DropdownMenuItem onClick={downloadCsv}><FileText className="size-3.5 mr-2" /> CSV (.csv)</DropdownMenuItem>
+            <DropdownMenuItem onClick={downloadXlsx}><FileSpreadsheet className="size-3.5 mr-2" /> Excel (.xlsx)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => triggerDownload(buildBlob("pdf"), "pdf")}><FileType className="size-3.5 mr-2" /> PDF (.pdf)</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={exportToDrive} disabled={uploading}><Cloud className="size-3.5 mr-2" /> Save to Google Drive</DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger><Cloud className="size-3.5 mr-2" /> Save to Google Drive</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => exportToDrive("csv")} disabled={uploading}>As CSV</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToDrive("xlsx")} disabled={uploading}>As Excel</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToDrive("pdf")} disabled={uploading}>As PDF</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="flex items-center gap-2"><Share2 className="size-3.5" /> Share</DropdownMenuLabel>
+            {([
+              { ch: "email" as const, label: "Email", icon: Mail },
+              { ch: "whatsapp" as const, label: "WhatsApp", icon: MessageCircle },
+              { ch: "sms" as const, label: "Text message", icon: MessageSquare },
+            ]).map(({ ch, label, icon: Icon }) => (
+              <DropdownMenuSub key={ch}>
+                <DropdownMenuSubTrigger><Icon className="size-3.5 mr-2" /> {label}</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => share(ch, "pdf")}>As PDF</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => share(ch, "xlsx")}>As Excel</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => share(ch, "csv")}>As CSV</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
