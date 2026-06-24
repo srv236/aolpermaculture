@@ -187,7 +187,7 @@ export function HarvestFormDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">{initial?.id ? "Edit harvest" : "Record a harvest"}</DialogTitle>
-          <DialogDescription>What was harvested today.</DialogDescription>
+          <DialogDescription>What was harvested.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Plot *">
