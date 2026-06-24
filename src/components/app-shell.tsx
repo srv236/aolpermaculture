@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 p-3 space-y-1 text-sm">
           <NavItem to="/farms" icon={<Sprout className="size-4" />}>Farms</NavItem>
           <NavItem to="/crops" icon={<Wheat className="size-4" />}>Crop Library</NavItem>
-          <NavItem to="/workers" icon={<HardHat className="size-4" />}>Workers</NavItem>
+          <NavItem to="/workers" icon={<HardHat className="size-4" />}>Sevaks</NavItem>
           {isAdmin && (
             <NavItem to="/admin/users" icon={<Users className="size-4" />}>Users</NavItem>
           )}

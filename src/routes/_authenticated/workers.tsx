@@ -78,15 +78,15 @@ function WorkersPage() {
       <div className="p-8 max-w-6xl">
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="font-serif text-3xl">Workers</h1>
+            <h1 className="font-serif text-3xl">Sevaks</h1>
             <p className="text-sm text-muted-foreground mt-1">Sevaks, labourers, and permanent staff on the farms</p>
           </div>
         </div>
         <DataTable
           data={workers.data || []} columns={columns}
           searchKeys={["full_name", "worker_code", "role", "phone", "email"]}
-          searchPlaceholder="Search workers..." csvFilename="workers"
-          toolbar={canEdit && <Button size="sm" onClick={() => setAdding(true)}><Plus className="size-3.5 mr-1" /> Add worker</Button>}
+          searchPlaceholder="Search sevaks..." csvFilename="sevaks"
+          toolbar={canEdit && <Button size="sm" onClick={() => setAdding(true)}><Plus className="size-3.5 mr-1" /> Add sevak</Button>}
         />
         {(adding || editing) && (
           <WorkerDialog open onOpenChange={(v) => { if (!v) { setAdding(false); setEditing(null); } }} initial={editing} />
@@ -134,8 +134,8 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-serif text-2xl">{initial ? "Edit worker" : "Add a worker"}</DialogTitle>
-          <DialogDescription>Workers are farm personnel — separate from the website user accounts under Users.</DialogDescription>
+          <DialogTitle className="font-serif text-2xl">{initial ? "Edit sevak" : "Add a sevak"}</DialogTitle>
+          <DialogDescription>Sevaks are farm personnel — separate from the website user accounts under Users.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-2">
           <div><Label>Worker ID</Label><Input value={f.worker_code || ""} onChange={(e) => set("worker_code", e.target.value)} placeholder="e.g. W-001" /></div>
