@@ -14,13 +14,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
+  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Cloud, Loader2 } from "lucide-react";
+import { ArrowUpDown, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Cloud, Loader2, Share2, Mail, MessageCircle, MessageSquare, FileType } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useServerFn } from "@tanstack/react-start";
 import { uploadToDrive } from "@/lib/drive.functions";
 import { toast } from "sonner";
+
+type FileFormat = "csv" | "xlsx" | "pdf";
+type ShareChannel = "email" | "whatsapp" | "sms";
 
 type Props<T> = {
   data: T[];
