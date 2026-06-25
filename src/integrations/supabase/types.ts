@@ -23,6 +23,7 @@ export type Database = {
           notes: string | null
           status: Database["public"]["Enums"]["attendance_status"]
           updated_at: string
+          work_done: string | null
           worker_id: string
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           notes?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           updated_at?: string
+          work_done?: string | null
           worker_id: string
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           notes?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           updated_at?: string
+          work_done?: string | null
           worker_id?: string
         }
         Relationships: [
@@ -110,8 +113,10 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
+          end_time: string | null
           farm_id: string
           id: string
+          start_time: string | null
           updated_at: string
           visitor_name: string
           visitor_type: Database["public"]["Enums"]["visitor_type"]
@@ -121,8 +126,10 @@ export type Database = {
           created_at?: string
           date: string
           description?: string | null
+          end_time?: string | null
           farm_id: string
           id?: string
+          start_time?: string | null
           updated_at?: string
           visitor_name: string
           visitor_type?: Database["public"]["Enums"]["visitor_type"]
@@ -132,8 +139,10 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
+          end_time?: string | null
           farm_id?: string
           id?: string
+          start_time?: string | null
           updated_at?: string
           visitor_name?: string
           visitor_type?: Database["public"]["Enums"]["visitor_type"]
