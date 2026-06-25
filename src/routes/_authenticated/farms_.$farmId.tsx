@@ -74,6 +74,7 @@ function FarmDetail() {
                 <TabsTrigger value="plots">Plots ({plots.data?.length ?? 0})</TabsTrigger>
                 <TabsTrigger value="sowing">Sowing ({sowing.data?.length ?? 0})</TabsTrigger>
                 <TabsTrigger value="harvest">Harvest ({harvest.data?.length ?? 0})</TabsTrigger>
+                <TabsTrigger value="resources">Resources ({resources.data?.length ?? 0})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="mt-4">
