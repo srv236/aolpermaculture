@@ -6,6 +6,7 @@ import {
   getFarm, listPlots, listSowing, listHarvest,
   deletePlot, deleteSowing, deleteHarvest,
 } from "@/lib/farm.functions";
+import { listResources, deleteResource } from "@/lib/resources.functions";
 import { AppShell, useMe } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { Plus, Pencil, Trash2, ChevronLeft, MapPin } from "lucide-react";
 import { FarmMap } from "@/components/farm-map";
 import { PlotFormDialog } from "@/components/plot-form-dialog";
 import { SowingFormDialog, HarvestFormDialog } from "@/components/record-dialogs";
+import { ResourceFormDialog } from "@/components/resource-dialog";
 import { DataTable } from "@/components/data-table";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -41,6 +43,8 @@ function FarmDetail() {
   const plots = useQuery({ queryKey: ["plots", farmId], queryFn: () => listPlotsFn({ data: { farmId } }) });
   const sowing = useQuery({ queryKey: ["sowing", farmId], queryFn: () => listSowingFn({ data: { farmId } }) });
   const harvest = useQuery({ queryKey: ["harvest", farmId], queryFn: () => listHarvestFn({ data: { farmId } }) });
+  const listResourcesFn = useServerFn(listResources);
+  const resources = useQuery({ queryKey: ["resources", farmId], queryFn: () => listResourcesFn({ data: { farmId } }) });
 
   return (
     <AppShell>
@@ -70,6 +74,7 @@ function FarmDetail() {
                 <TabsTrigger value="plots">Plots ({plots.data?.length ?? 0})</TabsTrigger>
                 <TabsTrigger value="sowing">Sowing ({sowing.data?.length ?? 0})</TabsTrigger>
                 <TabsTrigger value="harvest">Harvest ({harvest.data?.length ?? 0})</TabsTrigger>
+                <TabsTrigger value="resources">Resources ({resources.data?.length ?? 0})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="mt-4">
@@ -100,6 +105,9 @@ function FarmDetail() {
               </TabsContent>
               <TabsContent value="harvest" className="mt-4">
                 <HarvestTab farmId={farmId} rows={harvest.data || []} canEdit={!!canEdit} />
+              </TabsContent>
+              <TabsContent value="resources" className="mt-4">
+                <ResourcesTab farmId={farmId} rows={resources.data || []} canEdit={!!canEdit} />
               </TabsContent>
             </Tabs>
           </>

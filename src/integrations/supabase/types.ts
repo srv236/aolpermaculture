@@ -376,6 +376,72 @@ export type Database = {
         }
         Relationships: []
       }
+      resource_records: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_time: string | null
+          farm_id: string
+          id: string
+          notes: string | null
+          plot_id: string | null
+          quantity: number | null
+          resource_name: string
+          resource_type: Database["public"]["Enums"]["resource_type"]
+          start_time: string | null
+          unit: string | null
+          updated_at: string
+          used_for: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          farm_id: string
+          id?: string
+          notes?: string | null
+          plot_id?: string | null
+          quantity?: number | null
+          resource_name: string
+          resource_type: Database["public"]["Enums"]["resource_type"]
+          start_time?: string | null
+          unit?: string | null
+          updated_at?: string
+          used_for?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          farm_id?: string
+          id?: string
+          notes?: string | null
+          plot_id?: string | null
+          quantity?: number | null
+          resource_name?: string
+          resource_type?: Database["public"]["Enums"]["resource_type"]
+          start_time?: string | null
+          unit?: string | null
+          updated_at?: string
+          used_for?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_records_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_records_plot_id_fkey"
+            columns: ["plot_id"]
+            isOneToOne: false
+            referencedRelation: "plots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sowing_records: {
         Row: {
           area_utilized_percent: number | null
@@ -546,6 +612,14 @@ export type Database = {
     Enums: {
       app_role: "admin" | "editor" | "viewer"
       attendance_status: "present" | "absent" | "half_day" | "leave" | "holiday"
+      resource_type:
+        | "equipment"
+        | "labor"
+        | "material"
+        | "water"
+        | "biological"
+        | "energy"
+        | "other"
       sowing_status: "planned" | "active" | "completed" | "failed" | "abandoned"
       visitor_type:
         | "farmer"
@@ -687,6 +761,15 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "editor", "viewer"],
       attendance_status: ["present", "absent", "half_day", "leave", "holiday"],
+      resource_type: [
+        "equipment",
+        "labor",
+        "material",
+        "water",
+        "biological",
+        "energy",
+        "other",
+      ],
       sowing_status: ["planned", "active", "completed", "failed", "abandoned"],
       visitor_type: [
         "farmer",
