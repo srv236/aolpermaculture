@@ -106,6 +106,9 @@ function FarmDetail() {
               <TabsContent value="harvest" className="mt-4">
                 <HarvestTab farmId={farmId} rows={harvest.data || []} canEdit={!!canEdit} />
               </TabsContent>
+              <TabsContent value="resources" className="mt-4">
+                <ResourcesTab farmId={farmId} rows={resources.data || []} canEdit={!!canEdit} />
+              </TabsContent>
             </Tabs>
           </>
         ) : (
