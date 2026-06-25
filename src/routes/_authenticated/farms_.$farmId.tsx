@@ -6,6 +6,7 @@ import {
   getFarm, listPlots, listSowing, listHarvest,
   deletePlot, deleteSowing, deleteHarvest,
 } from "@/lib/farm.functions";
+import { listResources, deleteResource } from "@/lib/resources.functions";
 import { AppShell, useMe } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { Plus, Pencil, Trash2, ChevronLeft, MapPin } from "lucide-react";
 import { FarmMap } from "@/components/farm-map";
 import { PlotFormDialog } from "@/components/plot-form-dialog";
 import { SowingFormDialog, HarvestFormDialog } from "@/components/record-dialogs";
+import { ResourceFormDialog } from "@/components/resource-dialog";
 import { DataTable } from "@/components/data-table";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
