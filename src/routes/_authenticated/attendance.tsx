@@ -9,6 +9,7 @@ import {
   upsertAttendance,
   bulkMarkPresent,
   bulkUpsertAttendance,
+  bulkUpsertAttendancePairs,
   listVisitors,
   upsertVisitor,
   deleteVisitor,
