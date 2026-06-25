@@ -800,17 +800,22 @@ function MonthlyGrid({
 }
 
 function MonthlyCell({
-  children, current, onSave, disabled,
+  children, current, onSave, disabled, suppress,
 }: {
   children: React.ReactNode; current?: any;
   onSave: (status: string, notes: string | null) => void; disabled?: boolean;
+  suppress?: () => boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<string>(current?.status ?? "present");
   const [notes, setNotes] = useState<string>(current?.notes ?? "");
   if (disabled) return <>{children}</>;
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) { setStatus(current?.status ?? "present"); setNotes(current?.notes ?? ""); } }}>
+    <Popover open={open} onOpenChange={(o) => {
+      if (o && suppress?.()) return;
+      setOpen(o);
+      if (o) { setStatus(current?.status ?? "present"); setNotes(current?.notes ?? ""); }
+    }}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent className="w-64 p-3" align="center">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Status</div>
