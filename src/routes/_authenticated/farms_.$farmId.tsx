@@ -43,6 +43,8 @@ function FarmDetail() {
   const plots = useQuery({ queryKey: ["plots", farmId], queryFn: () => listPlotsFn({ data: { farmId } }) });
   const sowing = useQuery({ queryKey: ["sowing", farmId], queryFn: () => listSowingFn({ data: { farmId } }) });
   const harvest = useQuery({ queryKey: ["harvest", farmId], queryFn: () => listHarvestFn({ data: { farmId } }) });
+  const listResourcesFn = useServerFn(listResources);
+  const resources = useQuery({ queryKey: ["resources", farmId], queryFn: () => listResourcesFn({ data: { farmId } }) });
 
   return (
     <AppShell>
