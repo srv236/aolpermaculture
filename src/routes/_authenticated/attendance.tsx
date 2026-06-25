@@ -9,6 +9,7 @@ import {
   upsertAttendance,
   bulkMarkPresent,
   bulkUpsertAttendance,
+  bulkUpsertAttendancePairs,
   listVisitors,
   upsertVisitor,
   deleteVisitor,
@@ -528,6 +529,89 @@ function MonthlyGrid({
       toast.success("Marked all present");
     },
   });
+  const pairsFn = useServerFn(bulkUpsertAttendancePairs);
+  const pairsMut = useMutation({
+    mutationFn: (v: { status: string; pairs: { worker_id: string; date: string }[] }) =>
+      pairsFn({ data: { farm_id: farmId!, ...v } }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["attendance", farmId, year, month] });
+      toast.success(`Marked ${v.pairs.length} cell${v.pairs.length === 1 ? "" : "s"} ${statusMeta(v.status)?.label.toLowerCase()}`);
+      setSelected(new Set());
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Drag selection state
+  const cellKey = (wid: string, day: number) => `${wid}|${day}`;
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const dragRef = useRef<{
+    anchor: { wIdx: number; day: number };
+    additive: boolean;
+    baseline: Set<string>;
+    moved: boolean;
+  } | null>(null);
+
+  function rectKeys(a: { wIdx: number; day: number }, b: { wIdx: number; day: number }) {
+    const w1 = Math.min(a.wIdx, b.wIdx), w2 = Math.max(a.wIdx, b.wIdx);
+    const d1 = Math.min(a.day, b.day), d2 = Math.max(a.day, b.day);
+    const keys: string[] = [];
+    for (let i = w1; i <= w2; i++) {
+      const w = activeWorkers[i];
+      if (!w) continue;
+      for (let d = d1; d <= d2; d++) keys.push(cellKey(w.id, d));
+    }
+    return keys;
+  }
+
+  function onCellMouseDown(e: React.MouseEvent, wIdx: number, day: number) {
+    if (!canEdit) return;
+    const additive = e.shiftKey || e.metaKey || e.ctrlKey;
+    const baseline = additive ? new Set(selected) : new Set<string>();
+    dragRef.current = { anchor: { wIdx, day }, additive, baseline, moved: false };
+    const initial = new Set(baseline);
+    initial.add(cellKey(activeWorkers[wIdx].id, day));
+    setSelected(initial);
+  }
+  function onCellMouseEnter(wIdx: number, day: number) {
+    if (!dragRef.current) return;
+    dragRef.current.moved = true;
+    const keys = rectKeys(dragRef.current.anchor, { wIdx, day });
+    const next = new Set(dragRef.current.baseline);
+    for (const k of keys) next.add(k);
+    setSelected(next);
+  }
+  useEffect(() => {
+    function up() { dragRef.current = null; }
+    window.addEventListener("mouseup", up);
+    return () => window.removeEventListener("mouseup", up);
+  }, []);
+
+  // Keyboard shortcuts when selection exists
+  useEffect(() => {
+    if (!canEdit || selected.size === 0) return;
+    function handler(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      if (e.key === "Escape") { setSelected(new Set()); return; }
+      const status = STATUS.find((s) => s.key === e.key.toLowerCase());
+      if (!status) return;
+      e.preventDefault();
+      applyToSelection(status.value);
+    }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selected, canEdit]);
+
+  function applyToSelection(status: string) {
+    const pairs: { worker_id: string; date: string }[] = [];
+    for (const k of selected) {
+      const [wid, dayStr] = k.split("|");
+      const day = Number(dayStr);
+      const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      pairs.push({ worker_id: wid, date });
+    }
+    pairsMut.mutate({ status, pairs });
+  }
 
   function exportCsv() {
     const rows: any[] = [];
@@ -592,12 +676,34 @@ function MonthlyGrid({
             {s.label}
           </div>
         ))}
-        <div className="ml-auto italic">Click a date header to jump to that day in the Daily tab</div>
+        <div className="ml-auto italic inline-flex items-center gap-1.5">
+          <Keyboard className="size-3.5" /> drag across cells, then press <kbd className="px-1 border rounded">P</kbd> <kbd className="px-1 border rounded">A</kbd> <kbd className="px-1 border rounded">H</kbd> <kbd className="px-1 border rounded">L</kbd> <kbd className="px-1 border rounded">O</kbd>
+        </div>
       </div>
+
+      {canEdit && selected.size > 0 && (
+        <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-primary/10 border border-primary/20 sticky top-0 z-40">
+          <span className="text-sm font-medium ml-2">{selected.size} cell{selected.size === 1 ? "" : "s"} selected</span>
+          <div className="flex flex-wrap gap-1 ml-2">
+            {STATUS.map((s) => (
+              <Button
+                key={s.value}
+                size="sm"
+                variant="outline"
+                className={cn("h-7", s.cls)}
+                onClick={() => applyToSelection(s.value)}
+              >
+                {s.short} · {s.label}
+              </Button>
+            ))}
+          </div>
+          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelected(new Set())}>Clear</Button>
+        </div>
+      )}
 
       <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
         <div className="overflow-auto max-h-[65vh]">
-          <table className="border-separate border-spacing-0 text-sm">
+          <table className="border-separate border-spacing-0 text-sm select-none">
             <thead className="sticky top-0 z-20">
               <tr>
                 <th className="sticky left-0 z-30 bg-muted/60 backdrop-blur border-b border-r px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground min-w-[220px]">
@@ -636,7 +742,7 @@ function MonthlyGrid({
               {activeWorkers.length === 0 && (
                 <tr><td colSpan={days.length + 1} className="text-center text-muted-foreground italic py-10">No sevaks active in this month.</td></tr>
               )}
-              {activeWorkers.map((w) => (
+              {activeWorkers.map((w, wIdx) => (
                 <tr key={w.id} className="group">
                   <th className="sticky left-0 z-10 bg-card group-hover:bg-muted/30 border-b border-r px-4 py-3 text-left font-medium align-top">
                     <div className="text-sm">{w.full_name}</div>
@@ -648,11 +754,23 @@ function MonthlyGrid({
                     const meta = statusMeta(rec?.status);
                     const dow = new Date(year, month - 1, d).getDay();
                     const weekend = dow === 0 || dow === 6;
+                    const isSel = selected.has(cellKey(w.id, d));
                     return (
-                      <td key={d} className={cn("border-b border-r p-1 text-center", weekend && "bg-muted/30", dateStr === selectedDate && "bg-primary/5")}>
+                      <td
+                        key={d}
+                        onMouseDown={(e) => { e.preventDefault(); onCellMouseDown(e, wIdx, d); }}
+                        onMouseEnter={() => onCellMouseEnter(wIdx, d)}
+                        className={cn(
+                          "border-b border-r p-1 text-center cursor-cell",
+                          weekend && "bg-muted/30",
+                          dateStr === selectedDate && "bg-primary/5",
+                          isSel && "bg-primary/20 ring-1 ring-inset ring-primary/50",
+                        )}
+                      >
                         <MonthlyCell
                           disabled={!canEdit}
                           current={rec}
+                          suppress={() => !!dragRef.current?.moved || selected.size > 1}
                           onSave={(status, notes) => upsertMut.mutate({ worker_id: w.id, date: dateStr, status, notes })}
                         >
                           <button
@@ -682,17 +800,22 @@ function MonthlyGrid({
 }
 
 function MonthlyCell({
-  children, current, onSave, disabled,
+  children, current, onSave, disabled, suppress,
 }: {
   children: React.ReactNode; current?: any;
   onSave: (status: string, notes: string | null) => void; disabled?: boolean;
+  suppress?: () => boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<string>(current?.status ?? "present");
   const [notes, setNotes] = useState<string>(current?.notes ?? "");
   if (disabled) return <>{children}</>;
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) { setStatus(current?.status ?? "present"); setNotes(current?.notes ?? ""); } }}>
+    <Popover open={open} onOpenChange={(o) => {
+      if (o && suppress?.()) return;
+      setOpen(o);
+      if (o) { setStatus(current?.status ?? "present"); setNotes(current?.notes ?? ""); }
+    }}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent className="w-64 p-3" align="center">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Status</div>

@@ -54,6 +54,24 @@ export const bulkUpsertAttendance = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const bulkUpsertAttendancePairs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { farm_id: string; status: string; pairs: { worker_id: string; date: string }[] }) => d)
+  .handler(async ({ data, context }) => {
+    if (!data.pairs.length) return { ok: true };
+    const rows = data.pairs.map((p) => ({
+      worker_id: p.worker_id,
+      farm_id: data.farm_id,
+      date: p.date,
+      status: data.status as any,
+    }));
+    const { error } = await context.supabase
+      .from("attendance")
+      .upsert(rows as any, { onConflict: "worker_id,farm_id,date" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const bulkMarkPresent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { farm_id: string; date: string; worker_ids: string[] }) => d)
