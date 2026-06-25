@@ -19,20 +19,37 @@ export const listAttendance = createServerFn({ method: "GET" })
 
 export const upsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { worker_id: string; farm_id: string; date: string; status: string; notes?: string | null }) => d)
+  .inputValidator((d: { worker_id: string; farm_id: string; date: string; status: string; notes?: string | null; work_done?: string | null }) => d)
   .handler(async ({ data, context }) => {
+    const payload: any = {
+      worker_id: data.worker_id,
+      farm_id: data.farm_id,
+      date: data.date,
+      status: data.status as any,
+    };
+    if (data.notes !== undefined) payload.notes = data.notes;
+    if (data.work_done !== undefined) payload.work_done = data.work_done;
     const { error } = await context.supabase
       .from("attendance")
-      .upsert(
-        {
-          worker_id: data.worker_id,
-          farm_id: data.farm_id,
-          date: data.date,
-          status: data.status as any,
-          notes: data.notes ?? null,
-        } as any,
-        { onConflict: "worker_id,farm_id,date" },
-      );
+      .upsert(payload, { onConflict: "worker_id,farm_id,date" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const bulkUpsertAttendance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { farm_id: string; date: string; worker_ids: string[]; status: string }) => d)
+  .handler(async ({ data, context }) => {
+    if (!data.worker_ids.length) return { ok: true };
+    const rows = data.worker_ids.map((wid) => ({
+      worker_id: wid,
+      farm_id: data.farm_id,
+      date: data.date,
+      status: data.status as any,
+    }));
+    const { error } = await context.supabase
+      .from("attendance")
+      .upsert(rows as any, { onConflict: "worker_id,farm_id,date" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
