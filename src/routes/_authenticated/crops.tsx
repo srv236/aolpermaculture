@@ -126,7 +126,7 @@ function CropDialog({ open, onOpenChange, initial }: { open: boolean; onOpenChan
             <Select value={f.crop_category || ""} onValueChange={(v) => set("crop_category", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {["vegetable","fruit","herb","legume","grain","perennial","other"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {["vegetable","greens","fruit","herb","legume","grain","perennial","other"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
