@@ -51,10 +51,14 @@ export function applyFilters(rows: HarvestRow[], f: Filters): HarvestRow[] {
     if (f.from && !f.to && d < f.from) return false;
     if (f.to && !f.from && d > f.to) return false;
     if (f.plotIds.length && (!r.plot_id || !f.plotIds.includes(r.plot_id))) return false;
-    if (f.cropIds.length && (!r.crop_id || !f.cropIds.includes(r.crop_id))) return false;
+    if (f.cropIds.length) {
+      const k = cropKey(r);
+      if (!k || !f.cropIds.includes(k)) return false;
+    }
     return true;
   });
 }
+
 
 function bucketStart(d: Date, g: Granularity): Date {
   if (g === "day") return startOfDay(d);
