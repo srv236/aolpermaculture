@@ -209,7 +209,7 @@ export function colorFor(key: string): string {
   const h = hashKey(key);
   const hue = (h * GOLDEN_ANGLE) % 360;
   const sat = SAT_BANDS[h % SAT_BANDS.length];
-  const light = LIGHT_BANDS[(h >> 3) % LIGHT_BANDS.length];
+  const light = LIGHT_BANDS[(h >>> 3) % LIGHT_BANDS.length];
   return `hsl(${hue.toFixed(1)} ${sat}% ${light}%)`;
 }
 
