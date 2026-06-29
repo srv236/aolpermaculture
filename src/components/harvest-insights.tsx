@@ -312,7 +312,9 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
                   cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.3 }}
-                  formatter={(v: any, name: any) => [`${(+v).toFixed(1)} kg`, name]}
+                  content={(props: any) => (
+                    <CumulativeTooltip {...props} series={cumulative.data} />
+                  )}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {cumulative.cropKeys.map((k) => (
