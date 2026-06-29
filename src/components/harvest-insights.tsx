@@ -728,3 +728,53 @@ function PlotTooltip({
   );
 }
 
+function CumulativeTooltip({
+  active, payload, label, series,
+}: {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+  series: Array<Record<string, number | string>>;
+}) {
+  if (!active || !payload || payload.length === 0 || !label) return null;
+  const idx = series.findIndex((d) => d.period === label);
+  const cur = series[idx];
+  const total = Number(cur?._total) || payload.reduce((s, p) => s + (Number(p.value) || 0), 0);
+
+  let prevTotal = 0;
+  for (let i = idx - 1; i >= 0; i--) {
+    const t = Number(series[i]?._total);
+    if (t > 0) { prevTotal = t; break; }
+  }
+  const deltaKg = idx > 0 ? total - prevTotal : 0;
+  const deltaPct = prevTotal > 0 ? (deltaKg / prevTotal) * 100 : null;
+
+  const rows = [...payload]
+    .filter((p) => Number(p.value) > 0)
+    .sort((a, b) => Number(b.value) - Number(a.value));
+
+  return (
+    <TooltipCard>
+      <TooltipHeader title={label} subtitle={<>Running total {fmtKg(total)}</>} />
+      <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b">
+        {idx > 0
+          ? <Delta deltaKg={deltaKg} deltaPct={deltaPct} />
+          : <span className="text-[11px] text-muted-foreground">Starting period</span>}
+        {idx > 0 && <span className="text-[11px] text-muted-foreground">prev {fmtKg(prevTotal)}</span>}
+      </div>
+      <div className="space-y-0">
+        {rows.map((p) => (
+          <TooltipRow
+            key={p.dataKey}
+            swatch={p.color}
+            name={p.name || p.dataKey}
+            value={fmtKg(Number(p.value))}
+            pct={total ? (Number(p.value) / total) * 100 : 0}
+          />
+        ))}
+      </div>
+    </TooltipCard>
+  );
+}
+
+
