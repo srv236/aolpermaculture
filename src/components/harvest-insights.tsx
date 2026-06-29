@@ -370,7 +370,14 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
         </Card>
 
         <Card className="p-5">
-          <h3 className="font-medium mb-1">Plot contribution</h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-medium">Plot contribution</h3>
+            {plotIds.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setPlotIds([])}>
+                <RotateCcw className="size-3.5 mr-1" /> Back
+              </Button>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground mb-3">Click a slice to filter by that plot</p>
           <div className="h-[340px]">
             {plotsAgg.length === 0 ? <EmptyChart /> : (
