@@ -13,7 +13,7 @@ export type HarvestRow = {
   crop_id?: string;
   variety_id?: string;
   plots?: { plot_number?: string | null } | null;
-  crops?: { crop_name?: string | null; variety_name?: string | null; category?: string | null } | null;
+  crops?: { crop_name?: string | null; variety_name?: string | null; crop_category?: string | null } | null;
 };
 
 export type Granularity = "day" | "week" | "month";
@@ -211,7 +211,7 @@ export function colorFor(key: string): string {
 }
 
 export function cropCategory(r: HarvestRow): string {
-  return (r.crops?.category || "other").toLowerCase();
+  return (r.crops?.crop_category || "other").toLowerCase();
 }
 
 // Per-crop stats over a row set (for top-crops bar tooltip).
