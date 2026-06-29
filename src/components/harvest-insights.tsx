@@ -290,6 +290,48 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
         </div>
       </Card>
 
+      {/* Cumulative yield */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-medium">Cumulative yield</h3>
+            <p className="text-xs text-muted-foreground">Running total kilograms over time, stacked by crop</p>
+          </div>
+          {cumulative.data.length > 0 && (
+            <Badge variant="secondary" className="font-mono">
+              {(cumulative.data[cumulative.data.length - 1]._total as number).toFixed(1)} kg
+            </Badge>
+          )}
+        </div>
+        <div className="h-[320px]">
+          {cumulative.data.length === 0 ? <EmptyChart /> : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={cumulative.data} margin={{ top: 5, right: 12, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip
+                  cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.3 }}
+                  formatter={(v: any, name: any) => [`${(+v).toFixed(1)} kg`, name]}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {cumulative.cropKeys.map((k) => (
+                  <Area
+                    key={k}
+                    type="monotone"
+                    dataKey={k}
+                    stackId="cum"
+                    stroke={colorFor(k)}
+                    fill={colorFor(k)}
+                    fillOpacity={0.65}
+                  />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </Card>
+
       {/* Top crops + Plot share */}
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-5">
