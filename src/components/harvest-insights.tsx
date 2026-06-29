@@ -16,7 +16,7 @@ import {
 import { Check, ChevronDown, RotateCcw, Sprout, Leaf, MapPin, CalendarRange, Scale, BarChart3 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import {
-  applyFilters, aggregateByPeriod, topCrops, plotShare, monthlyMatrix,
+  applyFilters, aggregateByPeriod, cumulativeByPeriod, topCrops, plotShare, monthlyMatrix,
   summaryStats, colorFor, cropLabel, plotLabel, cropKey, cropCategory,
   perCropStats, perPlotStats, perBucketStats,
   type HarvestRow, type Filters, type Granularity,
@@ -96,6 +96,7 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   // When the user has picked specific crops, show each as its own area.
   const seriesTopN = cropIds.length > 0 ? Math.max(cropIds.length, 6) : 6;
   const series = useMemo(() => aggregateByPeriod(filtered, granularity, seriesTopN), [filtered, granularity, seriesTopN]);
+  const cumulative = useMemo(() => cumulativeByPeriod(filtered, granularity, seriesTopN), [filtered, granularity, seriesTopN]);
   const top = useMemo(() => topCrops(filtered, 10), [filtered]);
   const plotsAgg = useMemo(() => plotShare(filtered), [filtered]);
   const matrix = useMemo(() => monthlyMatrix(filtered), [filtered]);
@@ -281,6 +282,48 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                     stroke={colorFor(k)}
                     fill={colorFor(k)}
                     fillOpacity={0.7}
+                  />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </Card>
+
+      {/* Cumulative yield */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-medium">Cumulative yield</h3>
+            <p className="text-xs text-muted-foreground">Running total kilograms over time, stacked by crop</p>
+          </div>
+          {cumulative.data.length > 0 && (
+            <Badge variant="secondary" className="font-mono">
+              {(cumulative.data[cumulative.data.length - 1]._total as number).toFixed(1)} kg
+            </Badge>
+          )}
+        </div>
+        <div className="h-[320px]">
+          {cumulative.data.length === 0 ? <EmptyChart /> : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={cumulative.data} margin={{ top: 5, right: 12, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip
+                  cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.3 }}
+                  formatter={(v: any, name: any) => [`${(+v).toFixed(1)} kg`, name]}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {cumulative.cropKeys.map((k) => (
+                  <Area
+                    key={k}
+                    type="monotone"
+                    dataKey={k}
+                    stackId="cum"
+                    stroke={colorFor(k)}
+                    fill={colorFor(k)}
+                    fillOpacity={0.65}
                   />
                 ))}
               </AreaChart>
