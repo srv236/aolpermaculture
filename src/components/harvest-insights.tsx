@@ -199,7 +199,16 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
             options={cropOptions}
             value={cropIds}
             onChange={setCropIds}
+            groupByCategory
+            topN={(n) => {
+              const ranked = [...cropTotalsForRange.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, n)
+                .map(([k]) => k);
+              setCropIds(ranked);
+            }}
           />
+
 
           {filtersActive ? (
             <Button variant="ghost" size="sm" onClick={reset} className="ml-auto">
