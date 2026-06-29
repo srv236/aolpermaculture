@@ -272,3 +272,26 @@ export function perBucketStats(
   }
   return m;
 }
+
+// Cumulative series: running total of kg per bucket, stacked by top crops.
+export function cumulativeByPeriod(
+  rows: HarvestRow[],
+  g: Granularity,
+  topN = 6,
+): { data: Array<Record<string, number | string>>; cropKeys: string[] } {
+  const series = aggregateByPeriod(rows, g, topN);
+  const running: Record<string, number> = {};
+  for (const k of series.cropKeys) running[k] = 0;
+  const data = series.data.map((row) => {
+    const out: Record<string, number | string> = { _ts: row._ts, period: row.period };
+    let total = 0;
+    for (const k of series.cropKeys) {
+      running[k] += (row[k] as number) || 0;
+      out[k] = +running[k].toFixed(2);
+      total += running[k];
+    }
+    out._total = +total.toFixed(2);
+    return out;
+  });
+  return { data, cropKeys: series.cropKeys };
+}

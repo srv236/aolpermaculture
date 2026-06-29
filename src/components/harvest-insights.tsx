@@ -16,7 +16,7 @@ import {
 import { Check, ChevronDown, RotateCcw, Sprout, Leaf, MapPin, CalendarRange, Scale, BarChart3 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import {
-  applyFilters, aggregateByPeriod, topCrops, plotShare, monthlyMatrix,
+  applyFilters, aggregateByPeriod, cumulativeByPeriod, topCrops, plotShare, monthlyMatrix,
   summaryStats, colorFor, cropLabel, plotLabel, cropKey, cropCategory,
   perCropStats, perPlotStats, perBucketStats,
   type HarvestRow, type Filters, type Granularity,
@@ -96,6 +96,7 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   // When the user has picked specific crops, show each as its own area.
   const seriesTopN = cropIds.length > 0 ? Math.max(cropIds.length, 6) : 6;
   const series = useMemo(() => aggregateByPeriod(filtered, granularity, seriesTopN), [filtered, granularity, seriesTopN]);
+  const cumulative = useMemo(() => cumulativeByPeriod(filtered, granularity, seriesTopN), [filtered, granularity, seriesTopN]);
   const top = useMemo(() => topCrops(filtered, 10), [filtered]);
   const plotsAgg = useMemo(() => plotShare(filtered), [filtered]);
   const matrix = useMemo(() => monthlyMatrix(filtered), [filtered]);
