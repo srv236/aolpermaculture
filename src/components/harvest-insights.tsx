@@ -262,8 +262,14 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                 <XAxis dataKey="period" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: any) => `${Number(v).toFixed(1)} kg`}
+                  cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.3 }}
+                  content={(props: any) => (
+                    <TimeSeriesTooltip
+                      {...props}
+                      series={series.data}
+                      bucketStats={bucketStats}
+                    />
+                  )}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {series.cropKeys.map((k) => (
