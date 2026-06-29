@@ -100,6 +100,14 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   const plotsAgg = useMemo(() => plotShare(filtered), [filtered]);
   const matrix = useMemo(() => monthlyMatrix(filtered), [filtered]);
 
+  const bucketStats = useMemo(() => perBucketStats(filtered, granularity), [filtered, granularity]);
+  const cropStatsMap = useMemo(() => perCropStats(filtered), [filtered]);
+  const plotStatsMap = useMemo(() => perPlotStats(filtered), [filtered]);
+  const filteredTotalKg = useMemo(
+    () => filtered.reduce((s, r) => s + (r.quantity_harvested || 0), 0),
+    [filtered]
+  );
+
   // option lists from full rows so filters always show every choice
   const plotOptions = useMemo(() => {
     const m = new Map<string, string>();
