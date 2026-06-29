@@ -23,6 +23,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 
 export const Route = createFileRoute("/_authenticated/farms_/$farmId")({
@@ -213,13 +214,15 @@ function SowingTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; can
   }));
 
   const columns: ColumnDef<any>[] = [
-    { id: "planting_date", accessorKey: "planting_date", header: "Planted" },
+    { id: "planting_date", accessorKey: "planting_date", header: "Planted",
+      cell: ({ getValue }) => formatDate(getValue()) },
     { id: "plot_number", accessorKey: "plot_number", header: "Plot" },
     { id: "crop_label", accessorKey: "crop_label", header: "Crop" },
     { id: "quantity", header: "Qty", cell: ({ row }) => `${row.original.quantity_planted ?? "—"} ${row.original.quantity_unit || ""}` },
     { id: "status", accessorKey: "status", header: "Status",
       cell: ({ getValue }) => <Badge variant="secondary" className="capitalize">{String(getValue() ?? "")}</Badge> },
-    { id: "expected_first_harvest", accessorKey: "expected_first_harvest", header: "First harvest" },
+    { id: "expected_first_harvest", accessorKey: "expected_first_harvest", header: "First harvest",
+      cell: ({ getValue }) => formatDate(getValue()) },
     { id: "is_continuous_harvest", header: "Continuous",
       cell: ({ row }) => row.original.is_continuous_harvest ? "Yes" : "—" },
     ...(canEdit ? [{
@@ -278,7 +281,8 @@ function HarvestTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; ca
   }));
 
   const columns: ColumnDef<any>[] = [
-    { id: "harvest_date", accessorKey: "harvest_date", header: "Date" },
+    { id: "harvest_date", accessorKey: "harvest_date", header: "Date",
+      cell: ({ getValue }) => formatDate(getValue()) },
     { id: "plot_number", accessorKey: "plot_number", header: "Plot" },
     { id: "crop_label", accessorKey: "crop_label", header: "Crop" },
     { id: "quantity_harvested", accessorKey: "quantity_harvested", header: "Qty (kg)" },
@@ -338,8 +342,8 @@ function ResourcesTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; 
   const data = rows.map((r) => ({
     ...r,
     plot_number: r.plots?.plot_number ?? "—",
-    start_local: r.start_time ? new Date(r.start_time).toLocaleString() : "",
-    end_local: r.end_time ? new Date(r.end_time).toLocaleString() : "",
+    start_local: r.start_time ? formatDateTime(r.start_time) : "",
+    end_local: r.end_time ? formatDateTime(r.end_time) : "",
     qty_label: r.quantity != null ? `${r.quantity} ${r.unit || ""}`.trim() : "—",
   }));
 
