@@ -17,9 +17,12 @@ import { Check, ChevronDown, RotateCcw, Sprout, Leaf, MapPin, CalendarRange, Sca
 import { cn, formatDate } from "@/lib/utils";
 import {
   applyFilters, aggregateByPeriod, topCrops, plotShare, monthlyMatrix,
-  summaryStats, colorFor, cropLabel, plotLabel, cropKey,
+  summaryStats, colorFor, cropLabel, plotLabel, cropKey, cropCategory,
+  perCropStats, perPlotStats, perBucketStats,
   type HarvestRow, type Filters, type Granularity,
 } from "@/lib/harvest-analytics";
+import { TooltipCard, TooltipHeader, TooltipRow, Delta, fmtKg } from "@/components/insights-tooltip";
+import { Input } from "@/components/ui/input";
 
 
 type Preset = "30d" | "3m" | "ytd" | "12m" | "all";
