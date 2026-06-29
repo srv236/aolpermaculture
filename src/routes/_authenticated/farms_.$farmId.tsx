@@ -18,6 +18,7 @@ import { PlotFormDialog } from "@/components/plot-form-dialog";
 import { SowingFormDialog, HarvestFormDialog } from "@/components/record-dialogs";
 import { ResourceFormDialog } from "@/components/resource-dialog";
 import { DataTable } from "@/components/data-table";
+import { HarvestInsights } from "@/components/harvest-insights";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
