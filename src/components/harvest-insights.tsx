@@ -335,7 +335,14 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
       {/* Top crops + Plot share */}
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-5">
-          <h3 className="font-medium mb-1">Top crops</h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-medium">Top crops</h3>
+            {cropIds.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setCropIds([])}>
+                <RotateCcw className="size-3.5 mr-1" /> Back
+              </Button>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground mb-3">Click a bar to filter by that crop</p>
           <div className="h-[340px]">
             {top.length === 0 ? <EmptyChart /> : (
