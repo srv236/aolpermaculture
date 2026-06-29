@@ -11,6 +11,7 @@ export type HarvestRow = {
   estimated_remaining_yield?: number | null;
   plot_id?: string;
   crop_id?: string;
+  variety_id?: string;
   plots?: { plot_number?: string | null } | null;
   crops?: { crop_name?: string | null; variety_name?: string | null } | null;
 };
@@ -24,6 +25,13 @@ export type Filters = {
   cropIds: string[]; // empty = all
   granularity: Granularity;
 };
+
+// Harvest rows reference the crop variety via `variety_id` (legacy field name);
+// expose a single accessor so the rest of the analytics code is agnostic.
+export function cropKey(r: HarvestRow): string | undefined {
+  return r.crop_id ?? r.variety_id;
+}
+
 
 export function cropLabel(r: HarvestRow): string {
   const n = r.crops?.crop_name || "Unknown";
@@ -43,10 +51,14 @@ export function applyFilters(rows: HarvestRow[], f: Filters): HarvestRow[] {
     if (f.from && !f.to && d < f.from) return false;
     if (f.to && !f.from && d > f.to) return false;
     if (f.plotIds.length && (!r.plot_id || !f.plotIds.includes(r.plot_id))) return false;
-    if (f.cropIds.length && (!r.crop_id || !f.cropIds.includes(r.crop_id))) return false;
+    if (f.cropIds.length) {
+      const k = cropKey(r);
+      if (!k || !f.cropIds.includes(k)) return false;
+    }
     return true;
   });
 }
+
 
 function bucketStart(d: Date, g: Granularity): Date {
   if (g === "day") return startOfDay(d);
