@@ -54,20 +54,45 @@ function autoGran(from?: Date, to?: Date): Granularity {
   return "month";
 }
 
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
 export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   const [preset, setPreset] = useState<Preset>("all");
   const [granOverride, setGranOverride] = useState<Granularity | "auto">("auto");
   const [plotIds, setPlotIds] = useState<string[]>([]);
   const [cropIds, setCropIds] = useState<string[]>([]);
+  const [year, setYear] = useState<string>("all");       // "all" or "2025"
+  const [month, setMonth] = useState<string>("all");     // "all" or "1".."12"
 
-  const { from, to } = useMemo(() => rangeFromPreset(preset, rows), [preset, rows]);
+  // Years derived from data, descending
+  const years = useMemo(() => {
+    const s = new Set<number>();
+    for (const r of rows) if (r.harvest_date) s.add(parseISO(r.harvest_date).getFullYear());
+    return [...s].sort((a, b) => b - a);
+  }, [rows]);
+
+  const { from, to } = useMemo(() => {
+    if (year !== "all") {
+      const y = Number(year);
+      if (month !== "all") {
+        const m = Number(month) - 1;
+        const start = new Date(y, m, 1);
+        return { from: startOfMonth(start), to: endOfMonth(start) };
+      }
+      const start = new Date(y, 0, 1);
+      return { from: startOfYear(start), to: endOfYear(start) };
+    }
+    return rangeFromPreset(preset, rows);
+  }, [preset, rows, year, month]);
   const granularity: Granularity = granOverride === "auto" ? autoGran(from, to) : granOverride;
 
   const filters: Filters = { from, to, plotIds, cropIds, granularity };
   const filtered = useMemo(() => applyFilters(rows, filters), [rows, from, to, plotIds, cropIds]);
 
   const stats = useMemo(() => summaryStats(filtered), [filtered]);
-  const series = useMemo(() => aggregateByPeriod(filtered, granularity), [filtered, granularity]);
+  // When the user has picked specific crops, show each as its own area.
+  const seriesTopN = cropIds.length > 0 ? Math.max(cropIds.length, 6) : 6;
+  const series = useMemo(() => aggregateByPeriod(filtered, granularity, seriesTopN), [filtered, granularity, seriesTopN]);
   const top = useMemo(() => topCrops(filtered, 10), [filtered]);
   const plotsAgg = useMemo(() => plotShare(filtered), [filtered]);
   const matrix = useMemo(() => monthlyMatrix(filtered), [filtered]);
@@ -80,12 +105,20 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   }, [rows]);
   const cropOptions = useMemo(() => {
     const m = new Map<string, string>();
-    for (const r of rows) if (r.crop_id) m.set(r.crop_id, cropLabel(r));
+    for (const r of rows) {
+      const k = cropKey(r);
+      if (k) m.set(k, cropLabel(r));
+    }
     return [...m.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [rows]);
 
-  const reset = () => { setPreset("all"); setGranOverride("auto"); setPlotIds([]); setCropIds([]); };
-  const filtersActive = preset !== "all" || granOverride !== "auto" || plotIds.length || cropIds.length;
+  const reset = () => {
+    setPreset("all"); setGranOverride("auto"); setPlotIds([]); setCropIds([]);
+    setYear("all"); setMonth("all");
+  };
+  const filtersActive = preset !== "all" || granOverride !== "auto"
+    || plotIds.length || cropIds.length || year !== "all" || month !== "all";
+
 
   if (rows.length === 0) {
     return (
