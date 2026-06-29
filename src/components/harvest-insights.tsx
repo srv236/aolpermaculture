@@ -154,6 +154,23 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
             </SelectContent>
           </Select>
 
+          <Select value={year} onValueChange={(v) => { setYear(v); if (v === "all") setMonth("all"); }}>
+            <SelectTrigger className="w-[110px]"><SelectValue placeholder="Year" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All years</SelectItem>
+              {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={month} onValueChange={setMonth} disabled={year === "all"}>
+            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Month" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All months</SelectItem>
+              {MONTH_NAMES.map((n, i) => <SelectItem key={n} value={String(i + 1)}>{n}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+
           <MultiSelect
             icon={<MapPin className="size-3.5" />}
             label="Plots"
