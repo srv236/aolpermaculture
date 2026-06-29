@@ -189,26 +189,30 @@ export function summaryStats(rows: HarvestRow[]) {
   };
 }
 
-// Stable palette via crop-name hash → semantic-ish HSL anchored on earthy hues.
-const PALETTE = [
-  "hsl(95 40% 45%)",   // green
-  "hsl(30 70% 50%)",   // orange
-  "hsl(15 60% 50%)",   // terracotta
-  "hsl(50 70% 50%)",   // mustard
-  "hsl(150 35% 40%)",  // forest
-  "hsl(355 55% 50%)",  // brick
-  "hsl(200 40% 45%)",  // teal
-  "hsl(280 30% 50%)",  // plum
-  "hsl(75 45% 45%)",   // olive
-  "hsl(0 0% 55%)",     // grey for Other
-];
+// Distinct color per crop via golden-angle hue rotation seeded by the key hash.
+// Saturation/lightness rotated through earthy bands so colors stay on-brand.
+const SAT_BANDS = [55, 45, 65, 40, 60];
+const LIGHT_BANDS = [45, 52, 40, 58, 48];
+const GOLDEN_ANGLE = 137.508;
+
+function hashKey(key: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h;
+}
 
 export function colorFor(key: string): string {
-  if (key === "Other") return PALETTE[9];
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return PALETTE[h % (PALETTE.length - 1)];
+  if (!key || key === "Other") return "hsl(0 0% 55%)";
+  const h = hashKey(key);
+  const hue = (h * GOLDEN_ANGLE) % 360;
+  const sat = SAT_BANDS[h % SAT_BANDS.length];
+  const light = LIGHT_BANDS[(h >> 3) % LIGHT_BANDS.length];
+  return `hsl(${hue.toFixed(1)} ${sat}% ${light}%)`;
 }
+
 
 export function cropCategory(r: HarvestRow): string {
   return (r.crops?.crop_category || "other").toLowerCase();
