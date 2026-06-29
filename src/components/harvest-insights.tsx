@@ -3,7 +3,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
   BarChart, Bar, PieChart, Pie, Cell,
 } from "recharts";
-import { subMonths, startOfMonth, startOfYear, parseISO, format } from "date-fns";
+import { subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +17,10 @@ import { Check, ChevronDown, RotateCcw, Sprout, Leaf, MapPin, CalendarRange, Sca
 import { cn, formatDate } from "@/lib/utils";
 import {
   applyFilters, aggregateByPeriod, topCrops, plotShare, monthlyMatrix,
-  summaryStats, colorFor, cropLabel, plotLabel,
+  summaryStats, colorFor, cropLabel, plotLabel, cropKey,
   type HarvestRow, type Filters, type Granularity,
 } from "@/lib/harvest-analytics";
+
 
 type Preset = "30d" | "3m" | "ytd" | "12m" | "all";
 
