@@ -13,7 +13,7 @@ export type HarvestRow = {
   crop_id?: string;
   variety_id?: string;
   plots?: { plot_number?: string | null } | null;
-  crops?: { crop_name?: string | null; variety_name?: string | null } | null;
+  crops?: { crop_name?: string | null; variety_name?: string | null; category?: string | null } | null;
 };
 
 export type Granularity = "day" | "week" | "month";
