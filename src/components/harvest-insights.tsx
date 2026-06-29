@@ -107,13 +107,25 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
     return [...m.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [rows]);
   const cropOptions = useMemo(() => {
-    const m = new Map<string, string>();
+    const m = new Map<string, { id: string; label: string; category: string }>();
     for (const r of rows) {
       const k = cropKey(r);
-      if (k) m.set(k, cropLabel(r));
+      if (k) m.set(k, { id: k, label: cropLabel(r), category: cropCategory(r) });
     }
-    return [...m.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+    return [...m.values()].sort((a, b) => a.label.localeCompare(b.label));
   }, [rows]);
+
+  // Totals respecting date+plot filters but NOT current crop selection (so Top N can re-pick).
+  const cropTotalsForRange = useMemo(() => {
+    const base = applyFilters(rows, { ...filters, cropIds: [] });
+    const m = new Map<string, number>();
+    for (const r of base) {
+      const k = cropKey(r);
+      if (!k) continue;
+      m.set(k, (m.get(k) || 0) + (r.quantity_harvested || 0));
+    }
+    return m;
+  }, [rows, from, to, plotIds]);
 
   const reset = () => {
     setPreset("all"); setGranOverride("auto"); setPlotIds([]); setCropIds([]);
