@@ -395,20 +395,78 @@ function EmptyChart() {
   return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No data for the current filters</div>;
 }
 
+type MultiOption = { id: string; label: string; category?: string };
+
 function MultiSelect({
-  icon, label, options, value, onChange,
+  icon, label, options, value, onChange, groupByCategory, topN,
 }: {
   icon: React.ReactNode;
   label: string;
-  options: { id: string; label: string }[];
+  options: MultiOption[];
   value: string[];
   onChange: (v: string[]) => void;
+  groupByCategory?: boolean;
+  topN?: (n: number) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const toggle = (id: string) => {
     onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
   };
   const summary = value.length === 0 ? `All ${label.toLowerCase()}` : `${value.length} selected`;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) =>
+      o.label.toLowerCase().includes(q) || (o.category || "").toLowerCase().includes(q)
+    );
+  }, [options, query]);
+
+  const groups = useMemo(() => {
+    if (!groupByCategory) return null;
+    const m = new Map<string, MultiOption[]>();
+    for (const o of filtered) {
+      const c = o.category || "other";
+      if (!m.has(c)) m.set(c, []);
+      m.get(c)!.push(o);
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filtered, groupByCategory]);
+
+  const selectAllVisible = () => {
+    const ids = new Set(value);
+    for (const o of filtered) ids.add(o.id);
+    onChange([...ids]);
+  };
+  const selectGroup = (opts: MultiOption[]) => {
+    const ids = new Set(value);
+    for (const o of opts) ids.add(o.id);
+    onChange([...ids]);
+  };
+
+  const renderRow = (o: MultiOption) => {
+    const sel = value.includes(o.id);
+    return (
+      <button
+        key={o.id}
+        onClick={() => toggle(o.id)}
+        className={cn(
+          "w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-accent",
+          sel && "text-foreground",
+        )}
+      >
+        <span className={cn(
+          "size-4 rounded border flex items-center justify-center",
+          sel ? "bg-primary border-primary text-primary-foreground" : "border-input",
+        )}>
+          {sel && <Check className="size-3" />}
+        </span>
+        <span className="truncate">{o.label}</span>
+      </button>
+    );
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -419,39 +477,62 @@ function MultiSelect({
           <ChevronDown className="size-3.5 ml-1.5 opacity-60" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent className="w-80 p-0" align="start">
+        <div className="p-2 border-b space-y-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${label.toLowerCase()}…`}
+            className="h-8 text-sm"
+          />
+          <div className="flex items-center gap-1 flex-wrap">
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={selectAllVisible}>
+              Select all{query ? " (filtered)" : ""}
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onChange([])}>
+              Clear
+            </Button>
+            {topN && (
+              <>
+                <span className="mx-1 h-4 w-px bg-border" />
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => topN(5)}>Top 5</Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => topN(10)}>Top 10</Button>
+              </>
+            )}
+          </div>
+        </div>
         <div className="max-h-72 overflow-auto py-1">
-          {options.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-muted-foreground">No options</div>
-          ) : options.map((o) => {
-            const sel = value.includes(o.id);
-            return (
-              <button
-                key={o.id}
-                onClick={() => toggle(o.id)}
-                className={cn(
-                  "w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-accent",
-                  sel && "text-foreground",
-                )}
-              >
-                <span className={cn(
-                  "size-4 rounded border flex items-center justify-center",
-                  sel ? "bg-primary border-primary text-primary-foreground" : "border-input",
-                )}>
-                  {sel && <Check className="size-3" />}
-                </span>
-                <span className="truncate">{o.label}</span>
-              </button>
-            );
-          })}
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
+          ) : groups ? (
+            groups.map(([cat, opts]) => (
+              <div key={cat}>
+                <div className="px-3 pt-2 pb-1 flex items-center justify-between">
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {cat} · {opts.length}
+                  </span>
+                  <button
+                    onClick={() => selectGroup(opts)}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Select all
+                  </button>
+                </div>
+                {opts.map(renderRow)}
+              </div>
+            ))
+          ) : (
+            filtered.map(renderRow)
+          )}
         </div>
         {value.length > 0 && (
           <div className="border-t p-2 flex items-center justify-between">
             <Badge variant="secondary">{value.length} selected</Badge>
-            <Button variant="ghost" size="sm" onClick={() => onChange([])}>Clear</Button>
+            <Button variant="ghost" size="sm" onClick={() => onChange([])}>Clear all</Button>
           </div>
         )}
       </PopoverContent>
     </Popover>
   );
 }
+
