@@ -38,14 +38,20 @@ export function TooltipHeader({
 }
 
 export function TooltipRow({
-  swatch, name, value, pct,
-}: { swatch?: string; name: React.ReactNode; value?: React.ReactNode; pct?: number | null }) {
+  swatch, name, value, pct, deltaPct,
+}: { swatch?: string; name: React.ReactNode; value?: React.ReactNode; pct?: number | null; deltaPct?: number | null }) {
+  const dTone = deltaPct == null ? "text-muted-foreground"
+    : deltaPct > 0 ? "text-emerald-600" : deltaPct < 0 ? "text-rose-600" : "text-muted-foreground";
+  const dLabel = deltaPct == null ? "" : `${deltaPct >= 0 ? "+" : ""}${deltaPct.toFixed(0)}%`;
   return (
     <div className="flex items-center gap-2 py-0.5">
       {swatch && <span className="size-2.5 rounded-sm shrink-0" style={{ background: swatch }} />}
       <span className="truncate flex-1">{name}</span>
       {value != null && <span className="tabular-nums text-muted-foreground">{value}</span>}
       {pct != null && <span className="tabular-nums text-[11px] text-muted-foreground w-9 text-right">{pct.toFixed(0)}%</span>}
+      {deltaPct !== undefined && (
+        <span className={cn("tabular-nums text-[11px] w-12 text-right", dTone)}>{dLabel || "—"}</span>
+      )}
     </div>
   );
 }
