@@ -341,8 +341,9 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                     {plotsAgg.map((d) => <Cell key={d.plot} fill={colorFor(d.plot)} cursor="pointer" />)}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: any, n: any) => [`${Number(v).toFixed(1)} kg`, n]}
+                    content={(props: any) => (
+                      <PlotTooltip {...props} statsMap={plotStatsMap} />
+                    )}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
