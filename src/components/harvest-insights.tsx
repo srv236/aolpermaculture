@@ -553,3 +553,119 @@ function MultiSelect({
   );
 }
 
+function TimeSeriesTooltip({
+  active, payload, label, series, bucketStats,
+}: {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+  series: Array<Record<string, number | string>>;
+  bucketStats: Map<string, { kg: number; events: number; ts: number }>;
+}) {
+  if (!active || !payload || payload.length === 0 || !label) return null;
+  const idx = series.findIndex((d) => d.period === label);
+  const stats = bucketStats.get(label);
+  const total = stats?.kg ?? payload.reduce((s, p) => s + (Number(p.value) || 0), 0);
+  const events = stats?.events ?? 0;
+
+  // Δ vs previous bucket
+  let deltaKg = 0;
+  let deltaPct: number | null = null;
+  if (idx > 0) {
+    const prev = series[idx - 1];
+    const prevTotal = Object.entries(prev)
+      .filter(([k]) => k !== "_ts" && k !== "period")
+      .reduce((s, [, v]) => s + (Number(v) || 0), 0);
+    deltaKg = total - prevTotal;
+    deltaPct = prevTotal > 0 ? (deltaKg / prevTotal) * 100 : null;
+  }
+
+  // Cumulative to date over visible series
+  let cumulative = 0;
+  for (let i = 0; i <= idx; i++) {
+    for (const [k, v] of Object.entries(series[i])) {
+      if (k === "_ts" || k === "period") continue;
+      cumulative += Number(v) || 0;
+    }
+  }
+
+  const rows = [...payload]
+    .filter((p) => Number(p.value) > 0)
+    .sort((a, b) => Number(b.value) - Number(a.value));
+
+  return (
+    <TooltipCard>
+      <TooltipHeader
+        title={label}
+        subtitle={<>Total {fmtKg(total)} · {events} {events === 1 ? "event" : "events"}</>}
+      />
+      <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b">
+        {idx > 0 ? <Delta deltaKg={deltaKg} deltaPct={deltaPct} /> : <span className="text-[11px] text-muted-foreground">First period</span>}
+        <span className="text-[11px] text-muted-foreground">Σ {fmtKg(cumulative)}</span>
+      </div>
+      <div className="space-y-0">
+        {rows.map((p) => (
+          <TooltipRow
+            key={p.dataKey}
+            swatch={p.color}
+            name={p.name || p.dataKey}
+            value={fmtKg(Number(p.value))}
+            pct={total ? (Number(p.value) / total) * 100 : 0}
+          />
+        ))}
+      </div>
+    </TooltipCard>
+  );
+}
+
+function TopCropTooltip({
+  active, payload, statsMap,
+}: {
+  active?: boolean;
+  payload?: any[];
+  statsMap: Map<string, { kg: number; events: number; plotCount: number; pct: number }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const d = payload[0].payload as { crop: string; kg: number };
+  const s = statsMap.get(d.crop);
+  return (
+    <TooltipCard>
+      <TooltipHeader
+        title={d.crop}
+        subtitle={s ? `${s.pct.toFixed(1)}% of harvest in range` : undefined}
+      />
+      <TooltipRow name="Total" value={fmtKg(d.kg)} />
+      {s && <TooltipRow name="Harvest events" value={String(s.events)} />}
+      {s && <TooltipRow name="Plots" value={String(s.plotCount)} />}
+    </TooltipCard>
+  );
+}
+
+function PlotTooltip({
+  active, payload, statsMap,
+}: {
+  active?: boolean;
+  payload?: any[];
+  statsMap: Map<string, { kg: number; events: number; pct: number; topCrops: { name: string; kg: number; pct: number }[] }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const d = payload[0].payload as { plot: string; kg: number };
+  const s = statsMap.get(d.plot);
+  return (
+    <TooltipCard>
+      <TooltipHeader
+        title={d.plot}
+        subtitle={s ? `${fmtKg(s.kg)} · ${s.pct.toFixed(1)}% of farm · ${s.events} events` : fmtKg(d.kg)}
+      />
+      {s && s.topCrops.length > 0 && (
+        <>
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mt-1 mb-1">Top crops</div>
+          {s.topCrops.map((c) => (
+            <TooltipRow key={c.name} name={c.name} value={fmtKg(c.kg)} pct={c.pct} />
+          ))}
+        </>
+      )}
+    </TooltipCard>
+  );
+}
+
