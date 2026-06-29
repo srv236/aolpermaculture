@@ -302,8 +302,10 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="crop" type="category" tick={{ fontSize: 11 }} width={140} />
                   <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: any) => `${Number(v).toFixed(1)} kg`}
+                    cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+                    content={(props: any) => (
+                      <TopCropTooltip {...props} statsMap={cropStatsMap} />
+                    )}
                   />
                   <Bar dataKey="kg" radius={[0, 4, 4, 0]} onClick={(d: any) => {
                     const opt = cropOptions.find((o) => o.label === d.crop);
