@@ -342,8 +342,8 @@ function ResourcesTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; 
   const data = rows.map((r) => ({
     ...r,
     plot_number: r.plots?.plot_number ?? "—",
-    start_local: r.start_time ? new Date(r.start_time).toLocaleString() : "",
-    end_local: r.end_time ? new Date(r.end_time).toLocaleString() : "",
+    start_local: r.start_time ? formatDateTime(r.start_time) : "",
+    end_local: r.end_time ? formatDateTime(r.end_time) : "",
     qty_label: r.quantity != null ? `${r.quantity} ${r.unit || ""}`.trim() : "—",
   }));
 
