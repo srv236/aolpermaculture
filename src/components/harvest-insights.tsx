@@ -663,15 +663,21 @@ function TimeSeriesTooltip({
         <span className="text-[11px] text-muted-foreground">Σ {fmtKg(cumulative)}</span>
       </div>
       <div className="space-y-0">
-        {rows.map((p) => (
-          <TooltipRow
-            key={p.dataKey}
-            swatch={p.color}
-            name={p.name || p.dataKey}
-            value={fmtKg(Number(p.value))}
-            pct={total ? (Number(p.value) / total) * 100 : 0}
-          />
-        ))}
+        {rows.map((p) => {
+          const prevVal = idx > 0 ? Number(series[idx - 1]?.[p.dataKey]) || 0 : 0;
+          const curVal = Number(p.value) || 0;
+          const dPct = idx > 0 ? (prevVal > 0 ? ((curVal - prevVal) / prevVal) * 100 : (curVal > 0 ? 100 : 0)) : null;
+          return (
+            <TooltipRow
+              key={p.dataKey}
+              swatch={p.color}
+              name={p.name || p.dataKey}
+              value={fmtKg(curVal)}
+              pct={total ? (curVal / total) * 100 : 0}
+              deltaPct={dPct}
+            />
+          );
+        })}
       </div>
     </TooltipCard>
   );
