@@ -60,8 +60,10 @@ function WorkersPage() {
     { id: "role", accessorKey: "role", header: "Role" },
     { id: "phone", accessorKey: "phone", header: "Phone" },
     { id: "email", accessorKey: "email", header: "Email" },
-    { id: "start_date", accessorKey: "start_date", header: "Start" },
-    { id: "end_date", accessorKey: "end_date", header: "End" },
+    { id: "start_date", accessorKey: "start_date", header: "Start",
+      cell: ({ getValue }) => formatDate(getValue()) },
+    { id: "end_date", accessorKey: "end_date", header: "End",
+      cell: ({ getValue }) => formatDate(getValue()) },
     { id: "is_active", accessorKey: "is_active", header: "Active",
       cell: ({ getValue }) => getValue() ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge> },
     ...(canEdit ? [{
