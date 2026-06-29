@@ -166,7 +166,7 @@ export const listHarvest = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("harvest_records")
-      .select("*, plots!inner(id, plot_number, farm_id), crops:variety_id(crop_name, variety_name)")
+      .select("*, plots!inner(id, plot_number, farm_id), crops:variety_id(crop_name, variety_name, category)")
       .order("harvest_date", { ascending: false });
     if (data.farmId) q = q.eq("plots.farm_id", data.farmId);
     const { data: rows, error } = await q;
