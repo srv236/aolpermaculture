@@ -221,7 +221,8 @@ function SowingTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; can
     { id: "quantity", header: "Qty", cell: ({ row }) => `${row.original.quantity_planted ?? "—"} ${row.original.quantity_unit || ""}` },
     { id: "status", accessorKey: "status", header: "Status",
       cell: ({ getValue }) => <Badge variant="secondary" className="capitalize">{String(getValue() ?? "")}</Badge> },
-    { id: "expected_first_harvest", accessorKey: "expected_first_harvest", header: "First harvest" },
+    { id: "expected_first_harvest", accessorKey: "expected_first_harvest", header: "First harvest",
+      cell: ({ getValue }) => formatDate(getValue()) },
     { id: "is_continuous_harvest", header: "Continuous",
       cell: ({ row }) => row.original.is_continuous_harvest ? "Yes" : "—" },
     ...(canEdit ? [{
