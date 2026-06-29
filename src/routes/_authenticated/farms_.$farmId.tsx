@@ -18,6 +18,7 @@ import { PlotFormDialog } from "@/components/plot-form-dialog";
 import { SowingFormDialog, HarvestFormDialog } from "@/components/record-dialogs";
 import { ResourceFormDialog } from "@/components/resource-dialog";
 import { DataTable } from "@/components/data-table";
+import { HarvestInsights } from "@/components/harvest-insights";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -300,13 +301,22 @@ function HarvestTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; ca
   ];
 
   return (
-    <>
-      <DataTable
-        data={data} columns={columns} searchKeys={["plot_number", "crop_label"]}
-        searchPlaceholder="Search harvests..." csvFilename="harvest"
-        toolbar={canEdit && <Button size="sm" onClick={() => setAdding(true)}><Plus className="size-3.5 mr-1" /> Record harvest</Button>}
-        emptyMessage="No harvests recorded yet."
-      />
+    <Tabs defaultValue="insights">
+      <TabsList>
+        <TabsTrigger value="insights">Insights</TabsTrigger>
+        <TabsTrigger value="records">Records ({rows.length})</TabsTrigger>
+      </TabsList>
+      <TabsContent value="insights" className="mt-4">
+        <HarvestInsights rows={rows as any} />
+      </TabsContent>
+      <TabsContent value="records" className="mt-4">
+        <DataTable
+          data={data} columns={columns} searchKeys={["plot_number", "crop_label"]}
+          searchPlaceholder="Search harvests..." csvFilename="harvest"
+          toolbar={canEdit && <Button size="sm" onClick={() => setAdding(true)}><Plus className="size-3.5 mr-1" /> Record harvest</Button>}
+          emptyMessage="No harvests recorded yet."
+        />
+      </TabsContent>
       {(adding || editing) && (
         <HarvestFormDialog open onOpenChange={(v) => { if (!v) { setAdding(false); setEditing(null); } }}
                            initial={editing} farmId={farmId} />
@@ -322,7 +332,7 @@ function HarvestTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; ca
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </Tabs>
   );
 }
 

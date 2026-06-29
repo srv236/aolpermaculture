@@ -1,0 +1,382 @@
+import { useMemo, useState } from "react";
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+  BarChart, Bar, PieChart, Pie, Cell,
+} from "recharts";
+import { subMonths, startOfMonth, startOfYear, parseISO, format } from "date-fns";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronDown, RotateCcw, Sprout, Leaf, MapPin, CalendarRange, Scale, BarChart3 } from "lucide-react";
+import { cn, formatDate } from "@/lib/utils";
+import {
+  applyFilters, aggregateByPeriod, topCrops, plotShare, monthlyMatrix,
+  summaryStats, colorFor, cropLabel, plotLabel,
+  type HarvestRow, type Filters, type Granularity,
+} from "@/lib/harvest-analytics";
+
+type Preset = "30d" | "3m" | "ytd" | "12m" | "all";
+
+const PRESETS: { id: Preset; label: string }[] = [
+  { id: "30d", label: "Last 30 days" },
+  { id: "3m",  label: "Last 3 months" },
+  { id: "ytd", label: "This year" },
+  { id: "12m", label: "Last 12 months" },
+  { id: "all", label: "All time" },
+];
+
+function rangeFromPreset(p: Preset, rows: HarvestRow[]): { from?: Date; to?: Date } {
+  const now = new Date();
+  switch (p) {
+    case "30d": return { from: subMonths(now, 1), to: now };
+    case "3m":  return { from: subMonths(now, 3), to: now };
+    case "ytd": return { from: startOfYear(now), to: now };
+    case "12m": return { from: subMonths(now, 12), to: now };
+    case "all": {
+      const dates = rows.map((r) => r.harvest_date).filter(Boolean).sort();
+      return { from: dates.length ? parseISO(dates[0]) : undefined, to: now };
+    }
+  }
+}
+
+function autoGran(from?: Date, to?: Date): Granularity {
+  if (!from || !to) return "month";
+  const days = (to.getTime() - from.getTime()) / 86_400_000;
+  if (days <= 45) return "day";
+  if (days <= 180) return "week";
+  return "month";
+}
+
+export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
+  const [preset, setPreset] = useState<Preset>("all");
+  const [granOverride, setGranOverride] = useState<Granularity | "auto">("auto");
+  const [plotIds, setPlotIds] = useState<string[]>([]);
+  const [cropIds, setCropIds] = useState<string[]>([]);
+
+  const { from, to } = useMemo(() => rangeFromPreset(preset, rows), [preset, rows]);
+  const granularity: Granularity = granOverride === "auto" ? autoGran(from, to) : granOverride;
+
+  const filters: Filters = { from, to, plotIds, cropIds, granularity };
+  const filtered = useMemo(() => applyFilters(rows, filters), [rows, from, to, plotIds, cropIds]);
+
+  const stats = useMemo(() => summaryStats(filtered), [filtered]);
+  const series = useMemo(() => aggregateByPeriod(filtered, granularity), [filtered, granularity]);
+  const top = useMemo(() => topCrops(filtered, 10), [filtered]);
+  const plotsAgg = useMemo(() => plotShare(filtered), [filtered]);
+  const matrix = useMemo(() => monthlyMatrix(filtered), [filtered]);
+
+  // option lists from full rows so filters always show every choice
+  const plotOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of rows) if (r.plot_id) m.set(r.plot_id, plotLabel(r));
+    return [...m.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
+  const cropOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of rows) if (r.crop_id) m.set(r.crop_id, cropLabel(r));
+    return [...m.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
+
+  const reset = () => { setPreset("all"); setGranOverride("auto"); setPlotIds([]); setCropIds([]); };
+  const filtersActive = preset !== "all" || granOverride !== "auto" || plotIds.length || cropIds.length;
+
+  if (rows.length === 0) {
+    return (
+      <Card className="p-10 text-center text-muted-foreground">
+        <BarChart3 className="size-8 mx-auto mb-3 opacity-50" />
+        No harvest records yet. Add a few from the Records tab to see insights here.
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Filter bar */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarRange className="size-4 text-muted-foreground" />
+            <Select value={preset} onValueChange={(v) => setPreset(v as Preset)}>
+              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PRESETS.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Select value={granOverride} onValueChange={(v) => setGranOverride(v as any)}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto ({granularity})</SelectItem>
+              <SelectItem value="day">Daily</SelectItem>
+              <SelectItem value="week">Weekly</SelectItem>
+              <SelectItem value="month">Monthly</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <MultiSelect
+            icon={<MapPin className="size-3.5" />}
+            label="Plots"
+            options={plotOptions}
+            value={plotIds}
+            onChange={setPlotIds}
+          />
+          <MultiSelect
+            icon={<Sprout className="size-3.5" />}
+            label="Crops"
+            options={cropOptions}
+            value={cropIds}
+            onChange={setCropIds}
+          />
+
+          {filtersActive ? (
+            <Button variant="ghost" size="sm" onClick={reset} className="ml-auto">
+              <RotateCcw className="size-3.5 mr-1" /> Reset
+            </Button>
+          ) : null}
+        </div>
+        <div className="text-xs text-muted-foreground mt-3">
+          Showing {filtered.length} of {rows.length} records
+          {from && to ? <> · {formatDate(from.toISOString())} – {formatDate(to.toISOString())}</> : null}
+        </div>
+      </Card>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Stat icon={<Scale className="size-4" />} label="Total harvest" value={`${stats.totalKg.toFixed(1)} kg`} />
+        <Stat icon={<Sprout className="size-4" />} label="Crops" value={stats.cropCount} />
+        <Stat icon={<MapPin className="size-4" />} label="Plots" value={stats.plotCount} />
+        <Stat icon={<Leaf className="size-4" />} label="Top crop"
+              value={stats.topCrop?.name || "—"}
+              sub={stats.topCrop ? `${stats.topCrop.kg.toFixed(1)} kg · ${stats.topCrop.pct.toFixed(0)}%` : undefined} />
+        <Stat icon={<CalendarRange className="size-4" />} label="Best month"
+              value={stats.bestMonth?.label || "—"}
+              sub={stats.bestMonth ? `${stats.bestMonth.kg.toFixed(1)} kg` : undefined} />
+        <Stat icon={<BarChart3 className="size-4" />} label="Avg per event"
+              value={`${stats.avgPerEvent.toFixed(1)} kg`}
+              sub={`${stats.events} events`} />
+      </div>
+
+      {/* Time series */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-medium">Harvest over time</h3>
+            <p className="text-xs text-muted-foreground">Kilograms per {granularity}, stacked by crop</p>
+          </div>
+        </div>
+        <div className="h-[320px]">
+          {series.data.length === 0 ? <EmptyChart /> : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={series.data} margin={{ top: 5, right: 12, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  formatter={(v: any) => `${Number(v).toFixed(1)} kg`}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {series.cropKeys.map((k) => (
+                  <Area
+                    key={k}
+                    type="monotone"
+                    dataKey={k}
+                    stackId="1"
+                    stroke={colorFor(k)}
+                    fill={colorFor(k)}
+                    fillOpacity={0.7}
+                  />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </Card>
+
+      {/* Top crops + Plot share */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Card className="p-5">
+          <h3 className="font-medium mb-1">Top crops</h3>
+          <p className="text-xs text-muted-foreground mb-3">Click a bar to filter by that crop</p>
+          <div className="h-[340px]">
+            {top.length === 0 ? <EmptyChart /> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={top} layout="vertical" margin={{ top: 5, right: 24, left: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis dataKey="crop" type="category" tick={{ fontSize: 11 }} width={140} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: any) => `${Number(v).toFixed(1)} kg`}
+                  />
+                  <Bar dataKey="kg" radius={[0, 4, 4, 0]} onClick={(d: any) => {
+                    const opt = cropOptions.find((o) => o.label === d.crop);
+                    if (opt) setCropIds([opt.id]);
+                  }}>
+                    {top.map((d) => <Cell key={d.crop} fill={colorFor(d.crop)} cursor="pointer" />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <h3 className="font-medium mb-1">Plot contribution</h3>
+          <p className="text-xs text-muted-foreground mb-3">Click a slice to filter by that plot</p>
+          <div className="h-[340px]">
+            {plotsAgg.length === 0 ? <EmptyChart /> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={plotsAgg}
+                    dataKey="kg"
+                    nameKey="plot"
+                    innerRadius={60}
+                    outerRadius={110}
+                    paddingAngle={2}
+                    onClick={(d: any) => {
+                      const opt = plotOptions.find((o) => o.label === d.plot);
+                      if (opt) setPlotIds([opt.id]);
+                    }}
+                  >
+                    {plotsAgg.map((d) => <Cell key={d.plot} fill={colorFor(d.plot)} cursor="pointer" />)}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: any, n: any) => [`${Number(v).toFixed(1)} kg`, n]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {/* Heatmap */}
+      <Card className="p-5">
+        <h3 className="font-medium mb-1">Seasonality</h3>
+        <p className="text-xs text-muted-foreground mb-3">Kilograms harvested per crop per month — darker is more</p>
+        {matrix.crops.length === 0 || matrix.months.length === 0 ? <EmptyChart /> : (
+          <div className="overflow-x-auto">
+            <table className="text-xs border-separate border-spacing-1">
+              <thead>
+                <tr>
+                  <th className="text-left pr-3 font-normal text-muted-foreground sticky left-0 bg-card">Crop</th>
+                  {matrix.months.map((m) => (
+                    <th key={m.ts} className="font-normal text-muted-foreground px-1 whitespace-nowrap">{m.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.crops.map((c) => (
+                  <tr key={c}>
+                    <td className="pr-3 whitespace-nowrap sticky left-0 bg-card">{c}</td>
+                    {matrix.months.map((m) => {
+                      const v = matrix.cell.get(`${c}|${m.ts}`) || 0;
+                      const intensity = matrix.max ? v / matrix.max : 0;
+                      return (
+                        <td key={m.ts}
+                            title={v ? `${c} · ${format(new Date(m.ts), "MMM yyyy")} — ${v.toFixed(1)} kg` : "—"}
+                            className="rounded w-10 h-7 text-center align-middle"
+                            style={{
+                              backgroundColor: v ? `hsl(95 45% ${Math.max(20, 85 - intensity * 60)}%)` : "hsl(var(--muted))",
+                              color: intensity > 0.5 ? "white" : "hsl(var(--foreground))",
+                            }}>
+                          {v ? v.toFixed(0) : ""}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function Stat({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string }) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
+      <div className="mt-1.5 text-lg font-medium truncate" title={typeof value === "string" ? value : undefined}>{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
+    </Card>
+  );
+}
+
+function EmptyChart() {
+  return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No data for the current filters</div>;
+}
+
+function MultiSelect({
+  icon, label, options, value, onChange,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  options: { id: string; label: string }[];
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const toggle = (id: string) => {
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+  };
+  const summary = value.length === 0 ? `All ${label.toLowerCase()}` : `${value.length} selected`;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9">
+          {icon}
+          <span className="ml-1.5">{label}:</span>
+          <span className="ml-1 text-muted-foreground">{summary}</span>
+          <ChevronDown className="size-3.5 ml-1.5 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0" align="start">
+        <div className="max-h-72 overflow-auto py-1">
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">No options</div>
+          ) : options.map((o) => {
+            const sel = value.includes(o.id);
+            return (
+              <button
+                key={o.id}
+                onClick={() => toggle(o.id)}
+                className={cn(
+                  "w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-accent",
+                  sel && "text-foreground",
+                )}
+              >
+                <span className={cn(
+                  "size-4 rounded border flex items-center justify-center",
+                  sel ? "bg-primary border-primary text-primary-foreground" : "border-input",
+                )}>
+                  {sel && <Check className="size-3" />}
+                </span>
+                <span className="truncate">{o.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        {value.length > 0 && (
+          <div className="border-t p-2 flex items-center justify-between">
+            <Badge variant="secondary">{value.length} selected</Badge>
+            <Button variant="ghost" size="sm" onClick={() => onChange([])}>Clear</Button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
