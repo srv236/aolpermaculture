@@ -214,7 +214,8 @@ function SowingTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; can
   }));
 
   const columns: ColumnDef<any>[] = [
-    { id: "planting_date", accessorKey: "planting_date", header: "Planted" },
+    { id: "planting_date", accessorKey: "planting_date", header: "Planted",
+      cell: ({ getValue }) => formatDate(getValue()) },
     { id: "plot_number", accessorKey: "plot_number", header: "Plot" },
     { id: "crop_label", accessorKey: "crop_label", header: "Crop" },
     { id: "quantity", header: "Qty", cell: ({ row }) => `${row.original.quantity_planted ?? "—"} ${row.original.quantity_unit || ""}` },
