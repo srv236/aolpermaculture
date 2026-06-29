@@ -17,9 +17,12 @@ import { Check, ChevronDown, RotateCcw, Sprout, Leaf, MapPin, CalendarRange, Sca
 import { cn, formatDate } from "@/lib/utils";
 import {
   applyFilters, aggregateByPeriod, topCrops, plotShare, monthlyMatrix,
-  summaryStats, colorFor, cropLabel, plotLabel, cropKey,
+  summaryStats, colorFor, cropLabel, plotLabel, cropKey, cropCategory,
+  perCropStats, perPlotStats, perBucketStats,
   type HarvestRow, type Filters, type Granularity,
 } from "@/lib/harvest-analytics";
+import { TooltipCard, TooltipHeader, TooltipRow, Delta, fmtKg } from "@/components/insights-tooltip";
+import { Input } from "@/components/ui/input";
 
 
 type Preset = "30d" | "3m" | "ytd" | "12m" | "all";
@@ -97,6 +100,14 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   const plotsAgg = useMemo(() => plotShare(filtered), [filtered]);
   const matrix = useMemo(() => monthlyMatrix(filtered), [filtered]);
 
+  const bucketStats = useMemo(() => perBucketStats(filtered, granularity), [filtered, granularity]);
+  const cropStatsMap = useMemo(() => perCropStats(filtered), [filtered]);
+  const plotStatsMap = useMemo(() => perPlotStats(filtered), [filtered]);
+  const filteredTotalKg = useMemo(
+    () => filtered.reduce((s, r) => s + (r.quantity_harvested || 0), 0),
+    [filtered]
+  );
+
   // option lists from full rows so filters always show every choice
   const plotOptions = useMemo(() => {
     const m = new Map<string, string>();
@@ -104,13 +115,25 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
     return [...m.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [rows]);
   const cropOptions = useMemo(() => {
-    const m = new Map<string, string>();
+    const m = new Map<string, { id: string; label: string; category: string }>();
     for (const r of rows) {
       const k = cropKey(r);
-      if (k) m.set(k, cropLabel(r));
+      if (k) m.set(k, { id: k, label: cropLabel(r), category: cropCategory(r) });
     }
-    return [...m.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+    return [...m.values()].sort((a, b) => a.label.localeCompare(b.label));
   }, [rows]);
+
+  // Totals respecting date+plot filters but NOT current crop selection (so Top N can re-pick).
+  const cropTotalsForRange = useMemo(() => {
+    const base = applyFilters(rows, { ...filters, cropIds: [] });
+    const m = new Map<string, number>();
+    for (const r of base) {
+      const k = cropKey(r);
+      if (!k) continue;
+      m.set(k, (m.get(k) || 0) + (r.quantity_harvested || 0));
+    }
+    return m;
+  }, [rows, from, to, plotIds]);
 
   const reset = () => {
     setPreset("all"); setGranOverride("auto"); setPlotIds([]); setCropIds([]);
@@ -184,7 +207,16 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
             options={cropOptions}
             value={cropIds}
             onChange={setCropIds}
+            groupByCategory
+            topN={(n) => {
+              const ranked = [...cropTotalsForRange.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, n)
+                .map(([k]) => k);
+              setCropIds(ranked);
+            }}
           />
+
 
           {filtersActive ? (
             <Button variant="ghost" size="sm" onClick={reset} className="ml-auto">
@@ -230,8 +262,14 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                 <XAxis dataKey="period" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: any) => `${Number(v).toFixed(1)} kg`}
+                  cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.3 }}
+                  content={(props: any) => (
+                    <TimeSeriesTooltip
+                      {...props}
+                      series={series.data}
+                      bucketStats={bucketStats}
+                    />
+                  )}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {series.cropKeys.map((k) => (
@@ -264,8 +302,10 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="crop" type="category" tick={{ fontSize: 11 }} width={140} />
                   <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: any) => `${Number(v).toFixed(1)} kg`}
+                    cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+                    content={(props: any) => (
+                      <TopCropTooltip {...props} statsMap={cropStatsMap} />
+                    )}
                   />
                   <Bar dataKey="kg" radius={[0, 4, 4, 0]} onClick={(d: any) => {
                     const opt = cropOptions.find((o) => o.label === d.crop);
@@ -301,8 +341,9 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                     {plotsAgg.map((d) => <Cell key={d.plot} fill={colorFor(d.plot)} cursor="pointer" />)}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: any, n: any) => [`${Number(v).toFixed(1)} kg`, n]}
+                    content={(props: any) => (
+                      <PlotTooltip {...props} statsMap={plotStatsMap} />
+                    )}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
@@ -371,20 +412,78 @@ function EmptyChart() {
   return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No data for the current filters</div>;
 }
 
+type MultiOption = { id: string; label: string; category?: string };
+
 function MultiSelect({
-  icon, label, options, value, onChange,
+  icon, label, options, value, onChange, groupByCategory, topN,
 }: {
   icon: React.ReactNode;
   label: string;
-  options: { id: string; label: string }[];
+  options: MultiOption[];
   value: string[];
   onChange: (v: string[]) => void;
+  groupByCategory?: boolean;
+  topN?: (n: number) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const toggle = (id: string) => {
     onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
   };
   const summary = value.length === 0 ? `All ${label.toLowerCase()}` : `${value.length} selected`;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) =>
+      o.label.toLowerCase().includes(q) || (o.category || "").toLowerCase().includes(q)
+    );
+  }, [options, query]);
+
+  const groups = useMemo(() => {
+    if (!groupByCategory) return null;
+    const m = new Map<string, MultiOption[]>();
+    for (const o of filtered) {
+      const c = o.category || "other";
+      if (!m.has(c)) m.set(c, []);
+      m.get(c)!.push(o);
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filtered, groupByCategory]);
+
+  const selectAllVisible = () => {
+    const ids = new Set(value);
+    for (const o of filtered) ids.add(o.id);
+    onChange([...ids]);
+  };
+  const selectGroup = (opts: MultiOption[]) => {
+    const ids = new Set(value);
+    for (const o of opts) ids.add(o.id);
+    onChange([...ids]);
+  };
+
+  const renderRow = (o: MultiOption) => {
+    const sel = value.includes(o.id);
+    return (
+      <button
+        key={o.id}
+        onClick={() => toggle(o.id)}
+        className={cn(
+          "w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-accent",
+          sel && "text-foreground",
+        )}
+      >
+        <span className={cn(
+          "size-4 rounded border flex items-center justify-center",
+          sel ? "bg-primary border-primary text-primary-foreground" : "border-input",
+        )}>
+          {sel && <Check className="size-3" />}
+        </span>
+        <span className="truncate">{o.label}</span>
+      </button>
+    );
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -395,39 +494,178 @@ function MultiSelect({
           <ChevronDown className="size-3.5 ml-1.5 opacity-60" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent className="w-80 p-0" align="start">
+        <div className="p-2 border-b space-y-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${label.toLowerCase()}…`}
+            className="h-8 text-sm"
+          />
+          <div className="flex items-center gap-1 flex-wrap">
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={selectAllVisible}>
+              Select all{query ? " (filtered)" : ""}
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onChange([])}>
+              Clear
+            </Button>
+            {topN && (
+              <>
+                <span className="mx-1 h-4 w-px bg-border" />
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => topN(5)}>Top 5</Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => topN(10)}>Top 10</Button>
+              </>
+            )}
+          </div>
+        </div>
         <div className="max-h-72 overflow-auto py-1">
-          {options.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-muted-foreground">No options</div>
-          ) : options.map((o) => {
-            const sel = value.includes(o.id);
-            return (
-              <button
-                key={o.id}
-                onClick={() => toggle(o.id)}
-                className={cn(
-                  "w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-accent",
-                  sel && "text-foreground",
-                )}
-              >
-                <span className={cn(
-                  "size-4 rounded border flex items-center justify-center",
-                  sel ? "bg-primary border-primary text-primary-foreground" : "border-input",
-                )}>
-                  {sel && <Check className="size-3" />}
-                </span>
-                <span className="truncate">{o.label}</span>
-              </button>
-            );
-          })}
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
+          ) : groups ? (
+            groups.map(([cat, opts]) => (
+              <div key={cat}>
+                <div className="px-3 pt-2 pb-1 flex items-center justify-between">
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {cat} · {opts.length}
+                  </span>
+                  <button
+                    onClick={() => selectGroup(opts)}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Select all
+                  </button>
+                </div>
+                {opts.map(renderRow)}
+              </div>
+            ))
+          ) : (
+            filtered.map(renderRow)
+          )}
         </div>
         {value.length > 0 && (
           <div className="border-t p-2 flex items-center justify-between">
             <Badge variant="secondary">{value.length} selected</Badge>
-            <Button variant="ghost" size="sm" onClick={() => onChange([])}>Clear</Button>
+            <Button variant="ghost" size="sm" onClick={() => onChange([])}>Clear all</Button>
           </div>
         )}
       </PopoverContent>
     </Popover>
   );
 }
+
+function TimeSeriesTooltip({
+  active, payload, label, series, bucketStats,
+}: {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+  series: Array<Record<string, number | string>>;
+  bucketStats: Map<string, { kg: number; events: number; ts: number }>;
+}) {
+  if (!active || !payload || payload.length === 0 || !label) return null;
+  const idx = series.findIndex((d) => d.period === label);
+  const stats = bucketStats.get(label);
+  const total = stats?.kg ?? payload.reduce((s, p) => s + (Number(p.value) || 0), 0);
+  const events = stats?.events ?? 0;
+
+  // Δ vs previous bucket
+  let deltaKg = 0;
+  let deltaPct: number | null = null;
+  if (idx > 0) {
+    const prev = series[idx - 1];
+    const prevTotal = Object.entries(prev)
+      .filter(([k]) => k !== "_ts" && k !== "period")
+      .reduce((s, [, v]) => s + (Number(v) || 0), 0);
+    deltaKg = total - prevTotal;
+    deltaPct = prevTotal > 0 ? (deltaKg / prevTotal) * 100 : null;
+  }
+
+  // Cumulative to date over visible series
+  let cumulative = 0;
+  for (let i = 0; i <= idx; i++) {
+    for (const [k, v] of Object.entries(series[i])) {
+      if (k === "_ts" || k === "period") continue;
+      cumulative += Number(v) || 0;
+    }
+  }
+
+  const rows = [...payload]
+    .filter((p) => Number(p.value) > 0)
+    .sort((a, b) => Number(b.value) - Number(a.value));
+
+  return (
+    <TooltipCard>
+      <TooltipHeader
+        title={label}
+        subtitle={<>Total {fmtKg(total)} · {events} {events === 1 ? "event" : "events"}</>}
+      />
+      <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b">
+        {idx > 0 ? <Delta deltaKg={deltaKg} deltaPct={deltaPct} /> : <span className="text-[11px] text-muted-foreground">First period</span>}
+        <span className="text-[11px] text-muted-foreground">Σ {fmtKg(cumulative)}</span>
+      </div>
+      <div className="space-y-0">
+        {rows.map((p) => (
+          <TooltipRow
+            key={p.dataKey}
+            swatch={p.color}
+            name={p.name || p.dataKey}
+            value={fmtKg(Number(p.value))}
+            pct={total ? (Number(p.value) / total) * 100 : 0}
+          />
+        ))}
+      </div>
+    </TooltipCard>
+  );
+}
+
+function TopCropTooltip({
+  active, payload, statsMap,
+}: {
+  active?: boolean;
+  payload?: any[];
+  statsMap: Map<string, { kg: number; events: number; plotCount: number; pct: number }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const d = payload[0].payload as { crop: string; kg: number };
+  const s = statsMap.get(d.crop);
+  return (
+    <TooltipCard>
+      <TooltipHeader
+        title={d.crop}
+        subtitle={s ? `${s.pct.toFixed(1)}% of harvest in range` : undefined}
+      />
+      <TooltipRow name="Total" value={fmtKg(d.kg)} />
+      {s && <TooltipRow name="Harvest events" value={String(s.events)} />}
+      {s && <TooltipRow name="Plots" value={String(s.plotCount)} />}
+    </TooltipCard>
+  );
+}
+
+function PlotTooltip({
+  active, payload, statsMap,
+}: {
+  active?: boolean;
+  payload?: any[];
+  statsMap: Map<string, { kg: number; events: number; pct: number; topCrops: { name: string; kg: number; pct: number }[] }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const d = payload[0].payload as { plot: string; kg: number };
+  const s = statsMap.get(d.plot);
+  return (
+    <TooltipCard>
+      <TooltipHeader
+        title={d.plot}
+        subtitle={s ? `${fmtKg(s.kg)} · ${s.pct.toFixed(1)}% of farm · ${s.events} events` : fmtKg(d.kg)}
+      />
+      {s && s.topCrops.length > 0 && (
+        <>
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mt-1 mb-1">Top crops</div>
+          {s.topCrops.map((c) => (
+            <TooltipRow key={c.name} name={c.name} value={fmtKg(c.kg)} pct={c.pct} />
+          ))}
+        </>
+      )}
+    </TooltipCard>
+  );
+}
+

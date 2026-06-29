@@ -1,60 +1,59 @@
 ## Goal
+Make the Harvest Insights filter bar faster to use when there are many crops, and make every chart tooltip carry meaningful stats instead of just a kg number.
 
-Make the Harvest tab in a farm's page a rich, interactive analytics view in addition to the existing editable records table.
+## 1. Bulk crop control (Crops dropdown)
 
-## Layout (Harvest tab)
+Rebuild the Crops multi-select popover with:
 
-Restructure the current `HarvestTab` into two sub-tabs:
+- **Search box** at the top — filters the list as you type (matches crop name + category).
+- **Select all / Clear** buttons on the header row, scoped to whatever the search currently shows (so "select all" after typing "tomato" picks just the tomato varieties).
+- **Top N chips** — "Top 5" and "Top 10" — pick the highest-yield crops within the currently active date range (respects year/month/preset filters, ignores the current crop filter so it can re-pick).
+- **Group by category** — list is sectioned by category (greens, vegetable, fruit, herb, legume, grain, perennial, other), each section header has its own tick-all toggle and a count (e.g. "Greens · 6").
 
-1. **Insights** (new, default) — interactive dashboard
-2. **Records** — current DataTable (edit/delete/export) unchanged
+Plots dropdown gets the same search + select-all/clear treatment for consistency (cheap to add once the component exists).
 
-## Insights dashboard sections
+## 2. Richer tooltips (all charts)
 
-### a) Stat cards (top row)
-- Total harvest (kg) — in filtered range
-- Unique crops harvested
-- Active plots harvesting
-- Top crop (by kg) with %
-- Best month (by kg)
-- Avg kg/harvest event
-Each card shows a small delta vs previous period when comparable.
+One shared `InsightsTooltip` component used by the time series, top-crops bar, and plot donut.
 
-### b) Filter bar (drives every chart + stats)
-- Date range preset: This month / Last 3 months / This year / All time / Custom
-- Plot multi-select (defaults: all)
-- Crop multi-select (defaults: all)
-- Granularity: Day / Week / Month (auto by range)
-- "Reset filters" link
-Filter state lives in URL search params via `validateSearch` so views are shareable.
+**Time series (stacked area)** — hovering a bucket shows:
+- Header: bucket label (e.g. "Mar 2026"), period total kg, number of harvest events.
+- Δ vs previous bucket: `+12.4 kg (+8%)` in green / red.
+- Cumulative to date: running kg from the start of the visible range.
+- Per-crop rows: color swatch, crop name, kg, % share of the bucket — sorted high → low, only crops with a value in that bucket.
 
-### c) Charts (recharts — already in deps)
-- **Harvest over time** — stacked area chart, x = period, stacks = top 6 crops + "Other". Click a legend item to isolate; click a period bar to drill into that period's records below.
-- **Top crops** — horizontal bar chart, total kg per crop, sortable, click to filter the dashboard to that crop.
-- **Plot contribution** — donut chart, kg by plot; click slice to filter to that plot.
-- **Monthly heatmap** — calendar-style month x crop grid, intensity by kg, hover for exact value. Good for spotting seasonality.
-- **Continuous-harvest progress** — for crops with `is_continuous_harvest` sowings, a small-multiples line chart of cumulative pick # vs date, with remaining-yield as a faded line.
+**Top crops bar** — hovering a bar shows:
+- Crop name, total kg, % of all harvest in the filtered range.
+- Harvest event count, number of plots it came from.
+- Δ vs the previous equivalent period (e.g. previous month if granularity = month, else previous 30 days).
 
-### d) Drill-down panel
-Below the charts, a compact list of harvest events for the current filter selection — same columns as Records but read-only, with a "Open in Records" button that carries the filter over.
+**Plot donut** — hovering a slice shows:
+- Plot name, total kg, % of farm total.
+- Top 3 crops on that plot with kg and share.
+- Event count.
 
-## Technical details
+All tooltips share the same card styling (bg-card, soft border, small caption text) so they read as one system.
 
-- **Computation**: all aggregations are client-side over the already-loaded `harvest` rows joined with `plots`/`crops` (already returned by `listHarvest`). No new server function needed. Memoize per filter state.
-- **New files**:
-  - `src/routes/_authenticated/farms_.$farmId.tsx` — split `HarvestTab` into `HarvestTab` (wrapper with sub-tabs) + extract the existing table into `HarvestRecordsTable`.
-  - `src/components/harvest-insights.tsx` — dashboard, filter bar, all charts, stat cards, drill-down list.
-  - `src/lib/harvest-analytics.ts` — pure functions: `aggregateByPeriod`, `topCrops`, `plotShare`, `monthlyMatrix`, `summaryStats`, `pickProgress`.
-- **Charts**: use existing `recharts` via the `Chart*` wrappers in `src/components/ui/chart.tsx` for consistent theming.
-- **Filters**: `validateSearch` adds `from`, `to`, `plots` (csv), `crops` (csv), `gran`. `useNavigate` updates them; default values omitted from URL.
-- **Date formatting**: reuse `formatDate` (DD-MM-YYYY).
-- **Styling**: stays within the existing earthy/field-notebook tokens; no new colors hardcoded. Crop colors derived from a stable palette of CSS tokens cycling per crop name hash.
-- **Export**: keep existing CSV/XLSX/Drive/Share on the Records sub-tab. Add a "Download PNG" on each chart via `recharts` ref → `toDataURL` for shareable charts.
-- **Empty states**: when filters yield 0 rows, show a friendly message + "Clear filters" button.
-- **Performance**: 700+ rows expected per farm; all client-side. `useMemo` keyed on filter state + rows length.
+## 3. Supporting data work in `src/lib/harvest-analytics.ts`
 
-## Out of scope (this change)
+Add pure helpers so the component stays thin:
+- `topCropsInRange(rows, n)` → ordered crop keys for the Top N chips.
+- `cropsByCategory(rows)` → `{ category: CropOption[] }` for the grouped dropdown.
+- `bucketBreakdown(rows, bucketKey)` → `{ total, eventCount, perCrop: [{ key, name, kg, pct }] }` for the time-series tooltip.
+- `bucketDelta(series, index)` → `{ deltaKg, deltaPct }`.
+- `cumulativeTo(series, index)` → running kg.
+- `cropStats(rows, cropKey, range)` → totals, event count, plot count, prev-period delta.
+- `plotBreakdown(rows, plotId)` → totals, event count, top crops.
 
-- No new DB tables, server functions, or migrations.
-- No changes to Sowing/Resources/Plots tabs.
-- No multi-farm comparison (can follow in a later turn if wanted).
+## 4. Files touched
+
+- `src/components/harvest-insights.tsx` — rebuild Crops/Plots popovers, wire new tooltip into the three charts.
+- `src/components/insights-tooltip.tsx` *(new)* — shared tooltip card.
+- `src/lib/harvest-analytics.ts` — add helpers listed above.
+
+No backend, schema, or routing changes. Other pages unaffected.
+
+## Out of scope
+- Saving crop selections as presets.
+- Exporting the tooltip breakdown.
+- Changing the chart types or colors.

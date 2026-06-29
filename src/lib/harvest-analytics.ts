@@ -13,7 +13,7 @@ export type HarvestRow = {
   crop_id?: string;
   variety_id?: string;
   plots?: { plot_number?: string | null } | null;
-  crops?: { crop_name?: string | null; variety_name?: string | null } | null;
+  crops?: { crop_name?: string | null; variety_name?: string | null; category?: string | null } | null;
 };
 
 export type Granularity = "day" | "week" | "month";
@@ -208,4 +208,67 @@ export function colorFor(key: string): string {
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return PALETTE[h % (PALETTE.length - 1)];
+}
+
+export function cropCategory(r: HarvestRow): string {
+  return (r.crops?.category || "other").toLowerCase();
+}
+
+// Per-crop stats over a row set (for top-crops bar tooltip).
+export function perCropStats(rows: HarvestRow[]) {
+  const total = rows.reduce((s, r) => s + (r.quantity_harvested || 0), 0);
+  const m = new Map<string, { kg: number; events: number; plots: Set<string> }>();
+  for (const r of rows) {
+    const k = cropLabel(r);
+    let e = m.get(k);
+    if (!e) { e = { kg: 0, events: 0, plots: new Set() }; m.set(k, e); }
+    e.kg += r.quantity_harvested || 0;
+    e.events += 1;
+    if (r.plot_id) e.plots.add(r.plot_id);
+  }
+  const out = new Map<string, { kg: number; events: number; plotCount: number; pct: number }>();
+  for (const [k, v] of m) out.set(k, { kg: v.kg, events: v.events, plotCount: v.plots.size, pct: total ? (v.kg / total) * 100 : 0 });
+  return out;
+}
+
+// Per-plot stats with top crops (for donut tooltip).
+export function perPlotStats(rows: HarvestRow[]) {
+  const total = rows.reduce((s, r) => s + (r.quantity_harvested || 0), 0);
+  const m = new Map<string, { kg: number; events: number; crops: Map<string, number> }>();
+  for (const r of rows) {
+    const k = plotLabel(r);
+    let e = m.get(k);
+    if (!e) { e = { kg: 0, events: 0, crops: new Map() }; m.set(k, e); }
+    e.kg += r.quantity_harvested || 0;
+    e.events += 1;
+    const ck = cropLabel(r);
+    e.crops.set(ck, (e.crops.get(ck) || 0) + (r.quantity_harvested || 0));
+  }
+  const out = new Map<string, { kg: number; events: number; pct: number; topCrops: { name: string; kg: number; pct: number }[] }>();
+  for (const [k, v] of m) {
+    const topCropsArr = [...v.crops.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, kg]) => ({ name, kg, pct: v.kg ? (kg / v.kg) * 100 : 0 }));
+    out.set(k, { kg: v.kg, events: v.events, pct: total ? (v.kg / total) * 100 : 0, topCrops: topCropsArr });
+  }
+  return out;
+}
+
+// Per-bucket stats keyed by period label (matches series.data items).
+export function perBucketStats(
+  rows: HarvestRow[],
+  g: Granularity,
+): Map<string, { kg: number; events: number; ts: number }> {
+  const m = new Map<string, { kg: number; events: number; ts: number }>();
+  for (const r of rows) {
+    if (!r.harvest_date) continue;
+    const d = bucketStart(parseISO(r.harvest_date), g);
+    const label = bucketLabel(d, g);
+    let e = m.get(label);
+    if (!e) { e = { kg: 0, events: 0, ts: d.getTime() }; m.set(label, e); }
+    e.kg += r.quantity_harvested || 0;
+    e.events += 1;
+  }
+  return m;
 }
