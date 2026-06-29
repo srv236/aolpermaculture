@@ -281,7 +281,8 @@ function HarvestTab({ farmId, rows, canEdit }: { farmId: string; rows: any[]; ca
   }));
 
   const columns: ColumnDef<any>[] = [
-    { id: "harvest_date", accessorKey: "harvest_date", header: "Date" },
+    { id: "harvest_date", accessorKey: "harvest_date", header: "Date",
+      cell: ({ getValue }) => formatDate(getValue()) },
     { id: "plot_number", accessorKey: "plot_number", header: "Plot" },
     { id: "crop_label", accessorKey: "crop_label", header: "Crop" },
     { id: "quantity_harvested", accessorKey: "quantity_harvested", header: "Qty (kg)" },
