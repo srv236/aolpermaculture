@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { FontSizeToggle } from "@/components/font-size-toggle";
 
 export function useMe() {
   const fn = useServerFn(getMe);
@@ -56,7 +57,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <NavItem to="/admin/users" icon={<Users className="size-4" />}>Users</NavItem>
           )}
         </nav>
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border space-y-1">
+          <FontSizeToggle />
+
           <DropdownMenu>
             <DropdownMenuTrigger className="w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-sidebar-accent transition">
               <Avatar className="size-8">
