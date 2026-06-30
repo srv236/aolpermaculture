@@ -122,7 +122,7 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
       const { id, created_at, updated_at, ...rest } = f;
       const values = { ...rest };
       // empty strings → null for optional fields
-      for (const k of ["worker_code","role","phone","email","start_date","end_date","notes"]) {
+      for (const k of ["worker_code","role","phone","email","start_date","end_date","notes","work_summary"]) {
         if (values[k] === "") values[k] = null;
       }
       return upsert({ data: { id, values } });
