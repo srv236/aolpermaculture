@@ -113,7 +113,7 @@ function WorkersPage() {
 function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenChange: (v: boolean) => void; initial?: any }) {
   const [f, setF] = useState(() => initial || {
     worker_code: "", full_name: "", worker_type: "short_term_sevak",
-    role: "", phone: "", email: "", start_date: "", end_date: "", notes: "", is_active: true,
+    role: "", phone: "", email: "", start_date: "", end_date: "", notes: "", work_summary: "", is_active: true,
   });
   const upsert = useServerFn(upsertWorker);
   const qc = useQueryClient();
@@ -122,7 +122,7 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
       const { id, created_at, updated_at, ...rest } = f;
       const values = { ...rest };
       // empty strings → null for optional fields
-      for (const k of ["worker_code","role","phone","email","start_date","end_date","notes"]) {
+      for (const k of ["worker_code","role","phone","email","start_date","end_date","notes","work_summary"]) {
         if (values[k] === "") values[k] = null;
       }
       return upsert({ data: { id, values } });
@@ -158,6 +158,16 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
           <div><Label>Start date</Label><Input type="date" value={f.start_date || ""} onChange={(e) => set("start_date", e.target.value)} /></div>
           <div><Label>End date</Label><Input type="date" value={f.end_date || ""} onChange={(e) => set("end_date", e.target.value)} /></div>
           <div className="md:col-span-2"><Label>Notes</Label><Textarea rows={3} value={f.notes || ""} onChange={(e) => set("notes", e.target.value)} /></div>
+          <div className="md:col-span-2">
+            <Label>Work done (final report)</Label>
+            <Textarea
+              rows={5}
+              value={f.work_summary || ""}
+              onChange={(e) => set("work_summary", e.target.value)}
+              placeholder="Summary of the work this sevak did during their time at the farm — projects, contributions, skills shown, etc."
+            />
+            <p className="text-xs text-muted-foreground mt-1">Filled by us at the end of the sevak's stay as a record of their contribution.</p>
+          </div>
           <div className="md:col-span-2 flex items-center justify-between">
             <Label>Active</Label>
             <Switch checked={!!f.is_active} onCheckedChange={(v) => set("is_active", v)} />
