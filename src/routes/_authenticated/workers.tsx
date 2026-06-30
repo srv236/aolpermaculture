@@ -113,7 +113,7 @@ function WorkersPage() {
 function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenChange: (v: boolean) => void; initial?: any }) {
   const [f, setF] = useState(() => initial || {
     worker_code: "", full_name: "", worker_type: "short_term_sevak",
-    role: "", phone: "", email: "", start_date: "", end_date: "", notes: "", is_active: true,
+    role: "", phone: "", email: "", start_date: "", end_date: "", notes: "", work_summary: "", is_active: true,
   });
   const upsert = useServerFn(upsertWorker);
   const qc = useQueryClient();
