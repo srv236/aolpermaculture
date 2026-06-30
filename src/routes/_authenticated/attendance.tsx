@@ -111,6 +111,7 @@ function AttendancePage() {
           <TabsList>
             <TabsTrigger value="daily">Daily</TabsTrigger>
             <TabsTrigger value="monthly">Monthly grid</TabsTrigger>
+            <TabsTrigger value="worklog">Work log</TabsTrigger>
             <TabsTrigger value="visitors">Visitors</TabsTrigger>
           </TabsList>
 
@@ -134,6 +135,14 @@ function AttendancePage() {
               setMonth={setMonth}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
+              canEdit={!!canEdit}
+            />
+          </TabsContent>
+
+          <TabsContent value="worklog" className="mt-6">
+            <WorkLogPanel
+              farmId={farmId}
+              workers={workers.data ?? []}
               canEdit={!!canEdit}
             />
           </TabsContent>
