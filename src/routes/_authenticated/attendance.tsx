@@ -14,6 +14,7 @@ import {
   upsertVisitor,
   deleteVisitor,
 } from "@/lib/attendance.functions";
+import { listWorkNotes, upsertWorkNote } from "@/lib/work-notes.functions";
 import { AppShell, useMe } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
