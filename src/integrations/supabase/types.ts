@@ -609,6 +609,7 @@ export type Database = {
           role: string | null
           start_date: string | null
           updated_at: string
+          work_summary: string | null
           worker_code: string | null
           worker_type: Database["public"]["Enums"]["worker_type"]
         }
@@ -624,6 +625,7 @@ export type Database = {
           role?: string | null
           start_date?: string | null
           updated_at?: string
+          work_summary?: string | null
           worker_code?: string | null
           worker_type: Database["public"]["Enums"]["worker_type"]
         }
@@ -639,6 +641,7 @@ export type Database = {
           role?: string | null
           start_date?: string | null
           updated_at?: string
+          work_summary?: string | null
           worker_code?: string | null
           worker_type?: Database["public"]["Enums"]["worker_type"]
         }
