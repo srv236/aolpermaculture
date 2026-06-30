@@ -442,6 +442,54 @@ export type Database = {
           },
         ]
       }
+      sevak_work_notes: {
+        Row: {
+          created_at: string
+          farm_id: string
+          id: string
+          notes: string | null
+          period_start: string
+          period_type: Database["public"]["Enums"]["work_note_period"]
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          farm_id: string
+          id?: string
+          notes?: string | null
+          period_start: string
+          period_type: Database["public"]["Enums"]["work_note_period"]
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          farm_id?: string
+          id?: string
+          notes?: string | null
+          period_start?: string
+          period_type?: Database["public"]["Enums"]["work_note_period"]
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sevak_work_notes_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sevak_work_notes_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sowing_records: {
         Row: {
           area_utilized_percent: number | null
@@ -621,6 +669,7 @@ export type Database = {
         | "previous_sevak"
         | "students"
         | "other"
+      work_note_period: "weekly" | "monthly"
       worker_type:
         | "short_term_sevak"
         | "long_term_sevak"
@@ -772,6 +821,7 @@ export const Constants = {
         "students",
         "other",
       ],
+      work_note_period: ["weekly", "monthly"],
       worker_type: [
         "short_term_sevak",
         "long_term_sevak",

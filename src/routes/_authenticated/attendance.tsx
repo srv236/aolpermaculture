@@ -14,6 +14,7 @@ import {
   upsertVisitor,
   deleteVisitor,
 } from "@/lib/attendance.functions";
+import { listWorkNotes, upsertWorkNote } from "@/lib/work-notes.functions";
 import { AppShell, useMe } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -110,6 +111,7 @@ function AttendancePage() {
           <TabsList>
             <TabsTrigger value="daily">Daily</TabsTrigger>
             <TabsTrigger value="monthly">Monthly grid</TabsTrigger>
+            <TabsTrigger value="worklog">Work log</TabsTrigger>
             <TabsTrigger value="visitors">Visitors</TabsTrigger>
           </TabsList>
 
@@ -133,6 +135,14 @@ function AttendancePage() {
               setMonth={setMonth}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
+              canEdit={!!canEdit}
+            />
+          </TabsContent>
+
+          <TabsContent value="worklog" className="mt-6">
+            <WorkLogPanel
+              farmId={farmId}
+              workers={workers.data ?? []}
               canEdit={!!canEdit}
             />
           </TabsContent>
@@ -1008,5 +1018,223 @@ function VisitorDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ---------- WORK LOG (weekly / monthly notes per sevak) ---------- */
+
+function isoDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function mondayOf(dateStr: string) {
+  const d = new Date(dateStr + "T00:00:00");
+  const dow = d.getDay(); // 0 Sun .. 6 Sat
+  const delta = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + delta);
+  return isoDate(d);
+}
+function addDays(dateStr: string, n: number) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return isoDate(d);
+}
+function prettyRange(period: "weekly" | "monthly", start: string) {
+  if (period === "monthly") {
+    const d = new Date(start + "T00:00:00");
+    return d.toLocaleDateString("default", { month: "long", year: "numeric" });
+  }
+  const end = addDays(start, 6);
+  const s = new Date(start + "T00:00:00");
+  const e = new Date(end + "T00:00:00");
+  const sStr = s.toLocaleDateString("default", { day: "numeric", month: "short" });
+  const eStr = e.toLocaleDateString("default", { day: "numeric", month: "short", year: "numeric" });
+  return `${sStr} – ${eStr}`;
+}
+
+function WorkLogPanel({
+  farmId, workers, canEdit,
+}: { farmId?: string; workers: any[]; canEdit: boolean }) {
+  const today = new Date();
+  const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
+  const [weekStart, setWeekStart] = useState<string>(mondayOf(isoDate(today)));
+  const [monthStart, setMonthStart] = useState<string>(
+    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`,
+  );
+  const periodStart = period === "weekly" ? weekStart : monthStart;
+  const periodEnd = period === "weekly"
+    ? addDays(weekStart, 6)
+    : isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+
+  // For monthly end-of-month calc using the selected month:
+  const ms = new Date(monthStart + "T00:00:00");
+  const realMonthEnd = isoDate(new Date(ms.getFullYear(), ms.getMonth() + 1, 0));
+  const rangeEnd = period === "weekly" ? periodEnd : realMonthEnd;
+
+  const activeWorkers = useMemo(() => {
+    return workers
+      .filter((w: any) => {
+        if (w.start_date && w.start_date > rangeEnd) return false;
+        if (w.end_date && w.end_date < periodStart) return false;
+        return true;
+      })
+      .sort((a: any, b: any) => a.full_name.localeCompare(b.full_name));
+  }, [workers, periodStart, rangeEnd]);
+
+  const listFn = useServerFn(listWorkNotes);
+  const notesQ = useQuery({
+    queryKey: ["work-notes", farmId, period, periodStart],
+    queryFn: () => listFn({ data: { farmId: farmId!, period_type: period, period_start: periodStart } }),
+    enabled: !!farmId,
+  });
+  const lookup = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const r of notesQ.data ?? []) m.set(r.worker_id, r);
+    return m;
+  }, [notesQ.data]);
+
+  const qc = useQueryClient();
+  const saveFn = useServerFn(upsertWorkNote);
+  const saveMut = useMutation({
+    mutationFn: (v: { worker_id: string; notes: string }) =>
+      saveFn({ data: {
+        worker_id: v.worker_id, farm_id: farmId!,
+        period_type: period, period_start: periodStart,
+        notes: v.notes,
+      } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["work-notes", farmId, period, periodStart] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function shiftPeriod(delta: number) {
+    if (period === "weekly") setWeekStart(addDays(weekStart, delta * 7));
+    else {
+      const d = new Date(monthStart + "T00:00:00");
+      d.setMonth(d.getMonth() + delta);
+      setMonthStart(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`);
+    }
+  }
+  function jumpToToday() {
+    if (period === "weekly") setWeekStart(mondayOf(isoDate(new Date())));
+    else {
+      const n = new Date();
+      setMonthStart(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-01`);
+    }
+  }
+
+  function exportCsv() {
+    const rows = activeWorkers.map((w) => ({
+      sevak: w.full_name,
+      sevak_id: w.worker_code ?? "",
+      role: w.role ?? "",
+      period: period,
+      period_start: periodStart,
+      notes: lookup.get(w.id)?.notes ?? "",
+    }));
+    const csv = Papa.unparse(rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `work-log-${period}-${periodStart}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="flex flex-col gap-1">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Period</Label>
+            <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end gap-1">
+            <Button variant="outline" size="icon" onClick={() => shiftPeriod(-1)}><ChevronLeft className="size-4" /></Button>
+            {period === "weekly" ? (
+              <div className="flex flex-col gap-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Week starting (Mon)</Label>
+                <Input
+                  type="date"
+                  value={weekStart}
+                  onChange={(e) => setWeekStart(mondayOf(e.target.value))}
+                  className="w-[170px]"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Month</Label>
+                <Input
+                  type="month"
+                  value={monthStart.slice(0, 7)}
+                  onChange={(e) => setMonthStart(`${e.target.value}-01`)}
+                  className="w-[170px]"
+                />
+              </div>
+            )}
+            <Button variant="outline" size="icon" onClick={() => shiftPeriod(1)}><ChevronRight className="size-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={jumpToToday}>Today</Button>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={exportCsv}>
+          <Download className="size-3.5 mr-1.5" /> Export CSV
+        </Button>
+      </div>
+
+      <div className="text-sm text-muted-foreground italic mb-4">
+        {prettyRange(period, periodStart)} · {activeWorkers.length} sevak{activeWorkers.length === 1 ? "" : "s"} active
+      </div>
+
+      <div className="border rounded-xl overflow-hidden bg-card shadow-sm divide-y">
+        {activeWorkers.length === 0 && (
+          <div className="text-center text-muted-foreground italic py-12">
+            No sevaks active in this period.
+          </div>
+        )}
+        {activeWorkers.map((w) => (
+          <WorkNoteRow
+            key={w.id}
+            worker={w}
+            current={lookup.get(w.id)?.notes ?? ""}
+            canEdit={canEdit}
+            onSave={(notes) => saveMut.mutate({ worker_id: w.id, notes })}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WorkNoteRow({
+  worker, current, canEdit, onSave,
+}: { worker: any; current: string; canEdit: boolean; onSave: (notes: string) => void }) {
+  const [val, setVal] = useState(current);
+  useEffect(() => { setVal(current); }, [current]);
+  return (
+    <div className="px-4 py-3 grid md:grid-cols-[220px_1fr] gap-3 items-start">
+      <div>
+        <div className="font-medium">{worker.full_name}</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
+          {worker.role || worker.worker_type?.replace(/_/g, " ")}
+        </div>
+      </div>
+      <Textarea
+        rows={3}
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={() => { if ((current ?? "") !== val) onSave(val); }}
+        placeholder="Work done this period, achievements, areas of focus, things to note…"
+        disabled={!canEdit}
+        className="text-sm"
+      />
+    </div>
   );
 }
