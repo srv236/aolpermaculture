@@ -596,6 +596,30 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_types: {
+        Row: {
+          created_at: string
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       workers: {
         Row: {
           created_at: string
@@ -611,7 +635,7 @@ export type Database = {
           updated_at: string
           work_summary: string | null
           worker_code: string | null
-          worker_type: Database["public"]["Enums"]["worker_type"]
+          worker_type: string
         }
         Insert: {
           created_at?: string
@@ -627,7 +651,7 @@ export type Database = {
           updated_at?: string
           work_summary?: string | null
           worker_code?: string | null
-          worker_type: Database["public"]["Enums"]["worker_type"]
+          worker_type: string
         }
         Update: {
           created_at?: string
@@ -643,9 +667,17 @@ export type Database = {
           updated_at?: string
           work_summary?: string | null
           worker_code?: string | null
-          worker_type?: Database["public"]["Enums"]["worker_type"]
+          worker_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workers_worker_type_fkey"
+            columns: ["worker_type"]
+            isOneToOne: false
+            referencedRelation: "worker_types"
+            referencedColumns: ["value"]
+          },
+        ]
       }
     }
     Views: {
@@ -673,11 +705,6 @@ export type Database = {
         | "students"
         | "other"
       work_note_period: "weekly" | "monthly"
-      worker_type:
-        | "short_term_sevak"
-        | "long_term_sevak"
-        | "labourer"
-        | "permanent_staff"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -825,12 +852,6 @@ export const Constants = {
         "other",
       ],
       work_note_period: ["weekly", "monthly"],
-      worker_type: [
-        "short_term_sevak",
-        "long_term_sevak",
-        "labourer",
-        "permanent_staff",
-      ],
     },
   },
 } as const

@@ -2,10 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listWorkers, upsertWorker, deleteWorker } from "@/lib/workers.functions";
+import {
+  listWorkers, upsertWorker, deleteWorker,
+  listWorkerTypes, upsertWorkerType, deleteWorkerType,
+} from "@/lib/workers.functions";
 import { AppShell, useMe } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Settings2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -26,24 +29,20 @@ export const Route = createFileRoute("/_authenticated/workers")({
   component: WorkersPage,
 });
 
-const WORKER_TYPES = [
-  { value: "short_term_sevak", label: "Short-term Sevak (≤ 1 month)" },
-  { value: "long_term_sevak", label: "Long-term Sevak (~3 months)" },
-  { value: "labourer", label: "Labourer" },
-  { value: "permanent_staff", label: "Permanent staff" },
-];
-const typeLabel = (v: string) => WORKER_TYPES.find((t) => t.value === v)?.label ?? v;
-
 function WorkersPage() {
   const me = useMe();
   const canEdit = me.data?.roles.some((r) => r === "admin" || r === "editor");
   const isAdmin = me.data?.roles.includes("admin");
   const list = useServerFn(listWorkers);
+  const listTypes = useServerFn(listWorkerTypes);
   const del = useServerFn(deleteWorker);
   const workers = useQuery({ queryKey: ["workers"], queryFn: () => list() });
+  const types = useQuery({ queryKey: ["worker_types"], queryFn: () => listTypes() });
+  const typeLabel = (v: string) => types.data?.find((t) => t.value === v)?.label ?? v;
   const qc = useQueryClient();
   const [editing, setEditing] = useState<any>(null);
   const [adding, setAdding] = useState(false);
+  const [managingTypes, setManagingTypes] = useState(false);
   const [confirmDel, setConfirmDel] = useState<any>(null);
 
   const delMut = useMutation({
@@ -89,10 +88,26 @@ function WorkersPage() {
           data={workers.data || []} columns={columns}
           searchKeys={["full_name", "worker_code", "role", "phone", "email"]}
           searchPlaceholder="Search sevaks..." csvFilename="sevaks"
-          toolbar={canEdit && <Button size="sm" onClick={() => setAdding(true)}><Plus className="size-3.5 mr-1" /> Add Sevak</Button>}
+          toolbar={canEdit && (
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setManagingTypes(true)}>
+                <Settings2 className="size-3.5 mr-1" /> Manage types
+              </Button>
+              <Button size="sm" onClick={() => setAdding(true)}><Plus className="size-3.5 mr-1" /> Add Sevak</Button>
+            </div>
+          )}
         />
         {(adding || editing) && (
-          <WorkerDialog open onOpenChange={(v) => { if (!v) { setAdding(false); setEditing(null); } }} initial={editing} />
+          <WorkerDialog
+            open
+            onOpenChange={(v) => { if (!v) { setAdding(false); setEditing(null); } }}
+            initial={editing}
+            types={types.data || []}
+            onManageTypes={() => setManagingTypes(true)}
+          />
+        )}
+        {managingTypes && (
+          <ManageTypesDialog open onOpenChange={(v) => !v && setManagingTypes(false)} isAdmin={!!isAdmin} />
         )}
         <AlertDialog open={!!confirmDel} onOpenChange={(v) => !v && setConfirmDel(null)}>
           <AlertDialogContent>
@@ -110,9 +125,15 @@ function WorkersPage() {
   );
 }
 
-function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenChange: (v: boolean) => void; initial?: any }) {
+function WorkerDialog({
+  open, onOpenChange, initial, types, onManageTypes,
+}: {
+  open: boolean; onOpenChange: (v: boolean) => void; initial?: any;
+  types: { value: string; label: string }[]; onManageTypes: () => void;
+}) {
+  const defaultType = types[0]?.value || "";
   const [f, setF] = useState(() => initial || {
-    worker_code: "", full_name: "", worker_type: "short_term_sevak",
+    worker_code: "", full_name: "", worker_type: defaultType,
     role: "", phone: "", email: "", start_date: "", end_date: "", notes: "", work_summary: "", is_active: true,
   });
   const upsert = useServerFn(upsertWorker);
@@ -121,7 +142,6 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
     mutationFn: () => {
       const { id, created_at, updated_at, ...rest } = f;
       const values = { ...rest };
-      // empty strings → null for optional fields
       for (const k of ["worker_code","role","phone","email","start_date","end_date","notes","work_summary"]) {
         if (values[k] === "") values[k] = null;
       }
@@ -144,11 +164,16 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
           <div><Label>Sevak ID</Label><Input value={f.worker_code || ""} onChange={(e) => set("worker_code", e.target.value)} placeholder="e.g. W-001" /></div>
           <div><Label>Full name *</Label><Input value={f.full_name} onChange={(e) => set("full_name", e.target.value)} /></div>
           <div className="md:col-span-2">
-            <Label>Type *</Label>
+            <div className="flex items-center justify-between">
+              <Label>Type *</Label>
+              <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={onManageTypes}>
+                Manage types
+              </button>
+            </div>
             <Select value={f.worker_type} onValueChange={(v) => set("worker_type", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger>
               <SelectContent>
-                {WORKER_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                {types.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -179,6 +204,110 @@ function WorkerDialog({ open, onOpenChange, initial }: { open: boolean; onOpenCh
             {mut.isPending ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ManageTypesDialog({
+  open, onOpenChange, isAdmin,
+}: { open: boolean; onOpenChange: (v: boolean) => void; isAdmin: boolean }) {
+  const listTypes = useServerFn(listWorkerTypes);
+  const upsert = useServerFn(upsertWorkerType);
+  const remove = useServerFn(deleteWorkerType);
+  const qc = useQueryClient();
+  const types = useQuery({ queryKey: ["worker_types"], queryFn: () => listTypes() });
+  const [editing, setEditing] = useState<{ original_value?: string; value: string; label: string; sort_order: number } | null>(null);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["worker_types"] });
+    qc.invalidateQueries({ queryKey: ["workers"] });
+  };
+
+  const saveMut = useMutation({
+    mutationFn: () => upsert({ data: editing as any }),
+    onSuccess: () => { invalidate(); setEditing(null); toast.success("Saved"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const delMut = useMutation({
+    mutationFn: (value: string) => remove({ data: { value } }),
+    onSuccess: () => { invalidate(); setConfirmDel(null); toast.success("Type removed"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-2xl">Sevak types</DialogTitle>
+          <DialogDescription>Add, rename, reorder, or remove the types shown in the dropdown.</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2">
+          {types.data?.map((t) => (
+            <div key={t.value} className="flex items-center justify-between border rounded-md px-3 py-2">
+              <div>
+                <div className="text-sm font-medium">{t.label}</div>
+                <div className="text-xs text-muted-foreground">{t.value} · order {t.sort_order}</div>
+              </div>
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" onClick={() => setEditing({ original_value: t.value, value: t.value, label: t.label, sort_order: t.sort_order })}>
+                  <Pencil className="size-3.5" />
+                </Button>
+                {isAdmin && (
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmDel(t.value)}>
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+          {(!types.data || types.data.length === 0) && (
+            <p className="text-sm text-muted-foreground">No types yet.</p>
+          )}
+        </div>
+
+        <DialogFooter className="sm:justify-between">
+          <Button variant="outline" onClick={() => setEditing({ value: "", label: "", sort_order: (types.data?.length ?? 0) * 10 + 10 })}>
+            <Plus className="size-3.5 mr-1" /> New type
+          </Button>
+          <Button onClick={() => onOpenChange(false)}>Done</Button>
+        </DialogFooter>
+
+        {editing && (
+          <Dialog open onOpenChange={(v) => !v && setEditing(null)}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>{editing.original_value ? "Edit type" : "New type"}</DialogTitle>
+                <DialogDescription>Label is what people see. Value is the internal code (auto-generated from the label if blank).</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div><Label>Label *</Label><Input value={editing.label} onChange={(e) => setEditing({ ...editing, label: e.target.value })} placeholder="e.g. Intern" /></div>
+                <div><Label>Value</Label><Input value={editing.value} disabled={!!editing.original_value} onChange={(e) => setEditing({ ...editing, value: e.target.value })} placeholder="auto from label" /></div>
+                <div><Label>Sort order</Label><Input type="number" value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) || 0 })} /></div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+                <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !editing.label.trim()}>
+                  {saveMut.isPending ? "Saving..." : "Save"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        <AlertDialog open={!!confirmDel} onOpenChange={(v) => !v && setConfirmDel(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove this type?</AlertDialogTitle>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction className="bg-destructive" onClick={() => confirmDel && delMut.mutate(confirmDel)}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
