@@ -146,7 +146,7 @@ function PlanningPage() {
               <SelectContent>
                 {(plots.data ?? []).map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    Plot {p.plot_number}{p.name ? ` — ${p.name}` : ""}
+                    Plot {p.plot_number}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -236,7 +236,7 @@ function PlanningPage() {
                       bedName={draft.name}
                       plotLabel={
                         activeFarm && activePlot
-                          ? `${activeFarm.name} — Plot ${activePlot.plot_number}${activePlot.name ? ` (${activePlot.name})` : ""}`
+                          ? `${activeFarm.name} — Plot ${activePlot.plot_number}`
                           : undefined
                       }
                       readOnly={!canEdit}
