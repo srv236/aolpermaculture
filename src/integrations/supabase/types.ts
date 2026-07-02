@@ -65,6 +65,41 @@ export type Database = {
           },
         ]
       }
+      bed_plans: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          name: string
+          plot_id: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          name: string
+          plot_id: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          plot_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bed_plans_plot_id_fkey"
+            columns: ["plot_id"]
+            isOneToOne: false
+            referencedRelation: "plots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crops: {
         Row: {
           created_at: string
