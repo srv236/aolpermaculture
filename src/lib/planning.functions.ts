@@ -7,7 +7,7 @@ export const listBedPlans = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("bed_plans")
-      .select("*, plots!inner(id, plot_number, farm_id, name)")
+      .select("*, plots!inner(id, plot_number, farm_id)")
       .order("created_at", { ascending: true });
     if (data.plotId) q = q.eq("plot_id", data.plotId);
     if (data.farmId) q = q.eq("plots.farm_id", data.farmId);
