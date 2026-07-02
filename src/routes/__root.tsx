@@ -73,8 +73,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "AOL Permaculture — Farm Management" },
-      { name: "description", content: "Internal farm management tool for AOL Permaculture — plots, sowings and harvests." },
+      { title: "AOL Permaculture — Internal Farm Management" },
+      { name: "description", content: "Internal farm management tool for AOL Permaculture." },
+      { property: "og:title", content: "AOL Permaculture — Internal Farm Management" },
+      { name: "twitter:title", content: "AOL Permaculture — Internal Farm Management" },
+      { property: "og:description", content: "Internal farm management tool for AOL Permaculture." },
+      { name: "twitter:description", content: "Internal farm management tool for AOL Permaculture." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/74c6169c-80b7-4964-8c7d-5a57dc22c0f1/id-preview-e8c12185--7fae7f56-609b-44da-81b3-9498bdcc02fe.lovable.app-1782985245453.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/74c6169c-80b7-4964-8c7d-5a57dc22c0f1/id-preview-e8c12185--7fae7f56-609b-44da-81b3-9498bdcc02fe.lovable.app-1782985245453.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
