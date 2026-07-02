@@ -22,9 +22,8 @@ function AuthPage() {
   const { redirect } = useSearch({ from: "/auth" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<"signin" | "forgot" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "forgot">("signin");
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -35,21 +34,6 @@ function AuthPage() {
     toast.success("Welcome back");
     navigate({ to: (redirect as any) || "/farms" });
   }
-
-  async function signUp(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Account created — signing you in...");
-    await supabase.auth.signInWithPassword({ email, password });
-    navigate({ to: "/farms" });
-  }
-
 
   async function sendReset(e: React.FormEvent) {
     e.preventDefault();
@@ -76,60 +60,45 @@ function AuthPage() {
         </div>
         <Card className="p-8">
           <h1 className="font-serif text-2xl mb-1">
-            {mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Reset your password"}
+            {mode === "signin" ? "Sign in" : "Reset your password"}
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
             {mode === "signin"
-              ? "Use the credentials your admin gave you."
-              : mode === "signup"
-              ? "First time setup or invited self-signup."
+              ? "Use the credentials your admin gave you. Accounts are created by an administrator."
               : "We'll email you a link to set a new password."}
           </p>
           <form
-            onSubmit={mode === "signin" ? signIn : mode === "signup" ? signUp : sendReset}
+            onSubmit={mode === "signin" ? signIn : sendReset}
             className="space-y-4"
           >
-            {mode === "signup" && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Full name</Label>
-                <Input id="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" autoComplete="email" required
                      value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            {mode !== "forgot" && (
+            {mode === "signin" && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  {mode === "signin" && (
-                    <button type="button" onClick={() => setMode("forgot")}
-                            className="text-xs text-muted-foreground hover:text-foreground">
-                      Forgot?
-                    </button>
-                  )}
+                  <button type="button" onClick={() => setMode("forgot")}
+                          className="text-xs text-muted-foreground hover:text-foreground">
+                    Forgot?
+                  </button>
                 </div>
-                <Input id="password" type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"} required minLength={mode === "signup" ? 8 : undefined}
+                <Input id="password" type="password" autoComplete="current-password" required
                        value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             )}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Please wait..." : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
+              {busy ? "Please wait..." : mode === "signin" ? "Sign in" : "Send reset link"}
             </Button>
-            <div className="text-center text-xs text-muted-foreground">
-              {mode === "signin" && (
-                <button type="button" onClick={() => setMode("signup")} className="hover:text-foreground">
-                  No account? Create one
-                </button>
-              )}
-              {mode !== "signin" && (
+            {mode !== "signin" && (
+              <div className="text-center text-xs text-muted-foreground">
                 <button type="button" onClick={() => setMode("signin")} className="hover:text-foreground">
                   Back to sign in
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </form>
         </Card>
       </div>
