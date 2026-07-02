@@ -24,7 +24,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<"signin" | "forgot" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "forgot">("signin");
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
