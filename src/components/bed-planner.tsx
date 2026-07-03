@@ -602,10 +602,14 @@ function BedGrid(props: BedGridProps) {
                 <div
                   key={`h-${i}`}
                   onPointerDown={(e) => startDrag(e, i)}
-                  className="absolute top-0 bottom-0 -translate-x-1/2 w-2 cursor-col-resize hover:bg-emerald-400/40 z-30"
+                  className="absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-col-resize flex items-center justify-center group/handle z-30"
                   style={{ left: `${leftPct}%` }}
                   title="Drag to resize columns"
-                />
+                >
+                  <span className="w-[3px] h-6 rounded bg-emerald-700/60 group-hover/handle:bg-emerald-600 relative flex items-center justify-center">
+                    <GripVertical className="absolute size-3.5 text-emerald-800 bg-white rounded-sm border border-emerald-700/50" />
+                  </span>
+                </div>
               );
             })}
             {/* drip line toggle dots (over gaps 0..N) */}
