@@ -670,7 +670,7 @@ function BedGrid(props: BedGridProps) {
 
 function RowRender({
   cfg, row, rowIdx, rowNumber, isTemplate,
-  cropById, crops, gapPercents, readOnly,
+  cropById, crops, gapPercents, readOnly, brushCropId,
   onCellChange, onFillRow, onFullChange, onRowKindChange, onInsertRow, onDeleteRow,
 }: BedGridProps & {
   row: BedRow; rowIdx: number; rowNumber: number; isTemplate: boolean;
