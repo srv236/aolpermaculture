@@ -557,7 +557,7 @@ function RowRender({
   gapPercents: number[];
   collapsedLabel?: string;
 }) {
-  const height = 26;
+  const height = 44;
   return (
     <div className="relative flex items-stretch border-b last:border-b-0 border-emerald-800/30">
       <div className="w-8 shrink-0 text-[10px] text-muted-foreground flex items-center justify-center border-r border-emerald-800/30 bg-emerald-50">
