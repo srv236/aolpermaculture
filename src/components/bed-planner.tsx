@@ -647,13 +647,22 @@ function BedGrid(props: BedGridProps) {
 function RowRender({
   cfg, row, rowIdx, rowNumber, isTemplate,
   cropById, crops, gapPercents, readOnly,
-  onCellChange, onFullChange, onRowKindChange, onInsertRow, onDeleteRow,
+  onCellChange, onFillRow, onFullChange, onRowKindChange, onInsertRow, onDeleteRow,
 }: BedGridProps & {
   row: BedRow; rowIdx: number; rowNumber: number; isTemplate: boolean;
 }) {
   const height = 52;
   const columns = cfg.columns.length;
   const editable = !readOnly && isTemplate;
+  const gridTemplate = cfg.columns.map((c) => `${c.widthFt}fr`).join(" ");
+
+  // Detect merged row (all cells same non-null crop) — render as spanning band.
+  const mergedCropId =
+    row.kind === "cells" &&
+    row.cells.length >= columns &&
+    row.cells.slice(0, columns).every((c) => c.cropId && c.cropId === row.cells[0].cropId)
+      ? row.cells[0].cropId
+      : null;
 
   return (
     <div className="relative flex items-stretch border-b last:border-b-0 border-emerald-800/40 group">
@@ -696,8 +705,30 @@ function RowRender({
               </InlineCropPicker>
             ) : content;
           })()
+        ) : mergedCropId ? (
+          (() => {
+            const c = cropById.get(mergedCropId);
+            const content = (
+              <div
+                className="h-full w-full flex items-center justify-center text-sm gap-2 font-medium"
+                style={{
+                  background: colorForCrop(c),
+                  boxShadow: c ? `inset 0 0 0 2px ${strongColorForCrop(c)}` : undefined,
+                  color: "#1c1917",
+                }}
+              >
+                <CropIcon crop={c} size={24} />
+                {c?.crop_name}
+              </div>
+            );
+            return editable ? (
+              <InlineCropPicker crops={crops} value={mergedCropId} onChange={(id) => onFillRow(rowIdx, id)}>
+                {content}
+              </InlineCropPicker>
+            ) : content;
+          })()
         ) : (
-          <div className="h-full w-full grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0,1fr))` }}>
+          <div className="h-full w-full grid" style={{ gridTemplateColumns: gridTemplate }}>
             {Array.from({ length: columns }).map((_, ci) => {
               const cell = row.cells[ci] ?? { cropId: null };
               const c = cell.cropId ? cropById.get(cell.cropId) : undefined;
@@ -729,6 +760,7 @@ function RowRender({
           </div>
         )}
       </div>
+
 
       {editable && (
         <div className="absolute -right-9 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
