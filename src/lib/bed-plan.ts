@@ -24,25 +24,21 @@ export type BedConfig = {
 };
 
 export function defaultBedConfig(): BedConfig {
+  const rows: BedRow[] = Array.from({ length: 100 }, () => ({
+    kind: "cells",
+    cells: [{ cropId: null }, { cropId: null }, { cropId: null }],
+  }));
   return {
     bedLengthFt: 100,
     bedWidthFt: 3,
     columns: [{ widthFt: 1 }, { widthFt: 1 }, { widthFt: 1 }],
     cycle: {
-      repeats: 12,
-      rows: [
-        { kind: "cells", cells: [{ cropId: null }, { cropId: null }, { cropId: null }] },
-        { kind: "full", cropId: null },
-        { kind: "cells", cells: [{ cropId: null }, { cropId: null }, { cropId: null }] },
-        { kind: "full", cropId: null },
-        { kind: "cells", cells: [{ cropId: null }, { cropId: null }, { cropId: null }] },
-        { kind: "full", cropId: null },
-        { kind: "empty" },
-        { kind: "full", cropId: null },
-      ],
+      repeats: 1,
+      rows,
     },
     border: { enabled: true, cropId: null, spacingIn: 12 },
     dripLines: [1, 2],
+
   };
 }
 
