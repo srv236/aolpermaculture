@@ -344,6 +344,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     onInsertRow={insertRowAfter}
                     onDeleteRow={deleteRow}
                     onToggleDrip={toggleDrip}
+                    brushCropId={brushCropId}
                     onAddColumn={() => setColumnCount(cfg.columns.length + 1)}
                     onRemoveColumn={() => setColumnCount(cfg.columns.length - 1)}
                   />
