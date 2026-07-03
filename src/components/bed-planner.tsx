@@ -300,6 +300,9 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     gapPercents={gapPercents}
                     crops={crops}
                     readOnly={!!readOnly}
+                    totalRows={totalRows}
+                    onSetRowCount={setRowCount}
+                    onSetColumnWidths={setColumnWidths}
                     onCellChange={(rowIdx, colIdx, cropId) => {
                       const row = cfg.cycle.rows[rowIdx];
                       if (row?.kind !== "cells") return;
@@ -307,6 +310,12 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                       while (cells.length < totalCols) cells.push({ cropId: null });
                       cells[colIdx] = { cropId };
                       updateRow(rowIdx, { kind: "cells", cells });
+                    }}
+                    onFillRow={(rowIdx, cropId) => {
+                      updateRow(rowIdx, {
+                        kind: "cells",
+                        cells: Array.from({ length: totalCols }, () => ({ cropId })),
+                      });
                     }}
                     onFullChange={(rowIdx, cropId) => updateRow(rowIdx, { kind: "full", cropId })}
                     onRowKindChange={setRowKind}
@@ -316,6 +325,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     onAddColumn={() => setColumnCount(cfg.columns.length + 1)}
                     onRemoveColumn={() => setColumnCount(cfg.columns.length - 1)}
                   />
+
                 </div>
 
                 {/* Legend */}
