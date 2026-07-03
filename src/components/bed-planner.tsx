@@ -814,3 +814,57 @@ function BorderMarkers({
   );
   return <>{side("left")}{side("right")}</>;
 }
+
+function InlineNumEdit({
+  label, value, min, max, onChange, disabled,
+}: {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  onChange: (n: number) => void;
+  disabled?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => { setDraft(String(value)); }, [value]);
+  const commit = () => {
+    const n = Number(draft);
+    if (!Number.isNaN(n)) {
+      const clamped = Math.max(min ?? -Infinity, Math.min(max ?? Infinity, Math.round(n)));
+      onChange(clamped);
+    }
+    setEditing(false);
+  };
+  if (editing && !disabled) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <span className="text-emerald-900 font-medium">{label}</span>
+        <Input
+          autoFocus
+          type="number"
+          value={draft}
+          min={min}
+          max={max}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+          className="h-6 w-16 text-xs px-2"
+        />
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => setEditing(true)}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-800/30 bg-white hover:bg-emerald-100 text-emerald-900 disabled:opacity-70"
+      title={disabled ? undefined : "Click to edit"}
+    >
+      <span className="font-medium">{label}:</span>
+      <span className="tabular-nums">{value}</span>
+    </button>
+  );
+}
+
