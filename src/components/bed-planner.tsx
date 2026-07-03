@@ -511,7 +511,7 @@ function BedGrid({
   }
 
   return (
-    <div className="border-2 border-emerald-800 rounded-sm bg-white" style={{ width: 360 }}>
+    <div className="border-2 border-emerald-800 rounded-sm bg-white" style={{ width: 460 }}>
       {rowsToRender.map((row, i) => {
         const rowNum = row.collapsed
           ? "…"
