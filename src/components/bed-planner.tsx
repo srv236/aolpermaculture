@@ -228,18 +228,18 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                 </div>
 
                 {/* Legend */}
-                <div className="text-xs space-y-2 w-56 shrink-0">
-                  <div className="font-semibold text-emerald-800 border-b pb-1">Legend</div>
+                <div className="text-sm space-y-3 w-64 shrink-0">
+                  <div className="font-semibold text-emerald-800 border-b pb-1.5 text-base">Legend</div>
                   {usedCropIds.map((id) => {
                     const c = cropById.get(id);
                     if (!c) return null;
                     return (
-                      <div key={id} className="flex items-center gap-2">
+                      <div key={id} className="flex items-center gap-3">
                         <span
-                          className="w-6 h-6 rounded flex items-center justify-center shrink-0"
+                          className="w-9 h-9 rounded flex items-center justify-center shrink-0"
                           style={{ background: colorForCrop(c) }}
                         >
-                          <CropIcon crop={c} size={13} />
+                          <CropIcon crop={c} size={20} />
                         </span>
                         <span>
                           {c.crop_name}
@@ -249,21 +249,21 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     );
                   })}
                   {cfg.dripLines.length > 0 && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <span className="inline-block w-5 h-[2px] border-t-2 border-dashed border-blue-500" />
+                    <div className="flex items-center gap-3 pt-1">
+                      <span className="inline-block w-7 h-[2px] border-t-2 border-dashed border-blue-500" />
                       <span>Drip line</span>
                     </div>
                   )}
                   {cfg.border.enabled && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex w-6 h-6 items-center justify-center">
-                        <CropIcon crop={cropById.get(cfg.border.cropId || "")} size={13} />
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex w-9 h-9 items-center justify-center">
+                        <CropIcon crop={cropById.get(cfg.border.cropId || "")} size={20} />
                       </span>
                       <span>Border @ {cfg.border.spacingIn}″</span>
                     </div>
                   )}
 
-                  <div className="pt-3 border-t mt-2 text-[11px] text-muted-foreground space-y-0.5">
+                  <div className="pt-3 border-t mt-2 text-xs text-muted-foreground space-y-1">
                     <div>Bed area: {bedArea} sq ft</div>
                     <div>Cycle: {cfg.cycle.rows.length} rows × {cfg.cycle.repeats}</div>
                   </div>
