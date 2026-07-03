@@ -582,8 +582,8 @@ function RowRender({
           (() => {
             const c = row.cropId ? cropById.get(row.cropId) : undefined;
             return (
-              <div className="h-full w-full flex items-center justify-center text-xs gap-1.5" style={{ background: colorForCrop(c) }}>
-                <CropIcon crop={c} size={12} />
+              <div className="h-full w-full flex items-center justify-center text-sm gap-2" style={{ background: colorForCrop(c) }}>
+                <CropIcon crop={c} size={22} />
                 {c ? `${c.crop_name}` : "—"}
               </div>
             );
