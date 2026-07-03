@@ -179,7 +179,21 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
       cells.length = n;
       return { kind: "cells", cells };
     });
-    patch({ columns: cols, cycle: { ...cfg.cycle, rows } });
+    const sum = cols.reduce((s, c) => s + c.widthFt, 0);
+    patch({ columns: cols, cycle: { ...cfg.cycle, rows }, bedWidthFt: Number(sum.toFixed(2)) });
+  }
+  function setRowCount(n: number) {
+    n = Math.max(1, Math.min(500, n));
+    const cols = cfg.columns.length;
+    const rows = [...cfg.cycle.rows];
+    while (rows.length < n) rows.push({ kind: "cells", cells: Array.from({ length: cols }, () => ({ cropId: null })) });
+    rows.length = n;
+    patch({ cycle: { repeats: 1, rows } });
+  }
+  function setColumnWidths(widths: number[]) {
+    const cols = widths.map((w) => ({ widthFt: Math.max(0.1, Number(w.toFixed(2))) }));
+    const sum = cols.reduce((s, c) => s + c.widthFt, 0);
+    patch({ columns: cols, bedWidthFt: Number(sum.toFixed(2)) });
   }
   function toggleDrip(gapIndex: number) {
     const has = cfg.dripLines.includes(gapIndex);
@@ -189,6 +203,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
         : [...cfg.dripLines, gapIndex].sort((a, b) => a - b),
     });
   }
+
 
   async function exportImage(kind: "png" | "pdf") {
     if (!printRef.current) return;
