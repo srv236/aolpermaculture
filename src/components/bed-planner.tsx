@@ -11,7 +11,44 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import type { BedConfig, BedRow } from "@/lib/bed-plan";
-import { defaultBedConfig, iconForCrop, colorForCrop } from "@/lib/bed-plan";
+import { defaultBedConfig, iconForCrop, colorForCrop, variantMarker } from "@/lib/bed-plan";
+
+/** Emoji icon + a tiny colored letter badge so crops sharing an icon are still distinguishable. */
+function CropIcon({
+  crop,
+  size = 14,
+}: {
+  crop?: { id?: string; crop_name?: string | null; variety_name?: string | null; crop_category?: string | null } | null;
+  size?: number;
+}) {
+  const icon = iconForCrop(crop as any);
+  const m = variantMarker(crop as any);
+  const badge = Math.max(9, Math.round(size * 0.7));
+  return (
+    <span
+      className="relative inline-flex items-center justify-center leading-none"
+      style={{ fontSize: size, lineHeight: 1 }}
+    >
+      <span>{icon}</span>
+      {crop && (
+        <span
+          className="absolute font-bold text-white rounded-full flex items-center justify-center ring-1 ring-white"
+          style={{
+            background: m.color,
+            width: badge,
+            height: badge,
+            fontSize: Math.round(badge * 0.7),
+            lineHeight: `${badge}px`,
+            right: -Math.round(badge * 0.35),
+            bottom: -Math.round(badge * 0.35),
+          }}
+        >
+          {m.label}
+        </span>
+      )}
+    </span>
+  );
+}
 
 type Crop = {
   id: string;
@@ -199,10 +236,10 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     return (
                       <div key={id} className="flex items-center gap-2">
                         <span
-                          className="w-5 h-5 rounded flex items-center justify-center text-[13px] shrink-0"
+                          className="w-6 h-6 rounded flex items-center justify-center shrink-0"
                           style={{ background: colorForCrop(c) }}
                         >
-                          {iconForCrop(c)}
+                          <CropIcon crop={c} size={13} />
                         </span>
                         <span>
                           {c.crop_name}
@@ -219,8 +256,8 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                   )}
                   {cfg.border.enabled && (
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px]">
-                        {iconForCrop(cropById.get(cfg.border.cropId || ""))}
+                      <span className="inline-flex w-6 h-6 items-center justify-center">
+                        <CropIcon crop={cropById.get(cfg.border.cropId || "")} size={13} />
                       </span>
                       <span>Border @ {cfg.border.spacingIn}″</span>
                     </div>
@@ -545,8 +582,8 @@ function RowRender({
           (() => {
             const c = row.cropId ? cropById.get(row.cropId) : undefined;
             return (
-              <div className="h-full w-full flex items-center justify-center text-xs" style={{ background: colorForCrop(c) }}>
-                <span className="mr-1">{iconForCrop(c)}</span>
+              <div className="h-full w-full flex items-center justify-center text-xs gap-1.5" style={{ background: colorForCrop(c) }}>
+                <CropIcon crop={c} size={12} />
                 {c ? `${c.crop_name}` : "—"}
               </div>
             );
@@ -556,9 +593,9 @@ function RowRender({
             {row.cells.map((cell, ci) => {
               const c = cell.cropId ? cropById.get(cell.cropId) : undefined;
               return (
-                <div key={ci} className="h-full flex items-center justify-center text-sm border-r last:border-r-0 border-emerald-800/10"
+                <div key={ci} className="h-full flex items-center justify-center border-r last:border-r-0 border-emerald-800/10"
                   style={{ background: colorForCrop(c) }}>
-                  {c ? iconForCrop(c) : <span className="text-muted-foreground">—</span>}
+                  {c ? <CropIcon crop={c} size={13} /> : <span className="text-muted-foreground text-sm">—</span>}
                 </div>
               );
             })}
