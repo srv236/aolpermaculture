@@ -509,6 +509,7 @@ type BedGridProps = {
   onToggleDrip: (gapIndex: number) => void;
   onAddColumn: () => void;
   onRemoveColumn: () => void;
+  brushCropId: string | null;
 };
 
 function BedGrid(props: BedGridProps) {
