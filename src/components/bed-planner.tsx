@@ -265,6 +265,13 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
               <span className="text-muted-foreground mr-1">Tip: click any cell to pick a crop.</span>
             </div>
           )}
+          {!readOnly && (
+            <BrushSelector
+              crops={crops}
+              value={brushCropId}
+              onChange={setBrushCropId}
+            />
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline">
