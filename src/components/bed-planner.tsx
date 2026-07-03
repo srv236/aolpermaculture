@@ -774,6 +774,7 @@ function RowRender({
                       crops={crops}
                       value={cell.cropId}
                       onChange={(id) => onCellChange(rowIdx, ci, id)}
+                      brushCropId={brushCropId}
                     >
                       {inner}
                     </InlineCropPicker>
