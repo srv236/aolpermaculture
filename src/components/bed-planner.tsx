@@ -293,108 +293,183 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
 
         <div className="border rounded-md bg-gradient-to-br from-emerald-50/40 to-amber-50/30 p-4 overflow-auto max-h-[80vh]">
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "fit-content" }}>
-            <div ref={printRef} className="bg-white p-8 rounded-md shadow-sm" style={{ width: 960 }}>
-              <div className="text-center mb-4">
-                <div className="text-lg font-serif font-semibold text-emerald-800">
-                  Vegetable Bed Plan — {bedName}
-                </div>
-                {plotLabel && <div className="text-xs text-muted-foreground">{plotLabel}</div>}
-                <div className="text-xs text-muted-foreground mt-1">
-                  {cfg.bedLengthFt} ft × {cfg.bedWidthFt} ft &nbsp;·&nbsp;
-                  {totalRows} rows &nbsp;·&nbsp; {totalCols} columns
+            <div ref={printRef} className="bg-white p-8 rounded-md shadow-sm" style={{ width: 1100 }}>
+              {/* Title bar */}
+              <div className="flex items-center gap-3 pb-3 mb-4 border-b-2 border-emerald-800">
+                <div className="w-11 h-11 rounded-full bg-emerald-700 text-white flex items-center justify-center text-xl shrink-0">🌱</div>
+                <div>
+                  <div className="text-2xl font-serif font-bold text-emerald-800 leading-tight">
+                    Vegetable Bed Plan — {bedName}
+                  </div>
+                  <div className="text-sm text-emerald-900/70">
+                    {plotLabel ? `${plotLabel} · ` : ""}Layout, crop cycle, crop categories, and land summary
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-8 justify-center items-start">
-                {/* Bed rendering */}
-                <div className="relative">
-                  {/* Border markers */}
-                  {cfg.border.enabled && (
-                    <BorderMarkers
-                      length={Math.min(totalRows, 24)}
-                      crop={cropById.get(cfg.border.cropId || "")}
-                      onPick={readOnly ? undefined : (id) => patch({ border: { ...cfg.border, cropId: id } })}
-                      crops={crops}
-                    />
-                  )}
+              <div className="grid grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
+                {/* LEFT: Bed layout panel */}
+                <div>
+                  <SectionHeader>BED LAYOUT — ONE RAISED BED ({cfg.bedLengthFt} ft × {cfg.bedWidthFt.toFixed(2)} ft)</SectionHeader>
+                  <div className="pt-4 pl-14 pr-14 pb-3">
+                    {/* Width arrow + column labels */}
+                    <div className="mb-1 flex items-center justify-center">
+                      <div className="text-[11px] font-semibold text-emerald-900 tracking-wide">
+                        ← {cfg.bedWidthFt.toFixed(2)} ft (width) →
+                      </div>
+                    </div>
+                    <div className="flex">
+                      {/* Length axis label */}
+                      <div className="relative w-8 shrink-0 flex items-center justify-center">
+                        <div
+                          className="text-[11px] font-semibold text-emerald-900 whitespace-nowrap tracking-wide"
+                          style={{ transform: "rotate(-90deg)" }}
+                        >
+                          ↑ {cfg.bedLengthFt} ft (length) ↓
+                        </div>
+                      </div>
 
-                  <BedGrid
-                    cfg={cfg}
-                    cropById={cropById}
-                    gapPercents={gapPercents}
-                    crops={crops}
-                    readOnly={!!readOnly}
-                    totalRows={totalRows}
-                    onSetRowCount={setRowCount}
-                    onSetColumnWidths={setColumnWidths}
-                    onCellChange={(rowIdx, colIdx, cropId) => {
-                      const row = cfg.cycle.rows[rowIdx];
-                      if (row?.kind !== "cells") return;
-                      const cells = [...row.cells];
-                      while (cells.length < totalCols) cells.push({ cropId: null });
-                      cells[colIdx] = { cropId };
-                      updateRow(rowIdx, { kind: "cells", cells });
-                    }}
-                    onFillRow={(rowIdx, cropId) => {
-                      updateRow(rowIdx, {
-                        kind: "cells",
-                        cells: Array.from({ length: totalCols }, () => ({ cropId })),
-                      });
-                    }}
-                    onFullChange={(rowIdx, cropId) => updateRow(rowIdx, { kind: "full", cropId })}
-                    onRowKindChange={setRowKind}
-                    onInsertRow={insertRowAfter}
-                    onDeleteRow={deleteRow}
-                    onToggleDrip={toggleDrip}
-                    brushCropId={brushCropId}
-                    onAddColumn={() => setColumnCount(cfg.columns.length + 1)}
-                    onRemoveColumn={() => setColumnCount(cfg.columns.length - 1)}
-                  />
+                      <div className="relative flex-1">
+                        {/* Border markers */}
+                        {cfg.border.enabled && (
+                          <BorderMarkers
+                            length={Math.min(totalRows, 24)}
+                            crop={cropById.get(cfg.border.cropId || "")}
+                            onPick={readOnly ? undefined : (id) => patch({ border: { ...cfg.border, cropId: id } })}
+                            crops={crops}
+                          />
+                        )}
 
+                        <BedGrid
+                          cfg={cfg}
+                          cropById={cropById}
+                          gapPercents={gapPercents}
+                          crops={crops}
+                          readOnly={!!readOnly}
+                          totalRows={totalRows}
+                          onSetRowCount={setRowCount}
+                          onSetColumnWidths={setColumnWidths}
+                          onCellChange={(rowIdx, colIdx, cropId) => {
+                            const row = cfg.cycle.rows[rowIdx];
+                            if (row?.kind !== "cells") return;
+                            const cells = [...row.cells];
+                            while (cells.length < totalCols) cells.push({ cropId: null });
+                            cells[colIdx] = { cropId };
+                            updateRow(rowIdx, { kind: "cells", cells });
+                          }}
+                          onFillRow={(rowIdx, cropId) => {
+                            updateRow(rowIdx, {
+                              kind: "cells",
+                              cells: Array.from({ length: totalCols }, () => ({ cropId })),
+                            });
+                          }}
+                          onFullChange={(rowIdx, cropId) => updateRow(rowIdx, { kind: "full", cropId })}
+                          onRowKindChange={setRowKind}
+                          onInsertRow={insertRowAfter}
+                          onDeleteRow={deleteRow}
+                          onToggleDrip={toggleDrip}
+                          brushCropId={brushCropId}
+                          onAddColumn={() => setColumnCount(cfg.columns.length + 1)}
+                          onRemoveColumn={() => setColumnCount(cfg.columns.length - 1)}
+                        />
+                      </div>
+                    </div>
+                    {cfg.border.enabled && (
+                      <div className="mt-3 text-center text-xs text-emerald-900/80 italic">
+                        Border planting at {cfg.border.spacingIn}″ spacing (plant to plant).
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Layout notes */}
+                  <div className="mt-4">
+                    <SectionHeader>LAYOUT NOTES</SectionHeader>
+                    <ul className="p-4 text-sm text-emerald-950 space-y-1 list-disc pl-8">
+                      <li>Bed divided into {cfg.columns.length} column{cfg.columns.length > 1 ? "s" : ""} ({cfg.columns.map((c) => `${c.widthFt.toFixed(2)} ft`).join(", ")}).</li>
+                      <li>{totalRows} horizontal rows along the {cfg.bedLengthFt} ft length.</li>
+                      <li>{cfg.dripLines.length} drip line{cfg.dripLines.length === 1 ? "" : "s"} through the bed.</li>
+                      {cfg.border.enabled && (
+                        <li>Border planted at {cfg.border.spacingIn}″ spacing along both outer edges.</li>
+                      )}
+                      <li>Full-width rows are sown continuously across the bed and not counted by columns.</li>
+                    </ul>
+                  </div>
                 </div>
 
-                {/* Legend */}
-                <div className="text-sm space-y-3 w-64 shrink-0">
-                  <div className="font-semibold text-emerald-800 border-b pb-1.5 text-base">Legend</div>
-                  {usedCropIds.length === 0 && (
-                    <div className="text-xs text-muted-foreground">No crops placed yet.</div>
-                  )}
-                  {usedCropIds.map((id) => {
-                    const c = cropById.get(id);
-                    if (!c) return null;
-                    return (
-                      <div key={id} className="flex items-center gap-3">
-                        <span
-                          className="w-9 h-9 rounded-md flex items-center justify-center shrink-0 ring-2"
-                          style={{ background: colorForCrop(c), boxShadow: `inset 0 0 0 2px ${strongColorForCrop(c)}` }}
-                        >
-                          <CropIcon crop={c} size={20} />
-                        </span>
-                        <span>
-                          {c.crop_name}
-                          {c.variety_name ? ` (${c.variety_name})` : ""}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {cfg.dripLines.length > 0 && (
-                    <div className="flex items-center gap-3 pt-1">
-                      <span className="inline-block w-7 h-[2px] border-t-2 border-dashed border-blue-500" />
-                      <span>Drip line</span>
+                {/* RIGHT: Legend + categories + summary */}
+                <div className="space-y-4">
+                  <div>
+                    <SectionHeader>LEGEND</SectionHeader>
+                    <div className="p-3 space-y-2 text-sm">
+                      {usedCropIds.length === 0 && (
+                        <div className="text-xs text-muted-foreground">No crops placed yet.</div>
+                      )}
+                      {usedCropIds.map((id) => {
+                        const c = cropById.get(id);
+                        if (!c) return null;
+                        return (
+                          <div key={id} className="flex items-center gap-3">
+                            <span
+                              className="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
+                              style={{ background: colorForCrop(c), boxShadow: `inset 0 0 0 2px ${strongColorForCrop(c)}` }}
+                            >
+                              <CropIcon crop={c} size={20} />
+                            </span>
+                            <span className="font-semibold" style={{ color: strongColorForCrop(c) }}>
+                              {c.crop_name}{c.variety_name ? ` (${c.variety_name})` : ""}
+                            </span>
+                            <span className="ml-auto text-xs text-emerald-900/70">
+                              {c.crop_category ? `= ${c.crop_category}` : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {cfg.dripLines.length > 0 && (
+                        <div className="flex items-center gap-3 pt-1">
+                          <span className="inline-block w-9 h-[2px] border-t-2 border-dashed border-blue-500" />
+                          <span className="font-semibold text-blue-700">Drip line</span>
+                          <span className="ml-auto text-xs text-emerald-900/70">= vertical dashed line</span>
+                        </div>
+                      )}
+                      {cfg.border.enabled && cfg.border.cropId && (
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
+                            style={{
+                              background: colorForCrop(cropById.get(cfg.border.cropId)),
+                              boxShadow: `inset 0 0 0 2px ${strongColorForCrop(cropById.get(cfg.border.cropId))}`,
+                            }}
+                          >
+                            <CropIcon crop={cropById.get(cfg.border.cropId)} size={20} />
+                          </span>
+                          <span className="font-semibold" style={{ color: strongColorForCrop(cropById.get(cfg.border.cropId)) }}>
+                            {cropById.get(cfg.border.cropId)?.crop_name} border
+                          </span>
+                          <span className="ml-auto text-xs text-emerald-900/70">@ {cfg.border.spacingIn}″</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {cfg.border.enabled && (
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex w-9 h-9 items-center justify-center">
-                        <CropIcon crop={cropById.get(cfg.border.cropId || "")} size={20} />
-                      </span>
-                      <span>Border @ {cfg.border.spacingIn}″</span>
-                    </div>
-                  )}
+                  </div>
 
-                  <div className="pt-3 border-t mt-2 text-xs text-muted-foreground space-y-1">
-                    <div>Bed area: {bedArea} sq ft</div>
-                    <div>Cycle: {cfg.cycle.rows.length} rows × {cfg.cycle.repeats}</div>
+                  <div>
+                    <SectionHeader>CROP CATEGORIES</SectionHeader>
+                    <CategoryTable crops={crops} />
+                  </div>
+
+                  <div>
+                    <SectionHeader>AREA &amp; LAND SUMMARY</SectionHeader>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        <SummaryRow label="Bed size" value={`${cfg.bedLengthFt} ft × ${cfg.bedWidthFt.toFixed(2)} ft = ${bedArea.toFixed(0)} sq ft`} />
+                        <SummaryRow label="Total rows" value={String(totalRows)} />
+                        <SummaryRow label="Columns" value={cfg.columns.map((c) => `${c.widthFt.toFixed(2)} ft`).join(" + ")} />
+                        <SummaryRow label="Cycle" value={`${cfg.cycle.rows.length} rows × ${cfg.cycle.repeats}`} />
+                        <SummaryRow label="Drip lines" value={String(cfg.dripLines.length)} />
+                        {cfg.border.enabled && (
+                          <SummaryRow label="Border spacing" value={`${cfg.border.spacingIn}″`} />
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -402,6 +477,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
           </div>
         </div>
       </div>
+
 
       {/* RIGHT: Controls (simplified — most editing happens on the bed) */}
       {!readOnly && (
