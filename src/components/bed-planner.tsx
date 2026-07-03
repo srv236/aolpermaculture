@@ -197,7 +197,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
 
         <div className="border rounded-md bg-muted/30 p-4 overflow-auto max-h-[75vh]">
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "fit-content" }}>
-            <div ref={printRef} className="bg-white p-6 rounded-md shadow-sm" style={{ width: 720 }}>
+            <div ref={printRef} className="bg-white p-8 rounded-md shadow-sm" style={{ width: 900 }}>
               <div className="text-center mb-3">
                 <div className="text-lg font-serif font-semibold text-emerald-800">
                   Vegetable Bed Plan — {bedName}
@@ -228,18 +228,18 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                 </div>
 
                 {/* Legend */}
-                <div className="text-xs space-y-2 w-56 shrink-0">
-                  <div className="font-semibold text-emerald-800 border-b pb-1">Legend</div>
+                <div className="text-sm space-y-3 w-64 shrink-0">
+                  <div className="font-semibold text-emerald-800 border-b pb-1.5 text-base">Legend</div>
                   {usedCropIds.map((id) => {
                     const c = cropById.get(id);
                     if (!c) return null;
                     return (
-                      <div key={id} className="flex items-center gap-2">
+                      <div key={id} className="flex items-center gap-3">
                         <span
-                          className="w-6 h-6 rounded flex items-center justify-center shrink-0"
+                          className="w-9 h-9 rounded flex items-center justify-center shrink-0"
                           style={{ background: colorForCrop(c) }}
                         >
-                          <CropIcon crop={c} size={13} />
+                          <CropIcon crop={c} size={20} />
                         </span>
                         <span>
                           {c.crop_name}
@@ -249,21 +249,21 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     );
                   })}
                   {cfg.dripLines.length > 0 && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <span className="inline-block w-5 h-[2px] border-t-2 border-dashed border-blue-500" />
+                    <div className="flex items-center gap-3 pt-1">
+                      <span className="inline-block w-7 h-[2px] border-t-2 border-dashed border-blue-500" />
                       <span>Drip line</span>
                     </div>
                   )}
                   {cfg.border.enabled && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex w-6 h-6 items-center justify-center">
-                        <CropIcon crop={cropById.get(cfg.border.cropId || "")} size={13} />
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex w-9 h-9 items-center justify-center">
+                        <CropIcon crop={cropById.get(cfg.border.cropId || "")} size={20} />
                       </span>
                       <span>Border @ {cfg.border.spacingIn}″</span>
                     </div>
                   )}
 
-                  <div className="pt-3 border-t mt-2 text-[11px] text-muted-foreground space-y-0.5">
+                  <div className="pt-3 border-t mt-2 text-xs text-muted-foreground space-y-1">
                     <div>Bed area: {bedArea} sq ft</div>
                     <div>Cycle: {cfg.cycle.rows.length} rows × {cfg.cycle.repeats}</div>
                   </div>
@@ -511,7 +511,7 @@ function BedGrid({
   }
 
   return (
-    <div className="border-2 border-emerald-800 rounded-sm bg-white" style={{ width: 360 }}>
+    <div className="border-2 border-emerald-800 rounded-sm bg-white" style={{ width: 460 }}>
       {rowsToRender.map((row, i) => {
         const rowNum = row.collapsed
           ? "…"
@@ -557,10 +557,10 @@ function RowRender({
   gapPercents: number[];
   collapsedLabel?: string;
 }) {
-  const height = 26;
+  const height = 44;
   return (
     <div className="relative flex items-stretch border-b last:border-b-0 border-emerald-800/30">
-      <div className="w-8 shrink-0 text-[10px] text-muted-foreground flex items-center justify-center border-r border-emerald-800/30 bg-emerald-50">
+      <div className="w-10 shrink-0 text-[12px] text-muted-foreground flex items-center justify-center border-r border-emerald-800/30 bg-emerald-50">
         {rowNumber}
       </div>
       <div className="relative flex-1" style={{ height }}>
@@ -582,8 +582,8 @@ function RowRender({
           (() => {
             const c = row.cropId ? cropById.get(row.cropId) : undefined;
             return (
-              <div className="h-full w-full flex items-center justify-center text-xs gap-1.5" style={{ background: colorForCrop(c) }}>
-                <CropIcon crop={c} size={12} />
+              <div className="h-full w-full flex items-center justify-center text-sm gap-2" style={{ background: colorForCrop(c) }}>
+                <CropIcon crop={c} size={22} />
                 {c ? `${c.crop_name}` : "—"}
               </div>
             );
@@ -595,7 +595,7 @@ function RowRender({
               return (
                 <div key={ci} className="h-full flex items-center justify-center border-r last:border-r-0 border-emerald-800/10"
                   style={{ background: colorForCrop(c) }}>
-                  {c ? <CropIcon crop={c} size={13} /> : <span className="text-muted-foreground text-sm">—</span>}
+                  {c ? <CropIcon crop={c} size={22} /> : <span className="text-muted-foreground text-base">—</span>}
                 </div>
               );
             })}
@@ -610,14 +610,14 @@ function BorderMarkers({ length, icon }: { length: number; icon: string }) {
   // decorative left/right border markers
   return (
     <>
-      <div className="absolute -left-4 top-0 bottom-0 flex flex-col justify-between py-1 pointer-events-none">
+      <div className="absolute -left-6 top-0 bottom-0 flex flex-col justify-between py-1 pointer-events-none">
         {Array.from({ length }).map((_, i) => (
-          <span key={i} className="text-[10px] leading-none">{icon}</span>
+          <span key={i} className="text-base leading-none">{icon}</span>
         ))}
       </div>
-      <div className="absolute -right-4 top-0 bottom-0 flex flex-col justify-between py-1 pointer-events-none">
+      <div className="absolute -right-6 top-0 bottom-0 flex flex-col justify-between py-1 pointer-events-none">
         {Array.from({ length }).map((_, i) => (
-          <span key={i} className="text-[10px] leading-none">{icon}</span>
+          <span key={i} className="text-base leading-none">{icon}</span>
         ))}
       </div>
     </>
