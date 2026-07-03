@@ -555,47 +555,53 @@ function BedGrid(props: BedGridProps) {
       </div>
 
 
-  return (
-    <div>
-      {/* Column control strip */}
-      {!readOnly && (
-        <div className="flex items-center justify-end gap-2 mb-2 pl-10">
-          <span className="text-xs text-muted-foreground mr-auto pl-2">
-            Columns: {cfg.columns.length}
-          </span>
-          <Button size="sm" variant="outline" className="h-7" onClick={onRemoveColumn} disabled={cfg.columns.length <= 1}>
-            <Minus className="size-3.5 mr-1" /> Column
-          </Button>
-          <Button size="sm" variant="outline" className="h-7" onClick={onAddColumn} disabled={cfg.columns.length >= 12}>
-            <Plus className="size-3.5 mr-1" /> Column
-          </Button>
-        </div>
-      )}
-
-      <div className="border-4 border-emerald-800 rounded-sm bg-white shadow-sm" style={{ width: 520 }}>
-        {/* drip toggle strip */}
-        {!readOnly && (
-          <div className="flex items-stretch border-b border-emerald-800/30 bg-emerald-50/50">
-            <div className="w-10 shrink-0 border-r border-emerald-800/30" />
-            <div className="relative flex-1 h-6">
-              {Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
-                const on = cfg.dripLines.includes(g);
-                return (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => onToggleDrip(g)}
-                    title={on ? "Remove drip line" : "Add drip line"}
-                    className="absolute -translate-x-1/2 top-0 bottom-0 flex items-center justify-center w-5"
-                    style={{ left: `${props.gapPercents[g]}%` }}
-                  >
-                    <span className={`inline-block w-2.5 h-2.5 rounded-full border ${on ? "bg-blue-500 border-blue-600" : "bg-white border-neutral-300"}`} />
-                  </button>
-                );
-              })}
+      <div className="border-4 border-emerald-800 rounded-sm bg-white shadow-sm" style={{ width: 560 }}>
+        {/* Column widths + drag handles + drip toggle */}
+        <div className="flex items-stretch border-b border-emerald-800/30 bg-emerald-50/60">
+          <div className="w-10 shrink-0 border-r border-emerald-800/30" />
+          <div ref={headerRef} className="relative flex-1 h-8">
+            {/* per-column width labels */}
+            <div
+              className="absolute inset-0 grid"
+              style={{ gridTemplateColumns: cfg.columns.map((c) => `${c.widthFt}fr`).join(" ") }}
+            >
+              {cfg.columns.map((c, i) => (
+                <div key={i} className="flex items-center justify-center text-[11px] font-medium text-emerald-900 border-r last:border-r-0 border-emerald-800/20">
+                  {c.widthFt.toFixed(2)} ft
+                </div>
+              ))}
             </div>
+            {/* drag handles between adjacent columns */}
+            {!readOnly && cfg.columns.slice(0, -1).map((_, i) => {
+              const leftPct = ((cfg.columns.slice(0, i + 1).reduce((s, c) => s + c.widthFt, 0)) / totalFt) * 100;
+              return (
+                <div
+                  key={`h-${i}`}
+                  onPointerDown={(e) => startDrag(e, i)}
+                  className="absolute top-0 bottom-0 -translate-x-1/2 w-2 cursor-col-resize hover:bg-emerald-400/40 z-30"
+                  style={{ left: `${leftPct}%` }}
+                  title="Drag to resize columns"
+                />
+              );
+            })}
+            {/* drip line toggle dots (over gaps 0..N) */}
+            {!readOnly && Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
+              const on = cfg.dripLines.includes(g);
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => onToggleDrip(g)}
+                  title={on ? "Remove drip line" : "Add drip line"}
+                  className="absolute -translate-x-1/2 -top-1 flex items-center justify-center w-4 h-4 z-20"
+                  style={{ left: `${props.gapPercents[g]}%` }}
+                >
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full border ${on ? "bg-blue-500 border-blue-600" : "bg-white border-neutral-400"}`} />
+                </button>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         {Array.from({ length: visualRepeats }).map((_, rep) => (
           <div key={rep}>
@@ -636,6 +642,7 @@ function BedGrid(props: BedGridProps) {
     </div>
   );
 }
+
 
 function RowRender({
   cfg, row, rowIdx, rowNumber, isTemplate,
