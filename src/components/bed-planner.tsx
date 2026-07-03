@@ -1,11 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
@@ -18,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { BedConfig, BedRow } from "@/lib/bed-plan";
 import { defaultBedConfig, iconForCrop, colorForCrop, strongColorForCrop, variantMarker } from "@/lib/bed-plan";
+
 
 type Crop = {
   id: string;
@@ -181,7 +179,21 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
       cells.length = n;
       return { kind: "cells", cells };
     });
-    patch({ columns: cols, cycle: { ...cfg.cycle, rows } });
+    const sum = cols.reduce((s, c) => s + c.widthFt, 0);
+    patch({ columns: cols, cycle: { ...cfg.cycle, rows }, bedWidthFt: Number(sum.toFixed(2)) });
+  }
+  function setRowCount(n: number) {
+    n = Math.max(1, Math.min(500, n));
+    const cols = cfg.columns.length;
+    const rows = [...cfg.cycle.rows];
+    while (rows.length < n) rows.push({ kind: "cells", cells: Array.from({ length: cols }, () => ({ cropId: null })) });
+    rows.length = n;
+    patch({ cycle: { repeats: 1, rows } });
+  }
+  function setColumnWidths(widths: number[]) {
+    const cols = widths.map((w) => ({ widthFt: Math.max(0.1, Number(w.toFixed(2))) }));
+    const sum = cols.reduce((s, c) => s + c.widthFt, 0);
+    patch({ columns: cols, bedWidthFt: Number(sum.toFixed(2)) });
   }
   function toggleDrip(gapIndex: number) {
     const has = cfg.dripLines.includes(gapIndex);
@@ -191,6 +203,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
         : [...cfg.dripLines, gapIndex].sort((a, b) => a - b),
     });
   }
+
 
   async function exportImage(kind: "png" | "pdf") {
     if (!printRef.current) return;
@@ -287,6 +300,9 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     gapPercents={gapPercents}
                     crops={crops}
                     readOnly={!!readOnly}
+                    totalRows={totalRows}
+                    onSetRowCount={setRowCount}
+                    onSetColumnWidths={setColumnWidths}
                     onCellChange={(rowIdx, colIdx, cropId) => {
                       const row = cfg.cycle.rows[rowIdx];
                       if (row?.kind !== "cells") return;
@@ -294,6 +310,12 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                       while (cells.length < totalCols) cells.push({ cropId: null });
                       cells[colIdx] = { cropId };
                       updateRow(rowIdx, { kind: "cells", cells });
+                    }}
+                    onFillRow={(rowIdx, cropId) => {
+                      updateRow(rowIdx, {
+                        kind: "cells",
+                        cells: Array.from({ length: totalCols }, () => ({ cropId })),
+                      });
                     }}
                     onFullChange={(rowIdx, cropId) => updateRow(rowIdx, { kind: "full", cropId })}
                     onRowKindChange={setRowKind}
@@ -303,6 +325,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     onAddColumn={() => setColumnCount(cfg.columns.length + 1)}
                     onRemoveColumn={() => setColumnCount(cfg.columns.length - 1)}
                   />
+
                 </div>
 
                 {/* Legend */}
@@ -451,7 +474,11 @@ type BedGridProps = {
   gapPercents: number[];
   crops: Crop[];
   readOnly: boolean;
+  totalRows: number;
+  onSetRowCount: (n: number) => void;
+  onSetColumnWidths: (widths: number[]) => void;
   onCellChange: (rowIdx: number, colIdx: number, cropId: string | null) => void;
+  onFillRow: (rowIdx: number, cropId: string | null) => void;
   onFullChange: (rowIdx: number, cropId: string | null) => void;
   onRowKindChange: (rowIdx: number, kind: BedRow["kind"]) => void;
   onInsertRow: (rowIdx: number) => void;
@@ -462,53 +489,119 @@ type BedGridProps = {
 };
 
 function BedGrid(props: BedGridProps) {
-  const { cfg, readOnly, onAddColumn, onRemoveColumn, onToggleDrip } = props;
+  const { cfg, readOnly, onAddColumn, onRemoveColumn, onToggleDrip, totalRows, onSetRowCount, onSetColumnWidths } = props;
   // For huge beds show first cycle + collapse indicator + last cycle
   const cycleLen = cfg.cycle.rows.length;
   const showFullCycles = cfg.cycle.repeats <= 2;
   const visualRepeats = showFullCycles ? cfg.cycle.repeats : 1;
+  const headerRef = useRef<HTMLDivElement>(null);
+  const totalFt = cfg.columns.reduce((s, c) => s + c.widthFt, 0) || 1;
+
+  const startDrag = useCallback((e: React.PointerEvent, i: number) => {
+    if (readOnly) return;
+    e.preventDefault();
+    const el = headerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const startX = e.clientX;
+    const startWidths = cfg.columns.map((c) => c.widthFt);
+    const ftPerPx = totalFt / rect.width;
+    const min = 0.25;
+    const move = (ev: PointerEvent) => {
+      const dxFt = (ev.clientX - startX) * ftPerPx;
+      const a = startWidths[i];
+      const b = startWidths[i + 1];
+      const newA = Math.max(min, Math.min(a + b - min, a + dxFt));
+      const newB = a + b - newA;
+      const widths = [...startWidths];
+      widths[i] = newA;
+      widths[i + 1] = newB;
+      onSetColumnWidths(widths);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }, [cfg.columns, totalFt, onSetColumnWidths, readOnly]);
 
   return (
     <div>
-      {/* Column control strip */}
-      {!readOnly && (
-        <div className="flex items-center justify-end gap-2 mb-2 pl-10">
-          <span className="text-xs text-muted-foreground mr-auto pl-2">
-            Columns: {cfg.columns.length}
-          </span>
-          <Button size="sm" variant="outline" className="h-7" onClick={onRemoveColumn} disabled={cfg.columns.length <= 1}>
-            <Minus className="size-3.5 mr-1" /> Column
-          </Button>
-          <Button size="sm" variant="outline" className="h-7" onClick={onAddColumn} disabled={cfg.columns.length >= 12}>
-            <Plus className="size-3.5 mr-1" /> Column
-          </Button>
+      {/* Row / Column inline-editable strip */}
+      <div className="flex items-center justify-between gap-3 mb-2 pl-10 flex-wrap">
+        <div className="flex items-center gap-3 text-xs">
+          <InlineNumEdit label="Rows" value={totalRows} min={1} max={500} onChange={onSetRowCount} disabled={readOnly} />
+          <InlineNumEdit label="Columns" value={cfg.columns.length} min={1} max={12}
+            onChange={(n) => {
+              const diff = n - cfg.columns.length;
+              if (diff > 0) for (let k = 0; k < diff; k++) onAddColumn();
+              else for (let k = 0; k < -diff; k++) onRemoveColumn();
+            }}
+            disabled={readOnly}
+          />
+          <span className="text-muted-foreground">Bed: {cfg.bedLengthFt}ft × {totalFt.toFixed(2)}ft</span>
         </div>
-      )}
-
-      <div className="border-4 border-emerald-800 rounded-sm bg-white shadow-sm" style={{ width: 520 }}>
-        {/* drip toggle strip */}
         {!readOnly && (
-          <div className="flex items-stretch border-b border-emerald-800/30 bg-emerald-50/50">
-            <div className="w-10 shrink-0 border-r border-emerald-800/30" />
-            <div className="relative flex-1 h-6">
-              {Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
-                const on = cfg.dripLines.includes(g);
-                return (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => onToggleDrip(g)}
-                    title={on ? "Remove drip line" : "Add drip line"}
-                    className="absolute -translate-x-1/2 top-0 bottom-0 flex items-center justify-center w-5"
-                    style={{ left: `${props.gapPercents[g]}%` }}
-                  >
-                    <span className={`inline-block w-2.5 h-2.5 rounded-full border ${on ? "bg-blue-500 border-blue-600" : "bg-white border-neutral-300"}`} />
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="h-7" onClick={onRemoveColumn} disabled={cfg.columns.length <= 1}>
+              <Minus className="size-3.5 mr-1" /> Column
+            </Button>
+            <Button size="sm" variant="outline" className="h-7" onClick={onAddColumn} disabled={cfg.columns.length >= 12}>
+              <Plus className="size-3.5 mr-1" /> Column
+            </Button>
           </div>
         )}
+      </div>
+
+
+      <div className="border-4 border-emerald-800 rounded-sm bg-white shadow-sm" style={{ width: 560 }}>
+        {/* Column widths + drag handles + drip toggle */}
+        <div className="flex items-stretch border-b border-emerald-800/30 bg-emerald-50/60">
+          <div className="w-10 shrink-0 border-r border-emerald-800/30" />
+          <div ref={headerRef} className="relative flex-1 h-8">
+            {/* per-column width labels */}
+            <div
+              className="absolute inset-0 grid"
+              style={{ gridTemplateColumns: cfg.columns.map((c) => `${c.widthFt}fr`).join(" ") }}
+            >
+              {cfg.columns.map((c, i) => (
+                <div key={i} className="flex items-center justify-center text-[11px] font-medium text-emerald-900 border-r last:border-r-0 border-emerald-800/20">
+                  {c.widthFt.toFixed(2)} ft
+                </div>
+              ))}
+            </div>
+            {/* drag handles between adjacent columns */}
+            {!readOnly && cfg.columns.slice(0, -1).map((_, i) => {
+              const leftPct = ((cfg.columns.slice(0, i + 1).reduce((s, c) => s + c.widthFt, 0)) / totalFt) * 100;
+              return (
+                <div
+                  key={`h-${i}`}
+                  onPointerDown={(e) => startDrag(e, i)}
+                  className="absolute top-0 bottom-0 -translate-x-1/2 w-2 cursor-col-resize hover:bg-emerald-400/40 z-30"
+                  style={{ left: `${leftPct}%` }}
+                  title="Drag to resize columns"
+                />
+              );
+            })}
+            {/* drip line toggle dots (over gaps 0..N) */}
+            {!readOnly && Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
+              const on = cfg.dripLines.includes(g);
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => onToggleDrip(g)}
+                  title={on ? "Remove drip line" : "Add drip line"}
+                  className="absolute -translate-x-1/2 -top-1 flex items-center justify-center w-4 h-4 z-20"
+                  style={{ left: `${props.gapPercents[g]}%` }}
+                >
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full border ${on ? "bg-blue-500 border-blue-600" : "bg-white border-neutral-400"}`} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {Array.from({ length: visualRepeats }).map((_, rep) => (
           <div key={rep}>
@@ -550,16 +643,26 @@ function BedGrid(props: BedGridProps) {
   );
 }
 
+
 function RowRender({
   cfg, row, rowIdx, rowNumber, isTemplate,
   cropById, crops, gapPercents, readOnly,
-  onCellChange, onFullChange, onRowKindChange, onInsertRow, onDeleteRow,
+  onCellChange, onFillRow, onFullChange, onRowKindChange, onInsertRow, onDeleteRow,
 }: BedGridProps & {
   row: BedRow; rowIdx: number; rowNumber: number; isTemplate: boolean;
 }) {
   const height = 52;
   const columns = cfg.columns.length;
   const editable = !readOnly && isTemplate;
+  const gridTemplate = cfg.columns.map((c) => `${c.widthFt}fr`).join(" ");
+
+  // Detect merged row (all cells same non-null crop) — render as spanning band.
+  const mergedCropId =
+    row.kind === "cells" &&
+    row.cells.length >= columns &&
+    row.cells.slice(0, columns).every((c) => c.cropId && c.cropId === row.cells[0].cropId)
+      ? row.cells[0].cropId
+      : null;
 
   return (
     <div className="relative flex items-stretch border-b last:border-b-0 border-emerald-800/40 group">
@@ -602,8 +705,30 @@ function RowRender({
               </InlineCropPicker>
             ) : content;
           })()
+        ) : mergedCropId ? (
+          (() => {
+            const c = cropById.get(mergedCropId);
+            const content = (
+              <div
+                className="h-full w-full flex items-center justify-center text-sm gap-2 font-medium"
+                style={{
+                  background: colorForCrop(c),
+                  boxShadow: c ? `inset 0 0 0 2px ${strongColorForCrop(c)}` : undefined,
+                  color: "#1c1917",
+                }}
+              >
+                <CropIcon crop={c} size={24} />
+                {c?.crop_name}
+              </div>
+            );
+            return editable ? (
+              <InlineCropPicker crops={crops} value={mergedCropId} onChange={(id) => onFillRow(rowIdx, id)}>
+                {content}
+              </InlineCropPicker>
+            ) : content;
+          })()
         ) : (
-          <div className="h-full w-full grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0,1fr))` }}>
+          <div className="h-full w-full grid" style={{ gridTemplateColumns: gridTemplate }}>
             {Array.from({ length: columns }).map((_, ci) => {
               const cell = row.cells[ci] ?? { cropId: null };
               const c = cell.cropId ? cropById.get(cell.cropId) : undefined;
@@ -635,6 +760,7 @@ function RowRender({
           </div>
         )}
       </div>
+
 
       {editable && (
         <div className="absolute -right-9 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -688,3 +814,57 @@ function BorderMarkers({
   );
   return <>{side("left")}{side("right")}</>;
 }
+
+function InlineNumEdit({
+  label, value, min, max, onChange, disabled,
+}: {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  onChange: (n: number) => void;
+  disabled?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => { setDraft(String(value)); }, [value]);
+  const commit = () => {
+    const n = Number(draft);
+    if (!Number.isNaN(n)) {
+      const clamped = Math.max(min ?? -Infinity, Math.min(max ?? Infinity, Math.round(n)));
+      onChange(clamped);
+    }
+    setEditing(false);
+  };
+  if (editing && !disabled) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <span className="text-emerald-900 font-medium">{label}</span>
+        <Input
+          autoFocus
+          type="number"
+          value={draft}
+          min={min}
+          max={max}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+          className="h-6 w-16 text-xs px-2"
+        />
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => setEditing(true)}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-emerald-800/30 bg-white hover:bg-emerald-100 text-emerald-900 disabled:opacity-70"
+      title={disabled ? undefined : "Click to edit"}
+    >
+      <span className="font-medium">{label}:</span>
+      <span className="tabular-nums">{value}</span>
+    </button>
+  );
+}
+
