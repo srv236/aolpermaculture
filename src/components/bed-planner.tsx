@@ -610,14 +610,14 @@ function BorderMarkers({ length, icon }: { length: number; icon: string }) {
   // decorative left/right border markers
   return (
     <>
-      <div className="absolute -left-4 top-0 bottom-0 flex flex-col justify-between py-1 pointer-events-none">
+      <div className="absolute -left-6 top-0 bottom-0 flex flex-col justify-between py-1 pointer-events-none">
         {Array.from({ length }).map((_, i) => (
-          <span key={i} className="text-[10px] leading-none">{icon}</span>
+          <span key={i} className="text-base leading-none">{icon}</span>
         ))}
       </div>
-      <div className="absolute -right-4 top-0 bottom-0 flex flex-col justify-between py-1 pointer-events-none">
+      <div className="absolute -right-6 top-0 bottom-0 flex flex-col justify-between py-1 pointer-events-none">
         {Array.from({ length }).map((_, i) => (
-          <span key={i} className="text-[10px] leading-none">{icon}</span>
+          <span key={i} className="text-base leading-none">{icon}</span>
         ))}
       </div>
     </>
