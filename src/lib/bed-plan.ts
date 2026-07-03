@@ -95,12 +95,18 @@ export function variantMarker(
   return { label, color: MARKER_PALETTE[h % MARKER_PALETTE.length] };
 }
 
-export function colorForCrop(crop?: { crop_category?: string | null } | null): string {
-  const cat = (crop?.crop_category || "").toLowerCase();
-  if (cat === "greens") return "#dcfce7";
-  if (cat === "root") return "#fee2e2";
-  if (cat === "creeper") return "#ecfccb";
-  if (cat === "ground") return "#fef3c7";
-  if (cat === "fruit") return "#ffe4e6";
-  return "#f5f5f4";
+export function colorForCrop(
+  crop?: { id?: string; crop_name?: string | null; variety_name?: string | null; crop_category?: string | null } | null,
+): string {
+  if (!crop) return "#fafaf9";
+  // Distinct per-crop pastel derived from the variant marker color (~22% opacity)
+  const { color } = variantMarker(crop);
+  return color + "33";
+}
+
+export function strongColorForCrop(
+  crop?: { id?: string; crop_name?: string | null; variety_name?: string | null } | null,
+): string {
+  if (!crop) return "#a3a3a3";
+  return variantMarker(crop).color;
 }
