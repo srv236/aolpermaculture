@@ -61,18 +61,31 @@ function CropIcon({
   );
 }
 
-/** Popover with a searchable crop picker — used on any cell/row/border directly on the bed. */
+/** Popover with a searchable crop picker — used on any cell/row/border directly on the bed.
+ * If `brushCropId` is provided, clicking applies it directly instead of opening the picker. */
 function InlineCropPicker({
-  crops, value, onChange, children, disabled,
+  crops, value, onChange, children, disabled, brushCropId,
 }: {
   crops: Crop[];
   value: string | null;
   onChange: (id: string | null) => void;
   children: React.ReactNode;
   disabled?: boolean;
+  brushCropId?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   if (disabled) return <>{children}</>;
+  if (brushCropId) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); onChange(brushCropId); }}
+        className="w-full h-full block focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-crosshair"
+      >
+        {children}
+      </button>
+    );
+  }
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
