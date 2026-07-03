@@ -197,7 +197,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
 
         <div className="border rounded-md bg-muted/30 p-4 overflow-auto max-h-[75vh]">
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "fit-content" }}>
-            <div ref={printRef} className="bg-white p-6 rounded-md shadow-sm" style={{ width: 720 }}>
+            <div ref={printRef} className="bg-white p-8 rounded-md shadow-sm" style={{ width: 900 }}>
               <div className="text-center mb-3">
                 <div className="text-lg font-serif font-semibold text-emerald-800">
                   Vegetable Bed Plan — {bedName}
