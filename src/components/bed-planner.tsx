@@ -897,3 +897,76 @@ function InlineNumEdit({
   );
 }
 
+function BrushSelector({
+  crops, value, onChange,
+}: {
+  crops: Crop[];
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = value ? crops.find((c) => c.id === value) : null;
+  if (active) {
+    return (
+      <div className="inline-flex items-center gap-1.5 h-8 px-2 rounded-md border-2 border-emerald-600 bg-emerald-50 shadow-sm">
+        <Paintbrush className="size-3.5 text-emerald-700" />
+        <span
+          className="w-5 h-5 rounded flex items-center justify-center"
+          style={{ background: colorForCrop(active) }}
+        >
+          <CropIcon crop={active} size={12} />
+        </span>
+        <span className="text-xs font-medium text-emerald-900 max-w-[120px] truncate">
+          {active.crop_name}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="ml-1 rounded-sm hover:bg-emerald-200 p-0.5"
+          title="Stop sowing"
+        >
+          <X className="size-3.5 text-emerald-800" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8">
+          <Paintbrush className="size-3.5 mr-1.5" /> Sow crop…
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-64" align="end">
+        <Command>
+          <CommandInput placeholder="Pick a crop to sow…" />
+          <CommandList>
+            <CommandEmpty>No crop found.</CommandEmpty>
+            <CommandGroup>
+              {crops.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={`${c.crop_name} ${c.variety_name ?? ""}`}
+                  onSelect={() => { onChange(c.id); setOpen(false); }}
+                >
+                  <span
+                    className="w-6 h-6 rounded flex items-center justify-center mr-2 shrink-0"
+                    style={{ background: colorForCrop(c) }}
+                  >
+                    <CropIcon crop={c} size={14} />
+                  </span>
+                  <span className="truncate">
+                    {c.crop_name}
+                    {c.variety_name ? <span className="text-muted-foreground"> · {c.variety_name}</span> : null}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
