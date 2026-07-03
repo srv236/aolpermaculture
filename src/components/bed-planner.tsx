@@ -724,7 +724,7 @@ function RowRender({
               </div>
             );
             return editable ? (
-              <InlineCropPicker crops={crops} value={row.cropId} onChange={(id) => onFullChange(rowIdx, id)}>
+              <InlineCropPicker crops={crops} value={row.cropId} onChange={(id) => onFullChange(rowIdx, id)} brushCropId={brushCropId}>
                 {content}
               </InlineCropPicker>
             ) : content;
