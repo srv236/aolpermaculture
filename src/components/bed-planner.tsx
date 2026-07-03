@@ -236,10 +236,10 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     return (
                       <div key={id} className="flex items-center gap-2">
                         <span
-                          className="w-5 h-5 rounded flex items-center justify-center text-[13px] shrink-0"
+                          className="w-6 h-6 rounded flex items-center justify-center shrink-0"
                           style={{ background: colorForCrop(c) }}
                         >
-                          {iconForCrop(c)}
+                          <CropIcon crop={c} size={13} />
                         </span>
                         <span>
                           {c.crop_name}
@@ -256,8 +256,8 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                   )}
                   {cfg.border.enabled && (
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px]">
-                        {iconForCrop(cropById.get(cfg.border.cropId || ""))}
+                      <span className="inline-flex w-6 h-6 items-center justify-center">
+                        <CropIcon crop={cropById.get(cfg.border.cropId || "")} size={13} />
                       </span>
                       <span>Border @ {cfg.border.spacingIn}″</span>
                     </div>
