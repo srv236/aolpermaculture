@@ -595,7 +595,7 @@ function RowRender({
               return (
                 <div key={ci} className="h-full flex items-center justify-center border-r last:border-r-0 border-emerald-800/10"
                   style={{ background: colorForCrop(c) }}>
-                  {c ? <CropIcon crop={c} size={13} /> : <span className="text-muted-foreground text-sm">—</span>}
+                  {c ? <CropIcon crop={c} size={22} /> : <span className="text-muted-foreground text-base">—</span>}
                 </div>
               );
             })}
