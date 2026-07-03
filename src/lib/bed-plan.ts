@@ -76,6 +76,25 @@ export function iconForCrop(crop?: {
   return "🌱";
 }
 
+// Deterministic marker (letter + color) to differentiate crops that share the
+// same category icon in the legend / preview.
+const MARKER_PALETTE = [
+  "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6",
+  "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16",
+  "#d946ef", "#0ea5e9",
+];
+export function variantMarker(
+  crop?: { id?: string; crop_name?: string | null; variety_name?: string | null } | null,
+): { label: string; color: string } {
+  if (!crop) return { label: "", color: "#999" };
+  const src = (crop.variety_name || crop.crop_name || crop.id || "").trim();
+  const label = src ? src[0].toUpperCase() : "•";
+  const key = crop.id || src;
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return { label, color: MARKER_PALETTE[h % MARKER_PALETTE.length] };
+}
+
 export function colorForCrop(crop?: { crop_category?: string | null } | null): string {
   const cat = (crop?.crop_category || "").toLowerCase();
   if (cat === "greens") return "#dcfce7";
