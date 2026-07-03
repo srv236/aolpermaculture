@@ -582,8 +582,8 @@ function RowRender({
           (() => {
             const c = row.cropId ? cropById.get(row.cropId) : undefined;
             return (
-              <div className="h-full w-full flex items-center justify-center text-xs" style={{ background: colorForCrop(c) }}>
-                <span className="mr-1">{iconForCrop(c)}</span>
+              <div className="h-full w-full flex items-center justify-center text-xs gap-1.5" style={{ background: colorForCrop(c) }}>
+                <CropIcon crop={c} size={12} />
                 {c ? `${c.crop_name}` : "—"}
               </div>
             );
@@ -593,9 +593,9 @@ function RowRender({
             {row.cells.map((cell, ci) => {
               const c = cell.cropId ? cropById.get(cell.cropId) : undefined;
               return (
-                <div key={ci} className="h-full flex items-center justify-center text-sm border-r last:border-r-0 border-emerald-800/10"
+                <div key={ci} className="h-full flex items-center justify-center border-r last:border-r-0 border-emerald-800/10"
                   style={{ background: colorForCrop(c) }}>
-                  {c ? iconForCrop(c) : <span className="text-muted-foreground">—</span>}
+                  {c ? <CropIcon crop={c} size={13} /> : <span className="text-muted-foreground text-sm">—</span>}
                 </div>
               );
             })}
