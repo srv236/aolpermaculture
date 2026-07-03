@@ -474,7 +474,11 @@ type BedGridProps = {
   gapPercents: number[];
   crops: Crop[];
   readOnly: boolean;
+  totalRows: number;
+  onSetRowCount: (n: number) => void;
+  onSetColumnWidths: (widths: number[]) => void;
   onCellChange: (rowIdx: number, colIdx: number, cropId: string | null) => void;
+  onFillRow: (rowIdx: number, cropId: string | null) => void;
   onFullChange: (rowIdx: number, cropId: string | null) => void;
   onRowKindChange: (rowIdx: number, kind: BedRow["kind"]) => void;
   onInsertRow: (rowIdx: number) => void;
@@ -485,11 +489,71 @@ type BedGridProps = {
 };
 
 function BedGrid(props: BedGridProps) {
-  const { cfg, readOnly, onAddColumn, onRemoveColumn, onToggleDrip } = props;
+  const { cfg, readOnly, onAddColumn, onRemoveColumn, onToggleDrip, totalRows, onSetRowCount, onSetColumnWidths } = props;
   // For huge beds show first cycle + collapse indicator + last cycle
   const cycleLen = cfg.cycle.rows.length;
   const showFullCycles = cfg.cycle.repeats <= 2;
   const visualRepeats = showFullCycles ? cfg.cycle.repeats : 1;
+  const headerRef = useRef<HTMLDivElement>(null);
+  const totalFt = cfg.columns.reduce((s, c) => s + c.widthFt, 0) || 1;
+
+  const startDrag = useCallback((e: React.PointerEvent, i: number) => {
+    if (readOnly) return;
+    e.preventDefault();
+    const el = headerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const startX = e.clientX;
+    const startWidths = cfg.columns.map((c) => c.widthFt);
+    const ftPerPx = totalFt / rect.width;
+    const min = 0.25;
+    const move = (ev: PointerEvent) => {
+      const dxFt = (ev.clientX - startX) * ftPerPx;
+      const a = startWidths[i];
+      const b = startWidths[i + 1];
+      const newA = Math.max(min, Math.min(a + b - min, a + dxFt));
+      const newB = a + b - newA;
+      const widths = [...startWidths];
+      widths[i] = newA;
+      widths[i + 1] = newB;
+      onSetColumnWidths(widths);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }, [cfg.columns, totalFt, onSetColumnWidths, readOnly]);
+
+  return (
+    <div>
+      {/* Row / Column inline-editable strip */}
+      <div className="flex items-center justify-between gap-3 mb-2 pl-10 flex-wrap">
+        <div className="flex items-center gap-3 text-xs">
+          <InlineNumEdit label="Rows" value={totalRows} min={1} max={500} onChange={onSetRowCount} disabled={readOnly} />
+          <InlineNumEdit label="Columns" value={cfg.columns.length} min={1} max={12}
+            onChange={(n) => {
+              const diff = n - cfg.columns.length;
+              if (diff > 0) for (let k = 0; k < diff; k++) onAddColumn();
+              else for (let k = 0; k < -diff; k++) onRemoveColumn();
+            }}
+            disabled={readOnly}
+          />
+          <span className="text-muted-foreground">Bed: {cfg.bedLengthFt}ft × {totalFt.toFixed(2)}ft</span>
+        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="h-7" onClick={onRemoveColumn} disabled={cfg.columns.length <= 1}>
+              <Minus className="size-3.5 mr-1" /> Column
+            </Button>
+            <Button size="sm" variant="outline" className="h-7" onClick={onAddColumn} disabled={cfg.columns.length >= 12}>
+              <Plus className="size-3.5 mr-1" /> Column
+            </Button>
+          </div>
+        )}
+      </div>
+
 
   return (
     <div>
