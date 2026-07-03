@@ -11,7 +11,44 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import type { BedConfig, BedRow } from "@/lib/bed-plan";
-import { defaultBedConfig, iconForCrop, colorForCrop } from "@/lib/bed-plan";
+import { defaultBedConfig, iconForCrop, colorForCrop, variantMarker } from "@/lib/bed-plan";
+
+/** Emoji icon + a tiny colored letter badge so crops sharing an icon are still distinguishable. */
+function CropIcon({
+  crop,
+  size = 14,
+}: {
+  crop?: { id?: string; crop_name?: string | null; variety_name?: string | null; crop_category?: string | null } | null;
+  size?: number;
+}) {
+  const icon = iconForCrop(crop as any);
+  const m = variantMarker(crop as any);
+  const badge = Math.max(9, Math.round(size * 0.7));
+  return (
+    <span
+      className="relative inline-flex items-center justify-center leading-none"
+      style={{ fontSize: size, lineHeight: 1 }}
+    >
+      <span>{icon}</span>
+      {crop && (
+        <span
+          className="absolute font-bold text-white rounded-full flex items-center justify-center ring-1 ring-white"
+          style={{
+            background: m.color,
+            width: badge,
+            height: badge,
+            fontSize: Math.round(badge * 0.7),
+            lineHeight: `${badge}px`,
+            right: -Math.round(badge * 0.35),
+            bottom: -Math.round(badge * 0.35),
+          }}
+        >
+          {m.label}
+        </span>
+      )}
+    </span>
+  );
+}
 
 type Crop = {
   id: string;
