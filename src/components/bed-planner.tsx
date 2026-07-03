@@ -8,7 +8,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from "@/components/ui/command";
 import {
-  Download, FileImage, FileText, Plus, Minus, MoreVertical, Trash2,
+  Download, FileImage, FileText, Plus, Minus, MoreVertical, Trash2, GripVertical, X, Paintbrush,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -61,18 +61,31 @@ function CropIcon({
   );
 }
 
-/** Popover with a searchable crop picker — used on any cell/row/border directly on the bed. */
+/** Popover with a searchable crop picker — used on any cell/row/border directly on the bed.
+ * If `brushCropId` is provided, clicking applies it directly instead of opening the picker. */
 function InlineCropPicker({
-  crops, value, onChange, children, disabled,
+  crops, value, onChange, children, disabled, brushCropId,
 }: {
   crops: Crop[];
   value: string | null;
   onChange: (id: string | null) => void;
   children: React.ReactNode;
   disabled?: boolean;
+  brushCropId?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   if (disabled) return <>{children}</>;
+  if (brushCropId) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); onChange(brushCropId); }}
+        className="w-full h-full block focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-crosshair"
+      >
+        {children}
+      </button>
+    );
+  }
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -132,6 +145,8 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
   const cfg = value ?? defaultBedConfig();
   const printRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [brushCropId, setBrushCropId] = useState<string | null>(null);
+  const brushCrop = brushCropId ? crops.find((c) => c.id === brushCropId) ?? null : null;
 
   const cropById = useMemo(() => new Map(crops.map((c) => [c.id, c])), [crops]);
   const usedCropIds = useMemo(() => {
@@ -250,6 +265,13 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
               <span className="text-muted-foreground mr-1">Tip: click any cell to pick a crop.</span>
             </div>
           )}
+          {!readOnly && (
+            <BrushSelector
+              crops={crops}
+              value={brushCropId}
+              onChange={setBrushCropId}
+            />
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline">
@@ -322,6 +344,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     onInsertRow={insertRowAfter}
                     onDeleteRow={deleteRow}
                     onToggleDrip={toggleDrip}
+                    brushCropId={brushCropId}
                     onAddColumn={() => setColumnCount(cfg.columns.length + 1)}
                     onRemoveColumn={() => setColumnCount(cfg.columns.length - 1)}
                   />
@@ -486,6 +509,7 @@ type BedGridProps = {
   onToggleDrip: (gapIndex: number) => void;
   onAddColumn: () => void;
   onRemoveColumn: () => void;
+  brushCropId: string | null;
 };
 
 function BedGrid(props: BedGridProps) {
@@ -578,10 +602,14 @@ function BedGrid(props: BedGridProps) {
                 <div
                   key={`h-${i}`}
                   onPointerDown={(e) => startDrag(e, i)}
-                  className="absolute top-0 bottom-0 -translate-x-1/2 w-2 cursor-col-resize hover:bg-emerald-400/40 z-30"
+                  className="absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-col-resize flex items-center justify-center group/handle z-30"
                   style={{ left: `${leftPct}%` }}
                   title="Drag to resize columns"
-                />
+                >
+                  <span className="w-[3px] h-6 rounded bg-emerald-700/60 group-hover/handle:bg-emerald-600 relative flex items-center justify-center">
+                    <GripVertical className="absolute size-3.5 text-emerald-800 bg-white rounded-sm border border-emerald-700/50" />
+                  </span>
+                </div>
               );
             })}
             {/* drip line toggle dots (over gaps 0..N) */}
@@ -646,7 +674,7 @@ function BedGrid(props: BedGridProps) {
 
 function RowRender({
   cfg, row, rowIdx, rowNumber, isTemplate,
-  cropById, crops, gapPercents, readOnly,
+  cropById, crops, gapPercents, readOnly, brushCropId,
   onCellChange, onFillRow, onFullChange, onRowKindChange, onInsertRow, onDeleteRow,
 }: BedGridProps & {
   row: BedRow; rowIdx: number; rowNumber: number; isTemplate: boolean;
@@ -700,7 +728,7 @@ function RowRender({
               </div>
             );
             return editable ? (
-              <InlineCropPicker crops={crops} value={row.cropId} onChange={(id) => onFullChange(rowIdx, id)}>
+              <InlineCropPicker crops={crops} value={row.cropId} onChange={(id) => onFullChange(rowIdx, id)} brushCropId={brushCropId}>
                 {content}
               </InlineCropPicker>
             ) : content;
@@ -722,7 +750,7 @@ function RowRender({
               </div>
             );
             return editable ? (
-              <InlineCropPicker crops={crops} value={mergedCropId} onChange={(id) => onFillRow(rowIdx, id)}>
+              <InlineCropPicker crops={crops} value={mergedCropId} onChange={(id) => onFillRow(rowIdx, id)} brushCropId={brushCropId}>
                 {content}
               </InlineCropPicker>
             ) : content;
@@ -750,6 +778,7 @@ function RowRender({
                       crops={crops}
                       value={cell.cropId}
                       onChange={(id) => onCellChange(rowIdx, ci, id)}
+                      brushCropId={brushCropId}
                     >
                       {inner}
                     </InlineCropPicker>
@@ -867,4 +896,77 @@ function InlineNumEdit({
     </button>
   );
 }
+
+function BrushSelector({
+  crops, value, onChange,
+}: {
+  crops: Crop[];
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = value ? crops.find((c) => c.id === value) : null;
+  if (active) {
+    return (
+      <div className="inline-flex items-center gap-1.5 h-8 px-2 rounded-md border-2 border-emerald-600 bg-emerald-50 shadow-sm">
+        <Paintbrush className="size-3.5 text-emerald-700" />
+        <span
+          className="w-5 h-5 rounded flex items-center justify-center"
+          style={{ background: colorForCrop(active) }}
+        >
+          <CropIcon crop={active} size={12} />
+        </span>
+        <span className="text-xs font-medium text-emerald-900 max-w-[120px] truncate">
+          {active.crop_name}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="ml-1 rounded-sm hover:bg-emerald-200 p-0.5"
+          title="Stop sowing"
+        >
+          <X className="size-3.5 text-emerald-800" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8">
+          <Paintbrush className="size-3.5 mr-1.5" /> Sow crop…
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-64" align="end">
+        <Command>
+          <CommandInput placeholder="Pick a crop to sow…" />
+          <CommandList>
+            <CommandEmpty>No crop found.</CommandEmpty>
+            <CommandGroup>
+              {crops.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={`${c.crop_name} ${c.variety_name ?? ""}`}
+                  onSelect={() => { onChange(c.id); setOpen(false); }}
+                >
+                  <span
+                    className="w-6 h-6 rounded flex items-center justify-center mr-2 shrink-0"
+                    style={{ background: colorForCrop(c) }}
+                  >
+                    <CropIcon crop={c} size={14} />
+                  </span>
+                  <span className="truncate">
+                    {c.crop_name}
+                    {c.variety_name ? <span className="text-muted-foreground"> · {c.variety_name}</span> : null}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
