@@ -76,11 +76,13 @@ function InlineCropPicker({
   const [open, setOpen] = useState(false);
   if (disabled) return <>{children}</>;
   if (brushCropId) {
+    const isSame = value === brushCropId;
     return (
       <button
         type="button"
-        onClick={(e) => { e.preventDefault(); onChange(brushCropId); }}
+        onClick={(e) => { e.preventDefault(); onChange(isSame ? null : brushCropId); }}
         className="w-full h-full block focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-crosshair"
+        title={isSame ? "Click to clear" : "Click to sow"}
       >
         {children}
       </button>
