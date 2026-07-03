@@ -1048,3 +1048,63 @@ function BrushSelector({
 }
 
 
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-emerald-800 text-white text-sm font-bold tracking-wide px-3 py-2 rounded-t-md text-center border-2 border-emerald-800">
+      {children}
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <tr className="border-b last:border-b-0 border-emerald-800/20">
+      <td className="py-1.5 px-3 text-emerald-900 font-medium">{label}</td>
+      <td className="py-1.5 px-3 text-right text-emerald-950 tabular-nums">{value}</td>
+    </tr>
+  );
+}
+
+function CategoryTable({ crops }: { crops: Crop[] }) {
+  const groups = new Map<string, Crop[]>();
+  for (const c of crops) {
+    const k = (c.crop_category || "Other").toLowerCase();
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k)!.push(c);
+  }
+  const order = ["greens", "ground", "creeper", "root", "fruit", "other"];
+  const sorted = [...groups.entries()].sort(
+    ([a], [b]) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)),
+  );
+  if (sorted.length === 0) {
+    return <div className="p-3 text-xs text-muted-foreground">No crops defined.</div>;
+  }
+  return (
+    <table className="w-full text-sm">
+      <tbody>
+        {sorted.map(([cat, list]) => {
+          const sample = list[0];
+          return (
+            <tr key={cat} className="border-b last:border-b-0 border-emerald-800/20 align-top">
+              <td className="py-2 px-2 w-12">
+                <span
+                  className="w-9 h-9 rounded-md flex items-center justify-center"
+                  style={{ background: colorForCrop(sample) }}
+                >
+                  <CropIcon crop={sample} size={20} />
+                </span>
+              </td>
+              <td className="py-2 px-2 font-semibold text-emerald-900 capitalize w-28">
+                {cat === "ground" ? "Ground veg." : cat === "creeper" ? "Creepers" : cat === "root" ? "Root veg." : cat}
+              </td>
+              <td className="py-2 px-2 text-xs text-emerald-950">
+                {list.map((c) => c.crop_name).join(", ")}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
