@@ -9,7 +9,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from "@/components/ui/command";
 import {
-  Download, FileImage, FileText, Plus, Minus, MoreVertical, Trash2, GripVertical, X, Paintbrush,
+  FileImage, FileText, Plus, Minus, MoreVertical, Trash2, GripVertical, X, Paintbrush,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -147,9 +147,12 @@ type Props = {
 export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnly }: Props) {
   const cfg = value ?? defaultBedConfig();
   const printRef = useRef<HTMLDivElement>(null);
+  const scrollWrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [brushCropId, setBrushCropId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const brushCrop = brushCropId ? crops.find((c) => c.id === brushCropId) ?? null : null;
+
 
   const cropById = useMemo(() => new Map(crops.map((c) => [c.id, c])), [crops]);
   const usedCropIds = useMemo(() => {
@@ -223,75 +226,111 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
   }
 
 
+  function buildFilename(ext: "png" | "pdf") {
+    const safeName = (bedName || "Bed_Plan").trim().replace(/[^\w-]+/g, "_");
+    const d = new Date();
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return `${safeName}_Plan_${iso}.${ext}`;
+  }
+
   async function exportImage(kind: "png" | "pdf") {
     if (!printRef.current) return;
     const el = printRef.current;
+    const scaledParent = el.parentElement as HTMLElement | null;
+    const scrollWrap = scrollWrapRef.current;
+
+    // Snapshot styles we'll temporarily override.
+    const prevTransform = scaledParent?.style.transform ?? "";
+    const prevScrollStyles = scrollWrap
+      ? {
+          maxHeight: scrollWrap.style.maxHeight,
+          overflow: scrollWrap.style.overflow,
+          height: scrollWrap.style.height,
+        }
+      : null;
+
     try {
       toast.loading(`Preparing ${kind.toUpperCase()}…`, { id: "bed-export" });
+
+      // 1) Enter clean export state (hides +/– controls, helper text, dropdown carets, etc).
+      setIsExporting(true);
+
+      // 2) Neutralise zoom transform and let the scroll container grow to fit.
+      if (scaledParent) scaledParent.style.transform = "none";
+      if (scrollWrap) {
+        scrollWrap.style.maxHeight = "none";
+        scrollWrap.style.overflow = "visible";
+        scrollWrap.style.height = "auto";
+      }
+
+      // 3) Wait two animation frames so React commits + browser lays out.
+      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
       const { default: html2canvas } = await import("html2canvas-pro");
 
-      // Temporarily neutralise the parent zoom transform so html2canvas measures
-      // the element at its natural size (transforms on ancestors break capture).
-      const scaledParent = el.parentElement as HTMLElement | null;
-      const prevTransform = scaledParent?.style.transform ?? "";
-      if (scaledParent) scaledParent.style.transform = "none";
-
-      // Cap total pixels so we don't blow past the browser's max canvas size
+      // Cap total pixels so we don't exceed the browser's max canvas size
       // (~16k px per side; very tall bed layouts otherwise render blank).
       const naturalW = el.offsetWidth;
       const naturalH = el.offsetHeight;
       const maxSide = 14000;
-      const scale = Math.min(2, maxSide / Math.max(naturalW, naturalH));
+      const captureScale = Math.min(2, maxSide / Math.max(naturalW, naturalH));
 
       const canvas = await html2canvas(el, {
         backgroundColor: "#ffffff",
-        scale,
+        scale: captureScale,
         useCORS: true,
         logging: false,
         windowWidth: naturalW,
         windowHeight: naturalH,
       });
 
-      if (scaledParent) scaledParent.style.transform = prevTransform;
-
       if (kind === "png") {
         const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement("a");
         a.href = dataUrl;
-        a.download = `${bedName || "bed-plan"}.png`;
+        a.download = buildFilename("png");
         document.body.appendChild(a);
         a.click();
         a.remove();
         toast.success("PNG downloaded", { id: "bed-export" });
-        return;
-      }
+      } else {
+        // PDF: split the captured image across A4 pages so tall layouts stay readable.
+        const { jsPDF } = await import("jspdf");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const imgW = pageW;
+        const imgH = (canvas.height * pageW) / canvas.width;
 
-      // PDF: split the captured image across A4 pages so tall layouts remain readable.
-      const { jsPDF } = await import("jspdf");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * pageW) / canvas.width;
-
-      let heightLeft = imgH;
-      let position = 0;
-      const dataUrl = canvas.toDataURL("image/png");
-      pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
-      heightLeft -= pageH;
-      while (heightLeft > 0) {
-        position -= pageH;
-        pdf.addPage();
+        const dataUrl = canvas.toDataURL("image/png");
+        let heightLeft = imgH;
+        let position = 0;
         pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
         heightLeft -= pageH;
+        while (heightLeft > 0) {
+          position -= pageH;
+          pdf.addPage();
+          pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
+          heightLeft -= pageH;
+        }
+        pdf.save(buildFilename("pdf"));
+        toast.success("PDF downloaded", { id: "bed-export" });
       }
-      pdf.save(`${bedName || "bed-plan"}.pdf`);
-      toast.success("PDF downloaded", { id: "bed-export" });
     } catch (e: any) {
       console.error("Bed export failed:", e);
       toast.error(`Export failed: ${e?.message ?? "unknown error"}`, { id: "bed-export" });
+    } finally {
+      // Always restore UI, scroll and transform state.
+      if (scaledParent) scaledParent.style.transform = prevTransform;
+      if (scrollWrap && prevScrollStyles) {
+        scrollWrap.style.maxHeight = prevScrollStyles.maxHeight;
+        scrollWrap.style.overflow = prevScrollStyles.overflow;
+        scrollWrap.style.height = prevScrollStyles.height;
+      }
+      setIsExporting(false);
     }
   }
+
 
 
   const gapPercents = useMemo(() => {
@@ -327,24 +366,31 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
               onChange={setBrushCropId}
             />
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline">
-                <Download className="size-3.5 mr-1.5" /> Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => exportImage("png")}>
-                <FileImage className="size-4 mr-2" /> Save as PNG
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportImage("pdf")}>
-                <FileText className="size-4 mr-2" /> Save as PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => exportImage("png")}
+              disabled={isExporting}
+            >
+              <FileImage className="size-3.5 mr-1.5" /> Download PNG
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => exportImage("pdf")}
+              disabled={isExporting}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white"
+            >
+              <FileText className="size-3.5 mr-1.5" /> Download PDF
+            </Button>
+          </div>
         </div>
 
-        <div className="border rounded-md bg-gradient-to-br from-emerald-50/40 to-amber-50/30 p-4 overflow-auto max-h-[80vh]">
+        <div
+          ref={scrollWrapRef}
+          className="border rounded-md bg-gradient-to-br from-emerald-50/40 to-amber-50/30 p-4 overflow-auto max-h-[80vh]"
+        >
+
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "fit-content" }}>
             <div ref={printRef} className="bg-white p-8 rounded-md shadow-sm" style={{ width: 1100 }}>
               {/* Title bar */}
@@ -424,6 +470,8 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                           brushCropId={brushCropId}
                           onAddColumn={() => setColumnCount(cfg.columns.length + 1)}
                           onRemoveColumn={() => setColumnCount(cfg.columns.length - 1)}
+                          isExporting={isExporting}
+
                         />
                       </div>
                     </div>
@@ -641,10 +689,12 @@ type BedGridProps = {
   onAddColumn: () => void;
   onRemoveColumn: () => void;
   brushCropId: string | null;
+  isExporting: boolean;
+
 };
 
 function BedGrid(props: BedGridProps) {
-  const { cfg, readOnly, onAddColumn, onRemoveColumn, onToggleDrip, totalRows, onSetRowCount, onSetColumnWidths } = props;
+  const { cfg, readOnly, onAddColumn, onRemoveColumn, onToggleDrip, totalRows, onSetRowCount, onSetColumnWidths, isExporting } = props;
   // For huge beds show first cycle + collapse indicator + last cycle
   const cycleLen = cfg.cycle.rows.length;
   const showFullCycles = cfg.cycle.repeats <= 2;
@@ -683,31 +733,34 @@ function BedGrid(props: BedGridProps) {
 
   return (
     <div>
-      {/* Row / Column inline-editable strip */}
-      <div className="flex items-center justify-between gap-3 mb-2 pl-10 flex-wrap">
-        <div className="flex items-center gap-3 text-xs">
-          <InlineNumEdit label="Rows" value={totalRows} min={1} max={500} onChange={onSetRowCount} disabled={readOnly} />
-          <InlineNumEdit label="Columns" value={cfg.columns.length} min={1} max={12}
-            onChange={(n) => {
-              const diff = n - cfg.columns.length;
-              if (diff > 0) for (let k = 0; k < diff; k++) onAddColumn();
-              else for (let k = 0; k < -diff; k++) onRemoveColumn();
-            }}
-            disabled={readOnly}
-          />
-          <span className="text-muted-foreground">Bed: {cfg.bedLengthFt}ft × {totalFt.toFixed(2)}ft</span>
-        </div>
-        {!readOnly && (
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="h-7" onClick={onRemoveColumn} disabled={cfg.columns.length <= 1}>
-              <Minus className="size-3.5 mr-1" /> Column
-            </Button>
-            <Button size="sm" variant="outline" className="h-7" onClick={onAddColumn} disabled={cfg.columns.length >= 12}>
-              <Plus className="size-3.5 mr-1" /> Column
-            </Button>
+      {/* Row / Column inline-editable strip (hidden in export) */}
+      {!isExporting && (
+        <div className="flex items-center justify-between gap-3 mb-2 pl-10 flex-wrap">
+          <div className="flex items-center gap-3 text-xs">
+            <InlineNumEdit label="Rows" value={totalRows} min={1} max={500} onChange={onSetRowCount} disabled={readOnly} />
+            <InlineNumEdit label="Columns" value={cfg.columns.length} min={1} max={12}
+              onChange={(n) => {
+                const diff = n - cfg.columns.length;
+                if (diff > 0) for (let k = 0; k < diff; k++) onAddColumn();
+                else for (let k = 0; k < -diff; k++) onRemoveColumn();
+              }}
+              disabled={readOnly}
+            />
+            <span className="text-muted-foreground">Bed: {cfg.bedLengthFt}ft × {totalFt.toFixed(2)}ft</span>
           </div>
-        )}
-      </div>
+          {!readOnly && (
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="h-7" onClick={onRemoveColumn} disabled={cfg.columns.length <= 1}>
+                <Minus className="size-3.5 mr-1" /> Column
+              </Button>
+              <Button size="sm" variant="outline" className="h-7" onClick={onAddColumn} disabled={cfg.columns.length >= 12}>
+                <Plus className="size-3.5 mr-1" /> Column
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
 
 
       <div className="border-4 border-emerald-800 rounded-sm bg-white shadow-sm" style={{ width: 560 }}>
@@ -727,7 +780,7 @@ function BedGrid(props: BedGridProps) {
               ))}
             </div>
             {/* drag handles between adjacent columns */}
-            {!readOnly && cfg.columns.slice(0, -1).map((_, i) => {
+            {!readOnly && !isExporting && cfg.columns.slice(0, -1).map((_, i) => {
               const leftPct = ((cfg.columns.slice(0, i + 1).reduce((s, c) => s + c.widthFt, 0)) / totalFt) * 100;
               return (
                 <div
@@ -744,7 +797,7 @@ function BedGrid(props: BedGridProps) {
               );
             })}
             {/* drip line toggle dots (over gaps 0..N) */}
-            {!readOnly && Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
+            {!readOnly && !isExporting && Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
               const on = cfg.dripLines.includes(g);
               return (
                 <button
@@ -758,6 +811,7 @@ function BedGrid(props: BedGridProps) {
                   <span className={`inline-block w-2.5 h-2.5 rounded-full border ${on ? "bg-blue-500 border-blue-600" : "bg-white border-neutral-400"}`} />
                 </button>
               );
+
             })}
           </div>
         </div>
@@ -805,15 +859,16 @@ function BedGrid(props: BedGridProps) {
 
 function RowRender({
   cfg, row, rowIdx, rowNumber, isTemplate,
-  cropById, crops, gapPercents, readOnly, brushCropId,
+  cropById, crops, gapPercents, readOnly, brushCropId, isExporting,
   onCellChange, onFillRow, onFullChange, onRowKindChange, onInsertRow, onDeleteRow,
 }: BedGridProps & {
   row: BedRow; rowIdx: number; rowNumber: number; isTemplate: boolean;
 }) {
   const height = 52;
   const columns = cfg.columns.length;
-  const editable = !readOnly && isTemplate;
+  const editable = !readOnly && isTemplate && !isExporting;
   const gridTemplate = cfg.columns.map((c) => `${c.widthFt}fr`).join(" ");
+
 
   // Detect merged row (all cells same non-null crop) — render as spanning band.
   const mergedCropId =
@@ -840,8 +895,9 @@ function RowRender({
 
         {row.kind === "empty" ? (
           <div className="h-full w-full bg-[repeating-linear-gradient(45deg,#f5f5f4,#f5f5f4_6px,#e7e5e4_6px,#e7e5e4_12px)] flex items-center justify-center text-xs text-neutral-500">
-            {editable ? "empty — click row menu to change" : "empty"}
+            {isExporting ? "—" : editable ? "empty — click row menu to change" : "empty"}
           </div>
+
         ) : row.kind === "full" ? (
           (() => {
             const c = row.cropId ? cropById.get(row.cropId) : undefined;
@@ -855,7 +911,7 @@ function RowRender({
                 }}
               >
                 <CropIcon crop={c} size={24} />
-                {c ? c.crop_name : (editable ? "click to pick crop" : "—")}
+                {c ? c.crop_name : (isExporting ? "" : editable ? "click to pick crop" : "—")}
               </div>
             );
             return editable ? (
@@ -899,7 +955,7 @@ function RowRender({
                     boxShadow: c ? `inset 0 0 0 2px ${strongColorForCrop(c)}` : undefined,
                   }}
                 >
-                  {c ? <CropIcon crop={c} size={26} /> : <span className="text-neutral-400 text-lg">＋</span>}
+                  {c ? <CropIcon crop={c} size={26} /> : (isExporting ? null : <span className="text-neutral-400 text-lg">＋</span>)}
                 </div>
               );
               return (
