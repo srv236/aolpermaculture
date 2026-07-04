@@ -366,24 +366,31 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
               onChange={setBrushCropId}
             />
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline">
-                <Download className="size-3.5 mr-1.5" /> Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => exportImage("png")}>
-                <FileImage className="size-4 mr-2" /> Save as PNG
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportImage("pdf")}>
-                <FileText className="size-4 mr-2" /> Save as PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => exportImage("png")}
+              disabled={isExporting}
+            >
+              <FileImage className="size-3.5 mr-1.5" /> Download PNG
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => exportImage("pdf")}
+              disabled={isExporting}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white"
+            >
+              <FileText className="size-3.5 mr-1.5" /> Download PDF
+            </Button>
+          </div>
         </div>
 
-        <div className="border rounded-md bg-gradient-to-br from-emerald-50/40 to-amber-50/30 p-4 overflow-auto max-h-[80vh]">
+        <div
+          ref={scrollWrapRef}
+          className="border rounded-md bg-gradient-to-br from-emerald-50/40 to-amber-50/30 p-4 overflow-auto max-h-[80vh]"
+        >
+
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "fit-content" }}>
             <div ref={printRef} className="bg-white p-8 rounded-md shadow-sm" style={{ width: 1100 }}>
               {/* Title bar */}
