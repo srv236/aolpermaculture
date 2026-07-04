@@ -694,7 +694,7 @@ type BedGridProps = {
 };
 
 function BedGrid(props: BedGridProps) {
-  const { cfg, readOnly, onAddColumn, onRemoveColumn, onToggleDrip, totalRows, onSetRowCount, onSetColumnWidths } = props;
+  const { cfg, readOnly, onAddColumn, onRemoveColumn, onToggleDrip, totalRows, onSetRowCount, onSetColumnWidths, isExporting } = props;
   // For huge beds show first cycle + collapse indicator + last cycle
   const cycleLen = cfg.cycle.rows.length;
   const showFullCycles = cfg.cycle.repeats <= 2;
