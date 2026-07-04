@@ -911,7 +911,7 @@ function RowRender({
                 }}
               >
                 <CropIcon crop={c} size={24} />
-                {c ? c.crop_name : (editable ? "click to pick crop" : "—")}
+                {c ? c.crop_name : (isExporting ? "" : editable ? "click to pick crop" : "—")}
               </div>
             );
             return editable ? (
