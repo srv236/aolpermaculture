@@ -9,7 +9,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from "@/components/ui/command";
 import {
-  Download, FileImage, FileText, Plus, Minus, MoreVertical, Trash2, GripVertical, X, Paintbrush,
+  FileImage, FileText, Plus, Minus, MoreVertical, Trash2, GripVertical, X, Paintbrush,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
