@@ -955,7 +955,7 @@ function RowRender({
                     boxShadow: c ? `inset 0 0 0 2px ${strongColorForCrop(c)}` : undefined,
                   }}
                 >
-                  {c ? <CropIcon crop={c} size={26} /> : <span className="text-neutral-400 text-lg">＋</span>}
+                  {c ? <CropIcon crop={c} size={26} /> : (isExporting ? null : <span className="text-neutral-400 text-lg">＋</span>)}
                 </div>
               );
               return (
