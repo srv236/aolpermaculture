@@ -733,31 +733,34 @@ function BedGrid(props: BedGridProps) {
 
   return (
     <div>
-      {/* Row / Column inline-editable strip */}
-      <div className="flex items-center justify-between gap-3 mb-2 pl-10 flex-wrap">
-        <div className="flex items-center gap-3 text-xs">
-          <InlineNumEdit label="Rows" value={totalRows} min={1} max={500} onChange={onSetRowCount} disabled={readOnly} />
-          <InlineNumEdit label="Columns" value={cfg.columns.length} min={1} max={12}
-            onChange={(n) => {
-              const diff = n - cfg.columns.length;
-              if (diff > 0) for (let k = 0; k < diff; k++) onAddColumn();
-              else for (let k = 0; k < -diff; k++) onRemoveColumn();
-            }}
-            disabled={readOnly}
-          />
-          <span className="text-muted-foreground">Bed: {cfg.bedLengthFt}ft × {totalFt.toFixed(2)}ft</span>
-        </div>
-        {!readOnly && (
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="h-7" onClick={onRemoveColumn} disabled={cfg.columns.length <= 1}>
-              <Minus className="size-3.5 mr-1" /> Column
-            </Button>
-            <Button size="sm" variant="outline" className="h-7" onClick={onAddColumn} disabled={cfg.columns.length >= 12}>
-              <Plus className="size-3.5 mr-1" /> Column
-            </Button>
+      {/* Row / Column inline-editable strip (hidden in export) */}
+      {!isExporting && (
+        <div className="flex items-center justify-between gap-3 mb-2 pl-10 flex-wrap">
+          <div className="flex items-center gap-3 text-xs">
+            <InlineNumEdit label="Rows" value={totalRows} min={1} max={500} onChange={onSetRowCount} disabled={readOnly} />
+            <InlineNumEdit label="Columns" value={cfg.columns.length} min={1} max={12}
+              onChange={(n) => {
+                const diff = n - cfg.columns.length;
+                if (diff > 0) for (let k = 0; k < diff; k++) onAddColumn();
+                else for (let k = 0; k < -diff; k++) onRemoveColumn();
+              }}
+              disabled={readOnly}
+            />
+            <span className="text-muted-foreground">Bed: {cfg.bedLengthFt}ft × {totalFt.toFixed(2)}ft</span>
           </div>
-        )}
-      </div>
+          {!readOnly && (
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="h-7" onClick={onRemoveColumn} disabled={cfg.columns.length <= 1}>
+                <Minus className="size-3.5 mr-1" /> Column
+              </Button>
+              <Button size="sm" variant="outline" className="h-7" onClick={onAddColumn} disabled={cfg.columns.length >= 12}>
+                <Plus className="size-3.5 mr-1" /> Column
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
 
 
       <div className="border-4 border-emerald-800 rounded-sm bg-white shadow-sm" style={{ width: 560 }}>
