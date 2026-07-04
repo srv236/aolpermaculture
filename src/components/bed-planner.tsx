@@ -229,72 +229,111 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
   async function exportImage(kind: "png" | "pdf") {
     if (!printRef.current) return;
     const el = printRef.current;
+  function buildFilename(ext: "png" | "pdf") {
+    const safeName = (bedName || "Bed_Plan").trim().replace(/[^\w-]+/g, "_");
+    const d = new Date();
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return `${safeName}_Plan_${iso}.${ext}`;
+  }
+
+  async function exportImage(kind: "png" | "pdf") {
+    if (!printRef.current) return;
+    const el = printRef.current;
+    const scaledParent = el.parentElement as HTMLElement | null;
+    const scrollWrap = scrollWrapRef.current;
+
+    // Snapshot styles we'll temporarily override.
+    const prevTransform = scaledParent?.style.transform ?? "";
+    const prevScrollStyles = scrollWrap
+      ? {
+          maxHeight: scrollWrap.style.maxHeight,
+          overflow: scrollWrap.style.overflow,
+          height: scrollWrap.style.height,
+        }
+      : null;
+
     try {
       toast.loading(`Preparing ${kind.toUpperCase()}…`, { id: "bed-export" });
+
+      // 1) Enter clean export state (hides +/– controls, helper text, dropdown carets, etc).
+      setIsExporting(true);
+
+      // 2) Neutralise zoom transform and let the scroll container grow to fit.
+      if (scaledParent) scaledParent.style.transform = "none";
+      if (scrollWrap) {
+        scrollWrap.style.maxHeight = "none";
+        scrollWrap.style.overflow = "visible";
+        scrollWrap.style.height = "auto";
+      }
+
+      // 3) Wait two animation frames so React commits + browser lays out.
+      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
       const { default: html2canvas } = await import("html2canvas-pro");
 
-      // Temporarily neutralise the parent zoom transform so html2canvas measures
-      // the element at its natural size (transforms on ancestors break capture).
-      const scaledParent = el.parentElement as HTMLElement | null;
-      const prevTransform = scaledParent?.style.transform ?? "";
-      if (scaledParent) scaledParent.style.transform = "none";
-
-      // Cap total pixels so we don't blow past the browser's max canvas size
+      // Cap total pixels so we don't exceed the browser's max canvas size
       // (~16k px per side; very tall bed layouts otherwise render blank).
       const naturalW = el.offsetWidth;
       const naturalH = el.offsetHeight;
       const maxSide = 14000;
-      const scale = Math.min(2, maxSide / Math.max(naturalW, naturalH));
+      const captureScale = Math.min(2, maxSide / Math.max(naturalW, naturalH));
 
       const canvas = await html2canvas(el, {
         backgroundColor: "#ffffff",
-        scale,
+        scale: captureScale,
         useCORS: true,
         logging: false,
         windowWidth: naturalW,
         windowHeight: naturalH,
       });
 
-      if (scaledParent) scaledParent.style.transform = prevTransform;
-
       if (kind === "png") {
         const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement("a");
         a.href = dataUrl;
-        a.download = `${bedName || "bed-plan"}.png`;
+        a.download = buildFilename("png");
         document.body.appendChild(a);
         a.click();
         a.remove();
         toast.success("PNG downloaded", { id: "bed-export" });
-        return;
-      }
+      } else {
+        // PDF: split the captured image across A4 pages so tall layouts stay readable.
+        const { jsPDF } = await import("jspdf");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const imgW = pageW;
+        const imgH = (canvas.height * pageW) / canvas.width;
 
-      // PDF: split the captured image across A4 pages so tall layouts remain readable.
-      const { jsPDF } = await import("jspdf");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * pageW) / canvas.width;
-
-      let heightLeft = imgH;
-      let position = 0;
-      const dataUrl = canvas.toDataURL("image/png");
-      pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
-      heightLeft -= pageH;
-      while (heightLeft > 0) {
-        position -= pageH;
-        pdf.addPage();
+        const dataUrl = canvas.toDataURL("image/png");
+        let heightLeft = imgH;
+        let position = 0;
         pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
         heightLeft -= pageH;
+        while (heightLeft > 0) {
+          position -= pageH;
+          pdf.addPage();
+          pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
+          heightLeft -= pageH;
+        }
+        pdf.save(buildFilename("pdf"));
+        toast.success("PDF downloaded", { id: "bed-export" });
       }
-      pdf.save(`${bedName || "bed-plan"}.pdf`);
-      toast.success("PDF downloaded", { id: "bed-export" });
     } catch (e: any) {
       console.error("Bed export failed:", e);
       toast.error(`Export failed: ${e?.message ?? "unknown error"}`, { id: "bed-export" });
+    } finally {
+      // Always restore UI, scroll and transform state.
+      if (scaledParent) scaledParent.style.transform = prevTransform;
+      if (scrollWrap && prevScrollStyles) {
+        scrollWrap.style.maxHeight = prevScrollStyles.maxHeight;
+        scrollWrap.style.overflow = prevScrollStyles.overflow;
+        scrollWrap.style.height = prevScrollStyles.height;
+      }
+      setIsExporting(false);
     }
   }
+
 
 
   const gapPercents = useMemo(() => {
