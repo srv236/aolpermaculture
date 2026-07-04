@@ -859,15 +859,16 @@ function BedGrid(props: BedGridProps) {
 
 function RowRender({
   cfg, row, rowIdx, rowNumber, isTemplate,
-  cropById, crops, gapPercents, readOnly, brushCropId,
+  cropById, crops, gapPercents, readOnly, brushCropId, isExporting,
   onCellChange, onFillRow, onFullChange, onRowKindChange, onInsertRow, onDeleteRow,
 }: BedGridProps & {
   row: BedRow; rowIdx: number; rowNumber: number; isTemplate: boolean;
 }) {
   const height = 52;
   const columns = cfg.columns.length;
-  const editable = !readOnly && isTemplate;
+  const editable = !readOnly && isTemplate && !isExporting;
   const gridTemplate = cfg.columns.map((c) => `${c.widthFt}fr`).join(" ");
+
 
   // Detect merged row (all cells same non-null crop) — render as spanning band.
   const mergedCropId =
