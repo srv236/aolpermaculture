@@ -470,6 +470,8 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                           brushCropId={brushCropId}
                           onAddColumn={() => setColumnCount(cfg.columns.length + 1)}
                           onRemoveColumn={() => setColumnCount(cfg.columns.length - 1)}
+                          isExporting={isExporting}
+
                         />
                       </div>
                     </div>
