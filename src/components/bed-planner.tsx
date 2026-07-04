@@ -226,9 +226,6 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
   }
 
 
-  async function exportImage(kind: "png" | "pdf") {
-    if (!printRef.current) return;
-    const el = printRef.current;
   function buildFilename(ext: "png" | "pdf") {
     const safeName = (bedName || "Bed_Plan").trim().replace(/[^\w-]+/g, "_");
     const d = new Date();
