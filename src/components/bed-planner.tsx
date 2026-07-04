@@ -780,7 +780,7 @@ function BedGrid(props: BedGridProps) {
               ))}
             </div>
             {/* drag handles between adjacent columns */}
-            {!readOnly && cfg.columns.slice(0, -1).map((_, i) => {
+            {!readOnly && !isExporting && cfg.columns.slice(0, -1).map((_, i) => {
               const leftPct = ((cfg.columns.slice(0, i + 1).reduce((s, c) => s + c.widthFt, 0)) / totalFt) * 100;
               return (
                 <div
@@ -797,7 +797,7 @@ function BedGrid(props: BedGridProps) {
               );
             })}
             {/* drip line toggle dots (over gaps 0..N) */}
-            {!readOnly && Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
+            {!readOnly && !isExporting && Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
               const on = cfg.dripLines.includes(g);
               return (
                 <button
@@ -811,6 +811,7 @@ function BedGrid(props: BedGridProps) {
                   <span className={`inline-block w-2.5 h-2.5 rounded-full border ${on ? "bg-blue-500 border-blue-600" : "bg-white border-neutral-400"}`} />
                 </button>
               );
+
             })}
           </div>
         </div>
