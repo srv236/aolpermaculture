@@ -895,8 +895,9 @@ function RowRender({
 
         {row.kind === "empty" ? (
           <div className="h-full w-full bg-[repeating-linear-gradient(45deg,#f5f5f4,#f5f5f4_6px,#e7e5e4_6px,#e7e5e4_12px)] flex items-center justify-center text-xs text-neutral-500">
-            {editable ? "empty — click row menu to change" : "empty"}
+            {isExporting ? "—" : editable ? "empty — click row menu to change" : "empty"}
           </div>
+
         ) : row.kind === "full" ? (
           (() => {
             const c = row.cropId ? cropById.get(row.cropId) : undefined;
