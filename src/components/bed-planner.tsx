@@ -689,6 +689,8 @@ type BedGridProps = {
   onAddColumn: () => void;
   onRemoveColumn: () => void;
   brushCropId: string | null;
+  isExporting: boolean;
+
 };
 
 function BedGrid(props: BedGridProps) {
