@@ -147,9 +147,12 @@ type Props = {
 export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnly }: Props) {
   const cfg = value ?? defaultBedConfig();
   const printRef = useRef<HTMLDivElement>(null);
+  const scrollWrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [brushCropId, setBrushCropId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const brushCrop = brushCropId ? crops.find((c) => c.id === brushCropId) ?? null : null;
+
 
   const cropById = useMemo(() => new Map(crops.map((c) => [c.id, c])), [crops]);
   const usedCropIds = useMemo(() => {
