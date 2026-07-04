@@ -224,22 +224,74 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
 
   async function exportImage(kind: "png" | "pdf") {
     if (!printRef.current) return;
-    const { default: html2canvas } = await import("html2canvas-pro");
-    const canvas = await html2canvas(printRef.current, { backgroundColor: "#ffffff", scale: 2 });
-    const dataUrl = canvas.toDataURL("image/png");
-    if (kind === "png") {
-      const a = document.createElement("a");
-      a.href = dataUrl; a.download = `${bedName || "bed-plan"}.png`; a.click();
-      return;
+    const el = printRef.current;
+    try {
+      toast.loading(`Preparing ${kind.toUpperCase()}…`, { id: "bed-export" });
+      const { default: html2canvas } = await import("html2canvas-pro");
+
+      // Temporarily neutralise the parent zoom transform so html2canvas measures
+      // the element at its natural size (transforms on ancestors break capture).
+      const scaledParent = el.parentElement as HTMLElement | null;
+      const prevTransform = scaledParent?.style.transform ?? "";
+      if (scaledParent) scaledParent.style.transform = "none";
+
+      // Cap total pixels so we don't blow past the browser's max canvas size
+      // (~16k px per side; very tall bed layouts otherwise render blank).
+      const naturalW = el.offsetWidth;
+      const naturalH = el.offsetHeight;
+      const maxSide = 14000;
+      const scale = Math.min(2, maxSide / Math.max(naturalW, naturalH));
+
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#ffffff",
+        scale,
+        useCORS: true,
+        logging: false,
+        windowWidth: naturalW,
+        windowHeight: naturalH,
+      });
+
+      if (scaledParent) scaledParent.style.transform = prevTransform;
+
+      if (kind === "png") {
+        const dataUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `${bedName || "bed-plan"}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        toast.success("PNG downloaded", { id: "bed-export" });
+        return;
+      }
+
+      // PDF: split the captured image across A4 pages so tall layouts remain readable.
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * pageW) / canvas.width;
+
+      let heightLeft = imgH;
+      let position = 0;
+      const dataUrl = canvas.toDataURL("image/png");
+      pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
+      heightLeft -= pageH;
+      while (heightLeft > 0) {
+        position -= pageH;
+        pdf.addPage();
+        pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
+        heightLeft -= pageH;
+      }
+      pdf.save(`${bedName || "bed-plan"}.pdf`);
+      toast.success("PDF downloaded", { id: "bed-export" });
+    } catch (e: any) {
+      console.error("Bed export failed:", e);
+      toast.error(`Export failed: ${e?.message ?? "unknown error"}`, { id: "bed-export" });
     }
-    const { jsPDF } = await import("jspdf");
-    const pdf = new jsPDF({
-      orientation: canvas.width > canvas.height ? "landscape" : "portrait",
-      unit: "pt", format: [canvas.width, canvas.height],
-    });
-    pdf.addImage(dataUrl, "PNG", 0, 0, canvas.width, canvas.height);
-    pdf.save(`${bedName || "bed-plan"}.pdf`);
   }
+
 
   const gapPercents = useMemo(() => {
     const total = cfg.columns.reduce((s, c) => s + c.widthFt, 0) || 1;
