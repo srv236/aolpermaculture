@@ -223,6 +223,18 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
   }
 
 
+  function exportFileName(ext: "png" | "pdf") {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const sanitize = (s: string) =>
+      s.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    const plotPart = sanitize(plotLabel || "Plot");
+    const bedPart = sanitize(bedName || "Bed");
+    return `${plotPart}_${bedPart}_${date}_${time}.${ext}`;
+  }
+
   async function exportImage(kind: "png" | "pdf") {
     if (!printRef.current) return;
     const el = printRef.current;
@@ -235,6 +247,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
       const scaledParent = el.parentElement as HTMLElement | null;
       const prevTransform = scaledParent?.style.transform ?? "";
       if (scaledParent) scaledParent.style.transform = "none";
+      el.classList.add("exporting");
 
       // Cap total pixels so we don't blow past the browser's max canvas size
       // (~16k px per side; very tall bed layouts otherwise render blank).
@@ -252,13 +265,14 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
         windowHeight: naturalH,
       });
 
+      el.classList.remove("exporting");
       if (scaledParent) scaledParent.style.transform = prevTransform;
 
       if (kind === "png") {
         const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement("a");
         a.href = dataUrl;
-        a.download = `${bedName || "bed-plan"}.png`;
+        a.download = exportFileName("png");
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -285,13 +299,15 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
         pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
         heightLeft -= pageH;
       }
-      pdf.save(`${bedName || "bed-plan"}.pdf`);
+      pdf.save(exportFileName("pdf"));
       toast.success("PDF downloaded", { id: "bed-export" });
     } catch (e: any) {
+      el.classList.remove("exporting");
       console.error("Bed export failed:", e);
       toast.error(`Export failed: ${e?.message ?? "unknown error"}`, { id: "bed-export" });
     }
   }
+
 
 
   const gapPercents = useMemo(() => {
@@ -347,6 +363,8 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
         <div className="border rounded-md bg-gradient-to-br from-emerald-50/40 to-amber-50/30 p-4 overflow-auto max-h-[80vh]">
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "fit-content" }}>
             <div ref={printRef} className="bg-white p-8 rounded-md shadow-sm" style={{ width: 1100 }}>
+              <style>{`.exporting [data-export-hide]{display:none !important;}`}</style>
+
               {/* Title bar */}
               <div className="flex items-center gap-3 pb-3 mb-4 border-b-2 border-emerald-800">
                 <div className="w-11 h-11 rounded-full bg-emerald-700 text-white flex items-center justify-center text-xl shrink-0">🌱</div>
@@ -383,8 +401,9 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                       </div>
 
                       <div className="relative flex-1">
-                        {/* Border markers */}
-                        {cfg.border.enabled && (
+                        {/* Border markers — only render when a border crop is picked so we
+                            don't clutter the export with placeholder bullets. */}
+                        {cfg.border.enabled && cfg.border.cropId && (
                           <BorderMarkers
                             length={Math.min(totalRows, 24)}
                             crop={cropById.get(cfg.border.cropId || "")}
@@ -392,6 +411,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                             crops={crops}
                           />
                         )}
+
 
                         <BedGrid
                           cfg={cfg}
@@ -732,6 +752,7 @@ function BedGrid(props: BedGridProps) {
               return (
                 <div
                   key={`h-${i}`}
+                  data-export-hide
                   onPointerDown={(e) => startDrag(e, i)}
                   className="absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-col-resize flex items-center justify-center group/handle z-30"
                   style={{ left: `${leftPct}%` }}
@@ -742,6 +763,7 @@ function BedGrid(props: BedGridProps) {
                   </span>
                 </div>
               );
+
             })}
             {/* drip line toggle dots (over gaps 0..N) */}
             {!readOnly && Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
