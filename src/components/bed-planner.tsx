@@ -363,6 +363,8 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
         <div className="border rounded-md bg-gradient-to-br from-emerald-50/40 to-amber-50/30 p-4 overflow-auto max-h-[80vh]">
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "fit-content" }}>
             <div ref={printRef} className="bg-white p-8 rounded-md shadow-sm" style={{ width: 1100 }}>
+              <style>{`.exporting [data-export-hide]{display:none !important;}`}</style>
+
               {/* Title bar */}
               <div className="flex items-center gap-3 pb-3 mb-4 border-b-2 border-emerald-800">
                 <div className="w-11 h-11 rounded-full bg-emerald-700 text-white flex items-center justify-center text-xl shrink-0">🌱</div>
