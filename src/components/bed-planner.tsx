@@ -383,8 +383,9 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                       </div>
 
                       <div className="relative flex-1">
-                        {/* Border markers */}
-                        {cfg.border.enabled && (
+                        {/* Border markers — only render when a border crop is picked so we
+                            don't clutter the export with placeholder bullets. */}
+                        {cfg.border.enabled && cfg.border.cropId && (
                           <BorderMarkers
                             length={Math.min(totalRows, 24)}
                             crop={cropById.get(cfg.border.cropId || "")}
@@ -392,6 +393,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                             crops={crops}
                           />
                         )}
+
 
                         <BedGrid
                           cfg={cfg}
