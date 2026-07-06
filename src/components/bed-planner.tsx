@@ -223,6 +223,18 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
   }
 
 
+  function exportFileName(ext: "png" | "pdf") {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const sanitize = (s: string) =>
+      s.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    const plotPart = sanitize(plotLabel || "Plot");
+    const bedPart = sanitize(bedName || "Bed");
+    return `${plotPart}_${bedPart}_${date}_${time}.${ext}`;
+  }
+
   async function exportImage(kind: "png" | "pdf") {
     if (!printRef.current) return;
     const el = printRef.current;
@@ -235,6 +247,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
       const scaledParent = el.parentElement as HTMLElement | null;
       const prevTransform = scaledParent?.style.transform ?? "";
       if (scaledParent) scaledParent.style.transform = "none";
+      el.classList.add("exporting");
 
       // Cap total pixels so we don't blow past the browser's max canvas size
       // (~16k px per side; very tall bed layouts otherwise render blank).
@@ -252,13 +265,14 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
         windowHeight: naturalH,
       });
 
+      el.classList.remove("exporting");
       if (scaledParent) scaledParent.style.transform = prevTransform;
 
       if (kind === "png") {
         const dataUrl = canvas.toDataURL("image/png");
         const a = document.createElement("a");
         a.href = dataUrl;
-        a.download = `${bedName || "bed-plan"}.png`;
+        a.download = exportFileName("png");
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -285,13 +299,15 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
         pdf.addImage(dataUrl, "PNG", 0, position, imgW, imgH);
         heightLeft -= pageH;
       }
-      pdf.save(`${bedName || "bed-plan"}.pdf`);
+      pdf.save(exportFileName("pdf"));
       toast.success("PDF downloaded", { id: "bed-export" });
     } catch (e: any) {
+      el.classList.remove("exporting");
       console.error("Bed export failed:", e);
       toast.error(`Export failed: ${e?.message ?? "unknown error"}`, { id: "bed-export" });
     }
   }
+
 
 
   const gapPercents = useMemo(() => {
