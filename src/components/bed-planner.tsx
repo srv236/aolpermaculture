@@ -750,6 +750,7 @@ function BedGrid(props: BedGridProps) {
               return (
                 <div
                   key={`h-${i}`}
+                  data-export-hide
                   onPointerDown={(e) => startDrag(e, i)}
                   className="absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-col-resize flex items-center justify-center group/handle z-30"
                   style={{ left: `${leftPct}%` }}
@@ -760,6 +761,7 @@ function BedGrid(props: BedGridProps) {
                   </span>
                 </div>
               );
+
             })}
             {/* drip line toggle dots (over gaps 0..N) */}
             {!readOnly && Array.from({ length: cfg.columns.length + 1 }).map((_, g) => {
