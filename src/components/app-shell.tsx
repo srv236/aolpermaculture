@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe } from "@/lib/farm.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { Sprout, Wheat, Users, HardHat, CalendarCheck, LogOut, LayoutGrid } from "lucide-react";
+import { Sprout, Wheat, Users, HardHat, CalendarCheck, LogOut, LayoutGrid, BookOpen } from "lucide-react";
 import logoAsset from "@/assets/aol-logo.png.asset.json";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
