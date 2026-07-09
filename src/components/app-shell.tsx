@@ -50,6 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 p-3 space-y-1 text-sm">
           <NavItem to="/farms" icon={<Sprout className="size-4" />}>Farms</NavItem>
+          <NavItem to="/introduction" icon={<BookOpen className="size-4" />}>Introduction</NavItem>
           <NavItem to="/planning" icon={<LayoutGrid className="size-4" />}>Planning</NavItem>
           <NavItem to="/crops" icon={<Wheat className="size-4" />}>Crop Library</NavItem>
           <NavItem to="/workers" icon={<HardHat className="size-4" />}>Sevaks</NavItem>
