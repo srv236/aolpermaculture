@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedWorkersRouteImport } from './routes/_authenticated/workers'
 import { Route as AuthenticatedPlanningRouteImport } from './routes/_authenticated/planning'
+import { Route as AuthenticatedIntroductionRouteImport } from './routes/_authenticated/introduction'
 import { Route as AuthenticatedFarmsRouteImport } from './routes/_authenticated/farms'
 import { Route as AuthenticatedCropsRouteImport } from './routes/_authenticated/crops'
 import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated/attendance'
@@ -50,6 +51,12 @@ const AuthenticatedPlanningRoute = AuthenticatedPlanningRouteImport.update({
   path: '/planning',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIntroductionRoute =
+  AuthenticatedIntroductionRouteImport.update({
+    id: '/introduction',
+    path: '/introduction',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFarmsRoute = AuthenticatedFarmsRouteImport.update({
   id: '/farms',
   path: '/farms',
@@ -84,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/attendance': typeof AuthenticatedAttendanceRoute
   '/crops': typeof AuthenticatedCropsRoute
   '/farms': typeof AuthenticatedFarmsRoute
+  '/introduction': typeof AuthenticatedIntroductionRoute
   '/planning': typeof AuthenticatedPlanningRoute
   '/workers': typeof AuthenticatedWorkersRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -95,6 +103,7 @@ export interface FileRoutesByTo {
   '/attendance': typeof AuthenticatedAttendanceRoute
   '/crops': typeof AuthenticatedCropsRoute
   '/farms': typeof AuthenticatedFarmsRoute
+  '/introduction': typeof AuthenticatedIntroductionRoute
   '/planning': typeof AuthenticatedPlanningRoute
   '/workers': typeof AuthenticatedWorkersRoute
   '/': typeof AuthenticatedIndexRoute
@@ -109,6 +118,7 @@ export interface FileRoutesById {
   '/_authenticated/attendance': typeof AuthenticatedAttendanceRoute
   '/_authenticated/crops': typeof AuthenticatedCropsRoute
   '/_authenticated/farms': typeof AuthenticatedFarmsRoute
+  '/_authenticated/introduction': typeof AuthenticatedIntroductionRoute
   '/_authenticated/planning': typeof AuthenticatedPlanningRoute
   '/_authenticated/workers': typeof AuthenticatedWorkersRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
     | '/attendance'
     | '/crops'
     | '/farms'
+    | '/introduction'
     | '/planning'
     | '/workers'
     | '/admin/users'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '/attendance'
     | '/crops'
     | '/farms'
+    | '/introduction'
     | '/planning'
     | '/workers'
     | '/'
@@ -148,6 +160,7 @@ export interface FileRouteTypes {
     | '/_authenticated/attendance'
     | '/_authenticated/crops'
     | '/_authenticated/farms'
+    | '/_authenticated/introduction'
     | '/_authenticated/planning'
     | '/_authenticated/workers'
     | '/_authenticated/'
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlanningRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/introduction': {
+      id: '/_authenticated/introduction'
+      path: '/introduction'
+      fullPath: '/introduction'
+      preLoaderRoute: typeof AuthenticatedIntroductionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/farms': {
       id: '/_authenticated/farms'
       path: '/farms'
@@ -247,6 +267,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAttendanceRoute: typeof AuthenticatedAttendanceRoute
   AuthenticatedCropsRoute: typeof AuthenticatedCropsRoute
   AuthenticatedFarmsRoute: typeof AuthenticatedFarmsRoute
+  AuthenticatedIntroductionRoute: typeof AuthenticatedIntroductionRoute
   AuthenticatedPlanningRoute: typeof AuthenticatedPlanningRoute
   AuthenticatedWorkersRoute: typeof AuthenticatedWorkersRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -258,6 +279,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAttendanceRoute: AuthenticatedAttendanceRoute,
   AuthenticatedCropsRoute: AuthenticatedCropsRoute,
   AuthenticatedFarmsRoute: AuthenticatedFarmsRoute,
+  AuthenticatedIntroductionRoute: AuthenticatedIntroductionRoute,
   AuthenticatedPlanningRoute: AuthenticatedPlanningRoute,
   AuthenticatedWorkersRoute: AuthenticatedWorkersRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
@@ -276,13 +298,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
