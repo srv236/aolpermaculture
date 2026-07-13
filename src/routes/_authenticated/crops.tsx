@@ -87,6 +87,17 @@ function CropsPage() {
   });
 
   const columns: ColumnDef<any>[] = [
+    { id: "thumbnail", header: "", cell: ({ row }) => {
+      const crop = row.original;
+      const imageId = cropImageMap[crop.crop_name] || "photo-1592417817098-8f3d6eb18865";
+      const src = `https://images.unsplash.com/${imageId}?w=100&h=100&auto=format&fit=crop&q=60`;
+      return (
+        <Avatar className="size-9">
+          <AvatarImage src={src} alt={crop.crop_name} />
+          <AvatarFallback className="text-xs">{crop.crop_name?.slice(0, 2).toUpperCase() || "?"}</AvatarFallback>
+        </Avatar>
+      );
+    } },
     { id: "crop_name", accessorKey: "crop_name", header: "Crop" },
     { id: "variety_name", accessorKey: "variety_name", header: "Variety" },
     { id: "crop_category", accessorKey: "crop_category", header: "Category",
