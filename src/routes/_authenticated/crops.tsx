@@ -3,7 +3,26 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listCrops, upsertCrop, deleteCrop } from "@/lib/farm.functions";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { AppShell, useMe } from "@/components/app-shell";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { DataTable } from "@/components/data-table";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import type { ColumnDef } from "@tanstack/react-table";
 
 const cropImageMap: Record<string, string> = {
   "Aloevera": "photo-1596547609652-9cf5d8d76921",
@@ -48,23 +67,6 @@ const cropImageMap: Record<string, string> = {
   "White Pumpkin": "photo-1506806732259-39c2d0268443",
   "Zucchini": "photo-1557844352-761f2565b576"
 };
-import { AppShell, useMe } from "@/components/app-shell";
-import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { DataTable } from "@/components/data-table";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import type { ColumnDef } from "@tanstack/react-table";
 
 export const Route = createFileRoute("/_authenticated/crops")({
   component: CropsPage,
