@@ -4,22 +4,69 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listCrops, upsertCrop, deleteCrop } from "@/lib/farm.functions";
 import { AppShell, useMe } from "@/components/app-shell";
-import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { DataTable } from "@/components/data-table";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DataTable } from "@/components/data-table";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
+
+const cropImageMap: Record<string, string> = {
+  "Aloevera": "photo-1596547609652-9cf5d8d76921",
+  "Amaranthus": "photo-1622248512215-6de1825be691",
+  "Banana": "photo-1571771894821-ce9b6c11b08e",
+  "Basil": "photo-1594488879684-25cb48ff3c2a",
+  "Bean": "photo-1606588591319-564b73e284a0",
+  "Bhindi": "photo-1625938146369-adc83368bda7",
+  "Coriander": "photo-1608797178974-15b35a61d121",
+  "Cowpea": "photo-1601370693674-325db0056637",
+  "Cucumber": "photo-1604974244043-ab39375e80c9",
+  "Curry Leaves": "photo-1628549749971-55c3258548c2",
+  "Fenugreek": "photo-1627447291176-a21237305d21",
+  "Ginger": "photo-1615485290382-441e4d049cb5",
+  "Gongura": "photo-1515150144380-bca9f1650ed9",
+  "Green Gram": "photo-1585435557343-3b092031a831",
+  "Italian Basil": "photo-1603048588665-791ca8aea617",
+  "Jackfruit": "photo-1590005354167-6da97870c913",
+  "Lettuce": "photo-1622205313162-be1d5712a43f",
+  "Moringa": "photo-1608670868843-07d0f97a5a85",
+  "Moringa Leaves": "photo-1616070200021-a5d5e2cf9561",
+  "Musk Melon": "photo-1579887829701-d81226127b1f",
+  "Mustard": "photo-1587049633312-d628ae50a8ae",
+  "Onion": "photo-1618512496248-a07fe83766a5",
+  "Papaya": "photo-1601004890684-d8cbf643f5f2",
+  "Parsley": "photo-1606923829579-0ac99d6a5245",
+  "Pok Choy": "photo-1629141029279-d5225c93549f",
+  "Pumpkin Leaf": "photo-1606755962773-d324e0a13086",
+  "Punarnava": "photo-1560806887-1e4cd0b6cbd6",
+  "Radish": "photo-1590779033100-9f60a05a013d",
+  "Rayo Saag": "photo-1587486913049-53fc88980cfc",
+  "Rocket Leaves": "photo-1607532941433-304659e8198a",
+  "Sitaphal": "photo-1634838080334-28befa9effd0",
+  "Spinach": "photo-1576045057995-568f588f82fb",
+  "Star Fruit": "photo-1600854495079-efab8b6b1fcb",
+  "Sweet Potato": "photo-1590502593747-42a996133562",
+  "Tapioca": "photo-1617112028682-1262d16ebfdf",
+  "Taro": "photo-1568254183919-78a4f43a2877",
+  "Taro Leaves": "photo-1618220179428-22790b461013",
+  "Tomato": "photo-1595855759920-86582396756a",
+  "Turmeric": "photo-1615485290177-d1cbbe567a1c",
+  "White Pumpkin": "photo-1506806732259-39c2d0268443",
+  "Zucchini": "photo-1557844352-761f2565b576"
+};
 
 export const Route = createFileRoute("/_authenticated/crops")({
   component: CropsPage,
@@ -42,6 +89,17 @@ function CropsPage() {
   });
 
   const columns: ColumnDef<any>[] = [
+    { id: "thumbnail", header: "", cell: ({ row }) => {
+      const crop = row.original;
+      const imageId = cropImageMap[crop.crop_name] || "photo-1592417817098-8f3d6eb18865";
+      const src = `https://images.unsplash.com/${imageId}?w=100&h=100&auto=format&fit=crop&q=60`;
+      return (
+        <Avatar className="size-9">
+          <AvatarImage src={src} alt={crop.crop_name} />
+          <AvatarFallback className="text-xs">{crop.crop_name?.slice(0, 2).toUpperCase() || "?"}</AvatarFallback>
+        </Avatar>
+      );
+    } },
     { id: "crop_name", accessorKey: "crop_name", header: "Crop" },
     { id: "variety_name", accessorKey: "variety_name", header: "Variety" },
     { id: "crop_category", accessorKey: "crop_category", header: "Category",
