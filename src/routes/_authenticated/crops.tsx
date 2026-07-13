@@ -21,6 +21,76 @@ import {
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 
+const cropVisuals: Record<string, { unspashId?: string; fallbackBg?: string }> = {
+  "Aloevera": { unspashId: "photo-1596547609652-9cf5d8d76921" },
+  "Amaranthus": { unspashId: "photo-1551011311-bf3e6d625d30" },
+  "Banana": { unspashId: "photo-1571771894821-ce9b6c11b08e" },
+  "Basil": { unspashId: "photo-1603048588665-791ca8aea617" },
+  "Italian Basil": { unspashId: "photo-1594488879684-25cb48ff3c2a" },
+  "Bean": { unspashId: "photo-1567375639142-f8188151ff73" },
+  "Bhindi": { unspashId: "photo-1627490199723-57bfb6cfb7db" },
+  "Coriander": { unspashId: "photo-1608797178974-15b35a61d121" },
+  "Cucumber": { unspashId: "photo-1604974244043-ab39375e80c9" },
+  "Ginger": { unspashId: "photo-1599631668426-ba4a5697ed83" },
+  "Green Gram": { unspashId: "photo-1585435557343-3b092031a831" },
+  "Jackfruit": { unspashId: "photo-1590005354167-6da97870c913" },
+  "Lettuce": { unspashId: "photo-1622205313162-be1d5712a43f" },
+  "Musk Melon": { unspashId: "photo-1628102476597-25e197cb310a" },
+  "Mustard": { unspashId: "photo-1587049633312-d628ae50a8ae" },
+  "Onion": { unspashId: "photo-1618512496248-a07fe83766a5" },
+  "Papaya": { unspashId: "photo-1601004890684-d8cbf643f5f2" },
+  "Parsley": { unspashId: "photo-1606923829579-0ac99d6a5245" },
+  "Pok Choy": { unspashId: "photo-1611143669185-af224c5e3252" },
+  "Radish": { unspashId: "photo-1590779033100-9f60a05a013d" },
+  "Rocket Leaves": { unspashId: "photo-1607532941433-304659e8198a" },
+  "Sitaphal": { unspashId: "photo-1634838080334-28befa9effd0" },
+  "Spinach": { unspashId: "photo-1576045057995-568f588f82fb" },
+  "Star Fruit": { unspashId: "photo-1600854495079-efab8b6b1fcb" },
+  "Sweet Potato": { unspashId: "photo-1590502593747-42a996133562" },
+  "Tomato": { unspashId: "photo-1595855759920-86582396756a" },
+  "Turmeric": { unspashId: "photo-1615485290177-d1cbbe567a1c" },
+  "Zucchini": { unspashId: "photo-1557844352-761f2565b576" },
+
+  "Cowpea": { fallbackBg: "bg-emerald-600 text-white" },
+  "Curry Leaves": { fallbackBg: "bg-green-800 text-white" },
+  "Fenugreek": { fallbackBg: "bg-green-700 text-white" },
+  "Gongura": { fallbackBg: "bg-teal-700 text-white" },
+  "Moringa": { fallbackBg: "bg-emerald-700 text-white" },
+  "Moringa Leaves": { fallbackBg: "bg-emerald-800 text-white" },
+  "Pumpkin Leaf": { fallbackBg: "bg-green-600 text-white" },
+  "Punarnava": { fallbackBg: "bg-olive-600 text-white" },
+  "Rayo Saag": { fallbackBg: "bg-lime-700 text-stone-900" },
+  "Tapioca": { fallbackBg: "bg-amber-700 text-white" },
+  "Taro": { fallbackBg: "bg-stone-600 text-white" },
+  "Taro Leaves": { fallbackBg: "bg-green-900 text-white" },
+  "White Pumpkin": { fallbackBg: "bg-slate-300 text-slate-800" },
+};
+
+function cropInitials(name: string) {
+  return name.slice(0, 2).toUpperCase();
+}
+
+function CropVisual({ name }: { name: string }) {
+  const visual = cropVisuals[name];
+  if (visual?.unspashId) {
+    return (
+      <img
+        src={`https://images.unsplash.com/${visual.unspashId}?w=80&h=80&auto=format&fit=crop&q=80`}
+        alt={name}
+        className="size-10 rounded-full object-cover"
+        loading="lazy"
+      />
+    );
+  }
+  return (
+    <div
+      className={`size-10 rounded-full flex items-center justify-center text-xs font-semibold ${visual?.fallbackBg || "bg-green-100 text-green-900"}`}
+    >
+      {cropInitials(name)}
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/crops")({
   component: CropsPage,
 });
@@ -42,6 +112,7 @@ function CropsPage() {
   });
 
   const columns: ColumnDef<any>[] = [
+    { id: "visual", header: "", cell: ({ row }) => <CropVisual name={row.original.crop_name} /> },
     { id: "crop_name", accessorKey: "crop_name", header: "Crop" },
     { id: "variety_name", accessorKey: "variety_name", header: "Variety" },
     { id: "crop_category", accessorKey: "crop_category", header: "Category",
