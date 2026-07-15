@@ -8,6 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { listCrops, listPlots, upsertSowing, upsertHarvest } from "@/lib/farm.functions";
 import { toast } from "sonner";
 
@@ -199,14 +203,12 @@ export function HarvestFormDialog({
             </Select>
           </Field>
           <Field label="Crop variety *">
-            <Select value={f.variety_id} onValueChange={(v) => set("variety_id", v)}>
-              <SelectTrigger><SelectValue placeholder="Select crop" /></SelectTrigger>
-              <SelectContent>
-                {crops.data?.map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>{c.crop_name} — {c.variety_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CropCombobox
+              options={crops.data ?? []}
+              value={f.variety_id}
+              onChange={(v) => set("variety_id", v)}
+              placeholder="Select crop"
+            />
           </Field>
           <Field label="Harvest date *">
             <Input type="date" value={f.harvest_date} onChange={(e) => set("harvest_date", e.target.value)} />
@@ -257,4 +259,63 @@ function Field({ label, children, className }: { label: string; children: React.
     </div>
   );
 }
+
+function CropCombobox({
+  options,
+  value,
+  onChange,
+  placeholder,
+}: {
+  options: any[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          {selected ? `${selected.crop_name} — ${selected.variety_name}` : placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+        <Command>
+          <CommandInput placeholder="Search crop..." />
+          <CommandList>
+            <CommandEmpty>No crop found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={`${c.crop_name} ${c.variety_name} ${c.id}`}
+                  onSelect={() => {
+                    onChange(c.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === c.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {c.crop_name} — {c.variety_name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function stripId<T extends { id?: string }>(v: T) { const { id, ...rest } = v; return rest; }
