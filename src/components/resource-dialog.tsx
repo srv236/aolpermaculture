@@ -54,12 +54,19 @@ export function ResourceFormDialog({
 
   const mut = useMutation({
     mutationFn: (v: Form) => {
-      const { id, ...rest } = v;
-      const payload: any = { ...rest };
-      payload.start_time = v.start_time ? new Date(v.start_time).toISOString() : null;
-      payload.end_time = v.end_time ? new Date(v.end_time).toISOString() : null;
-      if (!payload.plot_id) payload.plot_id = null;
-      return upsert({ data: { id, values: payload } });
+      const payload: any = {
+        farm_id: v.farm_id,
+        plot_id: v.plot_id || null,
+        resource_name: v.resource_name,
+        resource_type: v.resource_type,
+        quantity: v.quantity ?? null,
+        unit: v.unit || null,
+        used_for: v.used_for || null,
+        notes: v.notes || null,
+        start_time: v.start_time ? new Date(v.start_time).toISOString() : null,
+        end_time: v.end_time ? new Date(v.end_time).toISOString() : null,
+      };
+      return upsert({ data: { id: v.id, values: payload } });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resources", farmId] });
