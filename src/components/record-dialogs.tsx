@@ -203,14 +203,12 @@ export function HarvestFormDialog({
             </Select>
           </Field>
           <Field label="Crop variety *">
-            <Select value={f.variety_id} onValueChange={(v) => set("variety_id", v)}>
-              <SelectTrigger><SelectValue placeholder="Select crop" /></SelectTrigger>
-              <SelectContent>
-                {crops.data?.map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>{c.crop_name} — {c.variety_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CropCombobox
+              options={crops.data ?? []}
+              value={f.variety_id}
+              onChange={(v) => set("variety_id", v)}
+              placeholder="Select crop"
+            />
           </Field>
           <Field label="Harvest date *">
             <Input type="date" value={f.harvest_date} onChange={(e) => set("harvest_date", e.target.value)} />
