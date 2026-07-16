@@ -491,9 +491,6 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                             <span className="font-semibold" style={{ color: strongColorForCrop(c) }}>
                               {c.crop_name}{c.variety_name ? ` (${c.variety_name})` : ""}
                             </span>
-                            <span className="ml-auto text-xs text-emerald-900/70">
-                              {c.crop_category ? `= ${c.crop_category}` : ""}
-                            </span>
                           </div>
                         );
                       })}
