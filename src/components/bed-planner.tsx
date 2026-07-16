@@ -522,11 +522,6 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                   </div>
 
                   <div>
-                    <SectionHeader>CROP CATEGORIES</SectionHeader>
-                    <CategoryTable crops={crops} />
-                  </div>
-
-                  <div>
                     <SectionHeader>AREA &amp; LAND SUMMARY</SectionHeader>
                     <table className="w-full text-sm">
                       <tbody>
