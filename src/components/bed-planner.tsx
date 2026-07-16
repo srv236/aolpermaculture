@@ -373,7 +373,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     Vegetable Bed Plan — {bedName}
                   </div>
                   <div className="text-sm text-emerald-900/70">
-                    {plotLabel ? `${plotLabel} · ` : ""}Layout, crop cycle, crop categories, and land summary
+                    {plotLabel ? `${plotLabel} · ` : ""}Layout, crop cycle, and land summary
                   </div>
                 </div>
               </div>
@@ -491,9 +491,6 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                             <span className="font-semibold" style={{ color: strongColorForCrop(c) }}>
                               {c.crop_name}{c.variety_name ? ` (${c.variety_name})` : ""}
                             </span>
-                            <span className="ml-auto text-xs text-emerald-900/70">
-                              {c.crop_category ? `= ${c.crop_category}` : ""}
-                            </span>
                           </div>
                         );
                       })}
@@ -522,11 +519,6 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  <div>
-                    <SectionHeader>CROP CATEGORIES</SectionHeader>
-                    <CategoryTable crops={crops} />
                   </div>
 
                   <div>
@@ -1141,45 +1133,3 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CategoryTable({ crops }: { crops: Crop[] }) {
-  const groups = new Map<string, Crop[]>();
-  for (const c of crops) {
-    const k = (c.crop_category || "Other").toLowerCase();
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k)!.push(c);
-  }
-  const order = ["greens", "ground", "creeper", "root", "fruit", "other"];
-  const sorted = [...groups.entries()].sort(
-    ([a], [b]) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)),
-  );
-  if (sorted.length === 0) {
-    return <div className="p-3 text-xs text-muted-foreground">No crops defined.</div>;
-  }
-  return (
-    <table className="w-full text-sm">
-      <tbody>
-        {sorted.map(([cat, list]) => {
-          const sample = list[0];
-          return (
-            <tr key={cat} className="border-b last:border-b-0 border-emerald-800/20 align-top">
-              <td className="py-2 px-2 w-12">
-                <span
-                  className="w-9 h-9 rounded-md flex items-center justify-center"
-                  style={{ background: colorForCrop(sample) }}
-                >
-                  <CropIcon crop={sample} size={20} />
-                </span>
-              </td>
-              <td className="py-2 px-2 font-semibold text-emerald-900 capitalize w-28">
-                {cat === "ground" ? "Ground veg." : cat === "creeper" ? "Creepers" : cat === "root" ? "Root veg." : cat}
-              </td>
-              <td className="py-2 px-2 text-xs text-emerald-950">
-                {list.map((c) => c.crop_name).join(", ")}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
-}
