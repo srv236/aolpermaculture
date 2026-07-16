@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, useMe } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, BookOpen, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, BookOpen, ChevronUp, ChevronDown, ImagePlus, X } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -22,13 +22,53 @@ export const Route = createFileRoute("/_authenticated/introduction")({
   component: IntroductionPage,
 });
 
+type StoredImage = { path: string };
 type Section = {
   id: string;
   title: string;
   content: string;
   sort_order: number;
   updated_at: string;
+  images: StoredImage[];
 };
+
+const BUCKET = "knowledge-images";
+
+function useSignedUrl(path: string | undefined) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!path) { setUrl(null); return; }
+    supabase.storage.from(BUCKET).createSignedUrl(path, 60 * 60).then(({ data }) => {
+      if (!cancelled) setUrl(data?.signedUrl ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [path]);
+  return url;
+}
+
+function SignedImage({ path, onRemove }: { path: string; onRemove?: () => void }) {
+  const url = useSignedUrl(path);
+  return (
+    <div className="relative group rounded-md overflow-hidden border bg-muted/30">
+      {url ? (
+        <img src={url} alt="" className="w-full h-auto object-cover" />
+      ) : (
+        <div className="aspect-video grid place-items-center text-xs text-muted-foreground">Loading…</div>
+      )}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute top-1 right-1 bg-background/90 border rounded-md p-1 opacity-0 group-hover:opacity-100 transition"
+          aria-label="Remove image"
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 function IntroductionPage() {
   const me = useMe();
@@ -44,7 +84,10 @@ function IntroductionPage() {
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw new Error(error.message);
-      return (data ?? []) as Section[];
+      return (data ?? []).map((r: any) => ({
+        ...r,
+        images: Array.isArray(r.images) ? r.images : [],
+      })) as Section[];
     },
   });
 
@@ -90,7 +133,6 @@ function IntroductionPage() {
     const a = list[idx];
     const b = list[idx + dir];
     if (!a || !b) return;
-    // If sort_order equal, seed differently first
     if (a.sort_order === b.sort_order) {
       a.sort_order = idx;
       b.sort_order = idx + dir;
@@ -101,7 +143,6 @@ function IntroductionPage() {
   return (
     <AppShell>
       <div className="flex h-screen">
-        {/* Section list sidebar */}
         <aside className="w-72 shrink-0 border-r bg-muted/20 flex flex-col">
           <div className="p-4 border-b flex items-center justify-between">
             <div>
@@ -112,7 +153,7 @@ function IntroductionPage() {
             </div>
             {canEdit && (
               <Button size="sm" variant="ghost" onClick={() =>
-                setEditing({ title: "", content: "", sort_order: (list.at(-1)?.sort_order ?? 0) + 1 })
+                setEditing({ title: "", content: "", images: [], sort_order: (list.at(-1)?.sort_order ?? 0) + 1 })
               }>
                 <Plus className="size-4" />
               </Button>
@@ -153,7 +194,6 @@ function IntroductionPage() {
           </div>
         </aside>
 
-        {/* Content */}
         <div className="flex-1 overflow-auto">
           {active ? (
             <article className="max-w-3xl mx-auto p-10">
@@ -175,6 +215,13 @@ function IntroductionPage() {
                   <span className="text-muted-foreground italic">No content yet.</span>
                 )}
               </div>
+              {active.images.length > 0 && (
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {active.images.map((img) => (
+                    <SignedImage key={img.path} path={img.path} />
+                  ))}
+                </div>
+              )}
               <div className="mt-8 text-xs text-muted-foreground">
                 Updated {new Date(active.updated_at).toLocaleString()}
               </div>
@@ -230,16 +277,57 @@ function SectionDialog({
 }) {
   const [title, setTitle] = useState(initial.title ?? "");
   const [content, setContent] = useState(initial.content ?? "");
+  const [images, setImages] = useState<StoredImage[]>(initial.images ?? []);
+  const [uploading, setUploading] = useState(false);
   const qc = useQueryClient();
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id ?? "anon";
+      const uploaded: StoredImage[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          toast.error(`${file.name} is not an image`);
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name} exceeds 10 MB`);
+          continue;
+        }
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `${uid}/${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type,
+        });
+        if (error) { toast.error(error.message); continue; }
+        uploaded.push({ path });
+      }
+      if (uploaded.length) setImages((prev) => [...prev, ...uploaded]);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeImage(path: string) {
+    setImages((prev) => prev.filter((i) => i.path !== path));
+    // best-effort delete from storage
+    await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+  }
 
   const save = useMutation({
     mutationFn: async () => {
       const t = title.trim();
       if (!t) throw new Error("Title is required");
+      const payload = { title: t, content, images: images as any };
       if (initial.id) {
         const { data, error } = await supabase
           .from("knowledge_sections")
-          .update({ title: t, content })
+          .update(payload)
           .eq("id", initial.id)
           .select("id")
           .single();
@@ -248,7 +336,7 @@ function SectionDialog({
       } else {
         const { data, error } = await supabase
           .from("knowledge_sections")
-          .insert({ title: t, content, sort_order: initial.sort_order ?? 0 })
+          .insert({ ...payload, sort_order: initial.sort_order ?? 0 })
           .select("id")
           .single();
         if (error) throw new Error(error.message);
@@ -265,7 +353,7 @@ function SectionDialog({
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">
             {initial.id ? "Edit section" : "New section"}
@@ -284,7 +372,7 @@ function SectionDialog({
           <div>
             <Label>Content</Label>
             <Textarea
-              rows={14}
+              rows={12}
               value={content}
               maxLength={20000}
               onChange={(e) => setContent(e.target.value)}
@@ -294,10 +382,41 @@ function SectionDialog({
               Line breaks are preserved.
             </p>
           </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <Label>Images</Label>
+              <label className="inline-flex items-center gap-1.5 text-sm cursor-pointer text-primary hover:underline">
+                <ImagePlus className="size-4" />
+                {uploading ? "Uploading…" : "Add images"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    handleFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {images.length > 0 ? (
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {images.map((img) => (
+                  <SignedImage key={img.path} path={img.path} onRemove={() => removeImage(img.path)} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Optional. PNG/JPG up to 10 MB each.
+              </p>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !title.trim()}>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !title.trim() || uploading}>
             {save.isPending ? "Saving…" : "Save"}
           </Button>
         </DialogFooter>

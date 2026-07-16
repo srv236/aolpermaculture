@@ -346,6 +346,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          images: Json
           sort_order: number
           title: string
           updated_at: string
@@ -355,6 +356,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          images?: Json
           sort_order?: number
           title: string
           updated_at?: string
@@ -364,6 +366,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          images?: Json
           sort_order?: number
           title?: string
           updated_at?: string
