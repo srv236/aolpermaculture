@@ -105,39 +105,54 @@ export type Database = {
           created_at: string
           crop_category: string | null
           crop_name: string
+          cultivation_season: string | null
           description: string | null
           growing_days: number | null
+          harvesting_window: string | null
           id: string
           is_active: boolean
+          optimal_temp: string | null
+          sowing_window: string | null
           typical_yield_per_acre: number | null
           updated_at: string
           variety_name: string | null
+          water_requirement: string | null
           yield_unit: string | null
         }
         Insert: {
           created_at?: string
           crop_category?: string | null
           crop_name: string
+          cultivation_season?: string | null
           description?: string | null
           growing_days?: number | null
+          harvesting_window?: string | null
           id?: string
           is_active?: boolean
+          optimal_temp?: string | null
+          sowing_window?: string | null
           typical_yield_per_acre?: number | null
           updated_at?: string
           variety_name?: string | null
+          water_requirement?: string | null
           yield_unit?: string | null
         }
         Update: {
           created_at?: string
           crop_category?: string | null
           crop_name?: string
+          cultivation_season?: string | null
           description?: string | null
           growing_days?: number | null
+          harvesting_window?: string | null
           id?: string
           is_active?: boolean
+          optimal_temp?: string | null
+          sowing_window?: string | null
           typical_yield_per_acre?: number | null
           updated_at?: string
           variety_name?: string | null
+          water_requirement?: string | null
           yield_unit?: string | null
         }
         Relationships: []
