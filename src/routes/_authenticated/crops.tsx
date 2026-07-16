@@ -46,10 +46,16 @@ function CropsPage() {
     { id: "variety_name", accessorKey: "variety_name", header: "Variety" },
     { id: "crop_category", accessorKey: "crop_category", header: "Category",
       cell: ({ getValue }) => <Badge variant="secondary" className="capitalize">{String(getValue() || "")}</Badge> },
+    { id: "cultivation_season", accessorKey: "cultivation_season", header: "Season" },
+    { id: "sowing_window", accessorKey: "sowing_window", header: "Sowing" },
+    { id: "harvesting_window", accessorKey: "harvesting_window", header: "Harvest" },
     { id: "growing_days", accessorKey: "growing_days", header: "Days" },
     { id: "typical_yield_per_acre", accessorKey: "typical_yield_per_acre", header: "Yield/acre" },
+    { id: "optimal_temp", accessorKey: "optimal_temp", header: "Temp" },
+    { id: "water_requirement", accessorKey: "water_requirement", header: "Water" },
     { id: "is_active", accessorKey: "is_active", header: "Active",
       cell: ({ getValue }) => getValue() ? "Yes" : "No" },
+
     ...(canEdit ? [{
       id: "actions", header: "", cell: ({ row }: any) => (
         <div className="flex gap-1 justify-end">
@@ -114,7 +120,7 @@ function CropDialog({ open, onOpenChange, initial }: { open: boolean; onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">{initial ? "Edit crop" : "Add a crop"}</DialogTitle>
         </DialogHeader>
@@ -133,7 +139,21 @@ function CropDialog({ open, onOpenChange, initial }: { open: boolean; onOpenChan
           <div><Label>Yield unit</Label><Input value={f.yield_unit || ""} onChange={(e) => set("yield_unit", e.target.value)} /></div>
           <div><Label>Typical yield / acre</Label><Input type="number" step="0.01" value={f.typical_yield_per_acre ?? ""} onChange={(e) => set("typical_yield_per_acre", e.target.value ? +e.target.value : null)} /></div>
           <div><Label>Growing days</Label><Input type="number" value={f.growing_days ?? ""} onChange={(e) => set("growing_days", e.target.value ? +e.target.value : null)} /></div>
+          <div><Label>Cultivation season</Label><Input value={f.cultivation_season || ""} onChange={(e) => set("cultivation_season", e.target.value)} placeholder="e.g. Kharif / Rabi" /></div>
+          <div><Label>Sowing window</Label><Input value={f.sowing_window || ""} onChange={(e) => set("sowing_window", e.target.value)} placeholder="e.g. Jun-Jul" /></div>
+          <div><Label>Harvesting window</Label><Input value={f.harvesting_window || ""} onChange={(e) => set("harvesting_window", e.target.value)} placeholder="e.g. Oct-Dec" /></div>
+          <div><Label>Optimal temperature</Label><Input value={f.optimal_temp || ""} onChange={(e) => set("optimal_temp", e.target.value)} placeholder="e.g. 20-30°C" /></div>
+          <div>
+            <Label>Water requirement</Label>
+            <Select value={f.water_requirement || ""} onValueChange={(v) => set("water_requirement", v)}>
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                {["Low","Medium","High"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="md:col-span-2"><Label>Description</Label><Textarea rows={3} value={f.description || ""} onChange={(e) => set("description", e.target.value)} /></div>
+
           <div className="md:col-span-2 flex items-center justify-between">
             <Label>Active</Label>
             <Switch checked={!!f.is_active} onCheckedChange={(v) => set("is_active", v)} />
