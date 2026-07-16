@@ -373,7 +373,7 @@ export function BedPlanner({ value, onChange, crops, bedName, plotLabel, readOnl
                     Vegetable Bed Plan — {bedName}
                   </div>
                   <div className="text-sm text-emerald-900/70">
-                    {plotLabel ? `${plotLabel} · ` : ""}Layout, crop cycle, crop categories, and land summary
+                    {plotLabel ? `${plotLabel} · ` : ""}Layout, crop cycle, and land summary
                   </div>
                 </div>
               </div>
