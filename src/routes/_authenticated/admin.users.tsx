@@ -149,7 +149,24 @@ function AddUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
         <div className="space-y-3">
           <div><Label>Full name</Label><Input value={full_name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-          <div><Label>Temporary password</Label><Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" /></div>
+          <div>
+            <div className="flex items-center justify-between">
+              <Label>Temporary password</Label>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  const bytes = new Uint8Array(12);
+                  crypto.getRandomValues(bytes);
+                  const pw = Array.from(bytes, (b) => "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 56]).join("");
+                  setPassword(pw);
+                }}
+              >
+                Generate
+              </button>
+            </div>
+            <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
+          </div>
           <div>
             <Label>Role</Label>
             <Select value={role} onValueChange={(v) => setRole(v as any)}>
