@@ -46,10 +46,16 @@ function CropsPage() {
     { id: "variety_name", accessorKey: "variety_name", header: "Variety" },
     { id: "crop_category", accessorKey: "crop_category", header: "Category",
       cell: ({ getValue }) => <Badge variant="secondary" className="capitalize">{String(getValue() || "")}</Badge> },
+    { id: "cultivation_season", accessorKey: "cultivation_season", header: "Season" },
+    { id: "sowing_window", accessorKey: "sowing_window", header: "Sowing" },
+    { id: "harvesting_window", accessorKey: "harvesting_window", header: "Harvest" },
     { id: "growing_days", accessorKey: "growing_days", header: "Days" },
     { id: "typical_yield_per_acre", accessorKey: "typical_yield_per_acre", header: "Yield/acre" },
+    { id: "optimal_temp", accessorKey: "optimal_temp", header: "Temp" },
+    { id: "water_requirement", accessorKey: "water_requirement", header: "Water" },
     { id: "is_active", accessorKey: "is_active", header: "Active",
       cell: ({ getValue }) => getValue() ? "Yes" : "No" },
+
     ...(canEdit ? [{
       id: "actions", header: "", cell: ({ row }: any) => (
         <div className="flex gap-1 justify-end">
