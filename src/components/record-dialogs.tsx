@@ -34,6 +34,26 @@ type SowingForm = {
   notes?: string;
 };
 
+function sanitizeSowingValues(v: SowingForm): Record<string, any> {
+  return {
+    plot_id: v.plot_id,
+    variety_id: v.variety_id,
+    planting_date: v.planting_date,
+    status: v.status || "planned",
+    quantity_planted: v.quantity_planted != null && (v.quantity_planted as any) !== "" ? Number(v.quantity_planted) : null,
+    quantity_unit: v.quantity_unit?.trim() || null,
+    seed_source: v.seed_source?.trim() || null,
+    expected_first_harvest: v.expected_first_harvest || null,
+    expected_final_harvest: v.expected_final_harvest || null,
+    is_continuous_harvest: Boolean(v.is_continuous_harvest),
+    estimated_harvest_interval_days: v.estimated_harvest_interval_days != null && (v.estimated_harvest_interval_days as any) !== "" ? Number(v.estimated_harvest_interval_days) : null,
+    is_replanting: Boolean(v.is_replanting),
+    original_sowing_id: v.original_sowing_id || null,
+    area_utilized_percent: v.area_utilized_percent != null && (v.area_utilized_percent as any) !== "" ? Number(v.area_utilized_percent) : null,
+    notes: v.notes?.trim() || null,
+  };
+}
+
 export function SowingFormDialog({
   open, onOpenChange, initial, farmId,
 }: { open: boolean; onOpenChange: (v: boolean) => void; initial?: Partial<SowingForm> | null; farmId?: string }) {
@@ -49,7 +69,7 @@ export function SowingFormDialog({
   const crops = useQuery({ queryKey: ["crops"], queryFn: () => listCropsFn() });
 
   const mut = useMutation({
-    mutationFn: (v: SowingForm) => upsert({ data: { id: v.id, values: stripId(v) } }),
+    mutationFn: (v: SowingForm) => upsert({ data: { id: v.id, values: sanitizeSowingValues(v) } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sowing"] });
       onOpenChange(false);
@@ -160,6 +180,22 @@ type HarvestForm = {
   notes?: string;
 };
 
+function sanitizeHarvestValues(v: HarvestForm): Record<string, any> {
+  return {
+    plot_id: v.plot_id,
+    variety_id: v.variety_id,
+    sowing_id: v.sowing_id || null,
+    harvest_date: v.harvest_date,
+    harvest_time_start: v.harvest_time_start || null,
+    harvest_time_end: v.harvest_time_end || null,
+    quantity_harvested: Number(v.quantity_harvested) || 0,
+    quality_grade: v.quality_grade || null,
+    harvest_sequence_number: v.harvest_sequence_number != null && (v.harvest_sequence_number as any) !== "" ? Number(v.harvest_sequence_number) : null,
+    estimated_remaining_yield: v.estimated_remaining_yield != null && (v.estimated_remaining_yield as any) !== "" ? Number(v.estimated_remaining_yield) : null,
+    notes: v.notes?.trim() || null,
+  };
+}
+
 export function HarvestFormDialog({
   open, onOpenChange, initial, farmId,
 }: { open: boolean; onOpenChange: (v: boolean) => void; initial?: Partial<HarvestForm> | null; farmId?: string }) {
@@ -175,7 +211,7 @@ export function HarvestFormDialog({
   const crops = useQuery({ queryKey: ["crops"], queryFn: () => listCropsFn() });
 
   const mut = useMutation({
-    mutationFn: (v: HarvestForm) => upsert({ data: { id: v.id, values: stripId(v) } }),
+    mutationFn: (v: HarvestForm) => upsert({ data: { id: v.id, values: sanitizeHarvestValues(v) } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["harvest"] });
       onOpenChange(false);

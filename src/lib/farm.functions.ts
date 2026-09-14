@@ -136,16 +136,43 @@ export const listSowing = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+const SOWING_ALLOWED_COLUMNS = new Set([
+  "plot_id",
+  "variety_id",
+  "planting_date",
+  "quantity_planted",
+  "quantity_unit",
+  "seed_source",
+  "expected_first_harvest",
+  "expected_final_harvest",
+  "status",
+  "is_continuous_harvest",
+  "estimated_harvest_interval_days",
+  "is_replanting",
+  "original_sowing_id",
+  "area_utilized_percent",
+  "notes",
+]);
+
+function filterSowingColumns(values: Record<string, any>) {
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(values || {})) {
+    if (SOWING_ALLOWED_COLUMNS.has(k)) clean[k] = v;
+  }
+  return clean;
+}
+
 export const upsertSowing = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
+    const cleanValues = filterSowingColumns(data.values);
     if (data.id) {
-      const { error } = await context.supabase.from("sowing_records").update(data.values as any).eq("id", data.id);
+      const { error } = await context.supabase.from("sowing_records").update(cleanValues as any).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("sowing_records").insert(data.values as any).select("id").single();
+    const { data: ins, error } = await context.supabase.from("sowing_records").insert(cleanValues as any).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -160,6 +187,28 @@ export const deleteSowing = createServerFn({ method: "POST" })
   });
 
 // ---------- HARVEST ----------
+const HARVEST_ALLOWED_COLUMNS = new Set([
+  "plot_id",
+  "variety_id",
+  "sowing_id",
+  "harvest_date",
+  "harvest_time_start",
+  "harvest_time_end",
+  "quantity_harvested",
+  "quality_grade",
+  "harvest_sequence_number",
+  "estimated_remaining_yield",
+  "notes",
+]);
+
+function filterHarvestColumns(values: Record<string, any>) {
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(values || {})) {
+    if (HARVEST_ALLOWED_COLUMNS.has(k)) clean[k] = v;
+  }
+  return clean;
+}
+
 export const listHarvest = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { farmId?: string }) => d)
@@ -178,12 +227,13 @@ export const upsertHarvest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
+    const cleanValues = filterHarvestColumns(data.values);
     if (data.id) {
-      const { error } = await context.supabase.from("harvest_records").update(data.values as any).eq("id", data.id);
+      const { error } = await context.supabase.from("harvest_records").update(cleanValues as any).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("harvest_records").insert(data.values as any).select("id").single();
+    const { data: ins, error } = await context.supabase.from("harvest_records").insert(cleanValues as any).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
