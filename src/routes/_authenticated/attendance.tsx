@@ -985,7 +985,7 @@ function VisitorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">{initial ? "Edit visitor" : "Log a visitor"}</DialogTitle>
           <DialogDescription>Anyone who came to the farm — farmers, officials, students, returning sevaks.</DialogDescription>

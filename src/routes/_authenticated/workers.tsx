@@ -155,7 +155,7 @@ function WorkerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">{initial ? "Edit Sevak" : "Add a Sevak"}</DialogTitle>
           <DialogDescription>Sevaks are farm personnel — separate from the website user accounts under Users.</DialogDescription>
@@ -198,7 +198,7 @@ function WorkerDialog({
             <Switch checked={!!f.is_active} onCheckedChange={(v) => set("is_active", v)} />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="sticky bottom-0 bg-background/95 backdrop-blur-sm -mx-6 -mb-6 p-6 pt-3 border-t mt-2 z-10">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending || !f.full_name || !f.worker_type}>
             {mut.isPending ? "Saving..." : "Save"}
@@ -238,7 +238,7 @@ function ManageTypesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl">Sevak types</DialogTitle>
           <DialogDescription>Add, rename, reorder, or remove the types shown in the dropdown.</DialogDescription>
