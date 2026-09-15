@@ -155,50 +155,54 @@ function WorkerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-xl max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-4 border-b shrink-0 pr-12">
           <DialogTitle className="font-serif text-2xl">{initial ? "Edit Sevak" : "Add a Sevak"}</DialogTitle>
           <DialogDescription>Sevaks are farm personnel — separate from the website user accounts under Users.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div><Label>Sevak ID</Label><Input value={f.worker_code || ""} onChange={(e) => set("worker_code", e.target.value)} placeholder="e.g. W-001" /></div>
-          <div><Label>Full name *</Label><Input value={f.full_name} onChange={(e) => set("full_name", e.target.value)} /></div>
-          <div className="md:col-span-2">
-            <div className="flex items-center justify-between">
-              <Label>Type *</Label>
-              <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={onManageTypes}>
-                Manage types
-              </button>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div><Label>Sevak ID</Label><Input value={f.worker_code || ""} onChange={(e) => set("worker_code", e.target.value)} placeholder="e.g. W-001" /></div>
+            <div><Label>Full name *</Label><Input value={f.full_name} onChange={(e) => set("full_name", e.target.value)} /></div>
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between">
+                <Label>Type *</Label>
+                <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={onManageTypes}>
+                  Manage types
+                </button>
+              </div>
+              <Select value={f.worker_type} onValueChange={(v) => set("worker_type", v)}>
+                <SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger>
+                <SelectContent>
+                  {types.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={f.worker_type} onValueChange={(v) => set("worker_type", v)}>
-              <SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger>
-              <SelectContent>
-                {types.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div><Label>Role</Label><Input value={f.role || ""} onChange={(e) => set("role", e.target.value)} placeholder="e.g. Field supervisor" /></div>
-          <div><Label>Phone</Label><Input value={f.phone || ""} onChange={(e) => set("phone", e.target.value)} /></div>
-          <div className="md:col-span-2"><Label>Email</Label><Input type="email" value={f.email || ""} onChange={(e) => set("email", e.target.value)} /></div>
-          <div><Label>Start date</Label><Input type="date" value={f.start_date || ""} onChange={(e) => set("start_date", e.target.value)} /></div>
-          <div><Label>End date</Label><Input type="date" value={f.end_date || ""} onChange={(e) => set("end_date", e.target.value)} /></div>
-          <div className="md:col-span-2"><Label>Notes</Label><Textarea rows={3} value={f.notes || ""} onChange={(e) => set("notes", e.target.value)} /></div>
-          <div className="md:col-span-2">
-            <Label>Work done (final report)</Label>
-            <Textarea
-              rows={5}
-              value={f.work_summary || ""}
-              onChange={(e) => set("work_summary", e.target.value)}
-              placeholder="Summary of the work this sevak did during their time at the farm — projects, contributions, skills shown, etc."
-            />
-            <p className="text-xs text-muted-foreground mt-1">Filled by us at the end of the sevak's stay as a record of their contribution.</p>
-          </div>
-          <div className="md:col-span-2 flex items-center justify-between">
-            <Label>Active</Label>
-            <Switch checked={!!f.is_active} onCheckedChange={(v) => set("is_active", v)} />
+            <div><Label>Role</Label><Input value={f.role || ""} onChange={(e) => set("role", e.target.value)} placeholder="e.g. Field supervisor" /></div>
+            <div><Label>Phone</Label><Input value={f.phone || ""} onChange={(e) => set("phone", e.target.value)} /></div>
+            <div className="md:col-span-2"><Label>Email</Label><Input type="email" value={f.email || ""} onChange={(e) => set("email", e.target.value)} /></div>
+            <div><Label>Start date</Label><Input type="date" value={f.start_date || ""} onChange={(e) => set("start_date", e.target.value)} /></div>
+            <div><Label>End date</Label><Input type="date" value={f.end_date || ""} onChange={(e) => set("end_date", e.target.value)} /></div>
+            <div className="md:col-span-2"><Label>Notes</Label><Textarea rows={3} value={f.notes || ""} onChange={(e) => set("notes", e.target.value)} /></div>
+            <div className="md:col-span-2">
+              <Label>Work done (final report)</Label>
+              <Textarea
+                rows={5}
+                value={f.work_summary || ""}
+                onChange={(e) => set("work_summary", e.target.value)}
+                placeholder="Summary of the work this sevak did during their time at the farm — projects, contributions, skills shown, etc."
+              />
+              <p className="text-xs text-muted-foreground mt-1">Filled by us at the end of the sevak's stay as a record of their contribution.</p>
+            </div>
+            <div className="md:col-span-2 flex items-center justify-between">
+              <Label>Active</Label>
+              <Switch checked={!!f.is_active} onCheckedChange={(v) => set("is_active", v)} />
+            </div>
           </div>
         </div>
-        <DialogFooter className="sticky bottom-0 bg-background/95 backdrop-blur-sm -mx-6 -mb-6 p-6 pt-3 border-t mt-2 z-10">
+
+        <DialogFooter className="p-4 px-6 border-t bg-background shrink-0 flex flex-row items-center justify-end gap-2 m-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending || !f.full_name || !f.worker_type}>
             {mut.isPending ? "Saving..." : "Save"}
