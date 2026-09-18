@@ -18,6 +18,7 @@ import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authentic
 import { Route as AuthenticatedCropsRouteImport } from './routes/_authenticated/crops'
 import { Route as AuthenticatedFarmsRouteImport } from './routes/_authenticated/farms'
 import { Route as AuthenticatedIntroductionRouteImport } from './routes/_authenticated/introduction'
+import { Route as AuthenticatedNotesRouteImport } from './routes/_authenticated/notes'
 import { Route as AuthenticatedPlanningRouteImport } from './routes/_authenticated/planning'
 import { Route as AuthenticatedWorkersRouteImport } from './routes/_authenticated/workers'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
@@ -68,6 +69,11 @@ const AuthenticatedIntroductionRoute =
     path: '/introduction',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedNotesRoute = AuthenticatedNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPlanningRoute = AuthenticatedPlanningRouteImport.update({
   id: '/planning',
   path: '/planning',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/crops': typeof AuthenticatedCropsRoute
   '/farms': typeof AuthenticatedFarmsRoute
   '/introduction': typeof AuthenticatedIntroductionRoute
+  '/notes': typeof AuthenticatedNotesRoute
   '/planning': typeof AuthenticatedPlanningRoute
   '/workers': typeof AuthenticatedWorkersRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/crops': typeof AuthenticatedCropsRoute
   '/farms': typeof AuthenticatedFarmsRoute
   '/introduction': typeof AuthenticatedIntroductionRoute
+  '/notes': typeof AuthenticatedNotesRoute
   '/planning': typeof AuthenticatedPlanningRoute
   '/workers': typeof AuthenticatedWorkersRoute
   '/': typeof AuthenticatedIndexRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_authenticated/crops': typeof AuthenticatedCropsRoute
   '/_authenticated/farms': typeof AuthenticatedFarmsRoute
   '/_authenticated/introduction': typeof AuthenticatedIntroductionRoute
+  '/_authenticated/notes': typeof AuthenticatedNotesRoute
   '/_authenticated/planning': typeof AuthenticatedPlanningRoute
   '/_authenticated/workers': typeof AuthenticatedWorkersRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/crops'
     | '/farms'
     | '/introduction'
+    | '/notes'
     | '/planning'
     | '/workers'
     | '/admin/users'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/crops'
     | '/farms'
     | '/introduction'
+    | '/notes'
     | '/planning'
     | '/workers'
     | '/'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crops'
     | '/_authenticated/farms'
     | '/_authenticated/introduction'
+    | '/_authenticated/notes'
     | '/_authenticated/planning'
     | '/_authenticated/workers'
     | '/_authenticated/'
@@ -251,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntroductionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/notes': {
+      id: '/_authenticated/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof AuthenticatedNotesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/planning': {
       id: '/_authenticated/planning'
       path: '/planning'
@@ -288,6 +307,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCropsRoute: typeof AuthenticatedCropsRoute
   AuthenticatedFarmsRoute: typeof AuthenticatedFarmsRoute
   AuthenticatedIntroductionRoute: typeof AuthenticatedIntroductionRoute
+  AuthenticatedNotesRoute: typeof AuthenticatedNotesRoute
   AuthenticatedPlanningRoute: typeof AuthenticatedPlanningRoute
   AuthenticatedWorkersRoute: typeof AuthenticatedWorkersRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -301,6 +321,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCropsRoute: AuthenticatedCropsRoute,
   AuthenticatedFarmsRoute: AuthenticatedFarmsRoute,
   AuthenticatedIntroductionRoute: AuthenticatedIntroductionRoute,
+  AuthenticatedNotesRoute: AuthenticatedNotesRoute,
   AuthenticatedPlanningRoute: AuthenticatedPlanningRoute,
   AuthenticatedWorkersRoute: AuthenticatedWorkersRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
