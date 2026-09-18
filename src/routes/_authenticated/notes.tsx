@@ -37,6 +37,7 @@ import {
   SectionImageItem,
   ImageLightboxModal,
   StoredImage,
+  type SectionMeta,
 } from "@/components/rich-section-viewer";
 import { RichSectionDialog } from "@/components/rich-section-dialog";
 
@@ -121,7 +122,7 @@ export function NotesPage() {
     reorderMut.mutate(copy);
   }
 
-  const activeMeta = active ? parseKnowledgeMeta(active.images, "note") : { font: "serif", imageLayout: "grid2", items: [] };
+  const activeMeta: SectionMeta = active ? parseKnowledgeMeta(active.images, "note") : { font: "serif", imageLayout: "grid2", items: [] };
 
   return (
     <AppShell>
