@@ -102,14 +102,46 @@ export const upsertCrop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
-    if (data.id) {
-      const { error } = await context.supabase.from("crops").update(data.values as any).eq("id", data.id);
-      if (error) throw new Error(error.message);
-      return { id: data.id };
+    const allowed = [
+      "crop_name",
+      "variety_name",
+      "crop_category",
+      "yield_unit",
+      "typical_yield_per_acre",
+      "growing_days",
+      "cultivation_season",
+      "sowing_window",
+      "harvesting_window",
+      "optimal_temp",
+      "water_requirement",
+      "description",
+      "is_active",
+      "image_url",
+    ];
+    const sanitized: Record<string, any> = {};
+    for (const key of allowed) {
+      if (key in data.values) {
+        sanitized[key] = data.values[key];
+      }
     }
-    const { data: ins, error } = await context.supabase.from("crops").insert(data.values as any).select("id").single();
-    if (error) throw new Error(error.message);
-    return { id: ins.id };
+
+    const execute = async (payload: Record<string, any>) => {
+      if (data.id) {
+        return await context.supabase.from("crops").update(payload as any).eq("id", data.id);
+      }
+      return await context.supabase.from("crops").insert(payload as any).select("id").single();
+    };
+
+    let result = await execute(sanitized);
+
+    // Defensive fallback: If PostgREST schema cache has not reloaded image_url column yet, retry without it
+    if (result.error && result.error.message?.includes("image_url") && "image_url" in sanitized) {
+      const { image_url: _, ...withoutImage } = sanitized;
+      result = await execute(withoutImage);
+    }
+
+    if (result.error) throw new Error(result.error.message);
+    return { id: data.id || result.data?.id };
   });
 
 export const deleteCrop = createServerFn({ method: "POST" })

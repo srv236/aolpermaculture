@@ -71,6 +71,7 @@ export function DataTable<T extends Record<string, any>>({
     return table.getFilteredRowModel().rows.map((r) => {
       const o: Record<string, any> = {};
       for (const c of table.getVisibleLeafColumns()) {
+        if ((c.columnDef.meta as any)?.excludeFromCsv || c.id === "actions") continue;
         const key = (c.columnDef.meta as any)?.csvKey || c.id;
         o[key] = r.getValue(c.id);
       }

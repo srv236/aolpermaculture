@@ -110,6 +110,7 @@ export type Database = {
           growing_days: number | null
           harvesting_window: string | null
           id: string
+          image_url: string | null
           is_active: boolean
           optimal_temp: string | null
           sowing_window: string | null
@@ -128,6 +129,7 @@ export type Database = {
           growing_days?: number | null
           harvesting_window?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           optimal_temp?: string | null
           sowing_window?: string | null
@@ -146,6 +148,7 @@ export type Database = {
           growing_days?: number | null
           harvesting_window?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           optimal_temp?: string | null
           sowing_window?: string | null
