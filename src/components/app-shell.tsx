@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe } from "@/lib/farm.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { Sprout, Wheat, Users, HardHat, CalendarCheck, LogOut, LayoutGrid, BookOpen } from "lucide-react";
+import { Sprout, Wheat, Users, HardHat, CalendarCheck, LogOut, LayoutGrid, Info } from "lucide-react";
 import logoAsset from "@/assets/aol-logo.png.asset.json";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 p-3 space-y-1 text-sm">
           <NavItem to="/farms" icon={<Sprout className="size-4" />}>Farms</NavItem>
-          <NavItem to="/introduction" icon={<BookOpen className="size-4" />}>Introduction</NavItem>
+          <NavItem to="/about" icon={<Info className="size-4" />}>About</NavItem>
           <NavItem to="/planning" icon={<LayoutGrid className="size-4" />}>Planning</NavItem>
           <NavItem to="/crops" icon={<Wheat className="size-4" />}>Crop Library</NavItem>
           <NavItem to="/workers" icon={<HardHat className="size-4" />}>Sevaks</NavItem>
