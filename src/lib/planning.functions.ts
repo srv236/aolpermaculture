@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listBedPlans = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { plotId?: string; farmId?: string }) => d)
+  .validator((d: { plotId?: string; farmId?: string }) => d)
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("bed_plans")
@@ -18,7 +18,7 @@ export const listBedPlans = createServerFn({ method: "GET" })
 
 export const upsertBedPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
       const { error } = await context.supabase
@@ -39,7 +39,7 @@ export const upsertBedPlan = createServerFn({ method: "POST" })
 
 export const deleteBedPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("bed_plans").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

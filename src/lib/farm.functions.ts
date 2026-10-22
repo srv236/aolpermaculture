@@ -15,7 +15,7 @@ export const listFarms = createServerFn({ method: "GET" })
 
 export const getFarm = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: farm, error } = await context.supabase
       .from("farms")
@@ -28,7 +28,7 @@ export const getFarm = createServerFn({ method: "GET" })
 
 export const upsertFarm = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     const payload: any = { ...data.values };
     if (data.id) {
@@ -43,7 +43,7 @@ export const upsertFarm = createServerFn({ method: "POST" })
 
 export const deleteFarm = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("farms").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -53,7 +53,7 @@ export const deleteFarm = createServerFn({ method: "POST" })
 // ---------- PLOTS ----------
 export const listPlots = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { farmId?: string }) => d)
+  .validator((d: { farmId?: string }) => d)
   .handler(async ({ data, context }) => {
     let q = context.supabase.from("plots").select("*").order("plot_number");
     if (data.farmId) q = q.eq("farm_id", data.farmId);
@@ -64,7 +64,7 @@ export const listPlots = createServerFn({ method: "GET" })
 
 export const upsertPlot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
       const { error } = await context.supabase.from("plots").update(data.values as any).eq("id", data.id);
@@ -78,7 +78,7 @@ export const upsertPlot = createServerFn({ method: "POST" })
 
 export const deletePlot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("plots").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -100,7 +100,7 @@ export const listCrops = createServerFn({ method: "GET" })
 
 export const upsertCrop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     const allowed = [
       "crop_name",
@@ -146,7 +146,7 @@ export const upsertCrop = createServerFn({ method: "POST" })
 
 export const deleteCrop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("crops").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -156,7 +156,7 @@ export const deleteCrop = createServerFn({ method: "POST" })
 // ---------- SOWING ----------
 export const listSowing = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { farmId?: string }) => d)
+  .validator((d: { farmId?: string }) => d)
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("sowing_records")
@@ -170,7 +170,7 @@ export const listSowing = createServerFn({ method: "GET" })
 
 export const upsertSowing = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     const allowed = [
       "plot_id", "variety_id", "planting_date", "quantity_planted", "quantity_unit",
@@ -194,7 +194,7 @@ export const upsertSowing = createServerFn({ method: "POST" })
 
 export const deleteSowing = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("sowing_records").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -204,7 +204,7 @@ export const deleteSowing = createServerFn({ method: "POST" })
 // ---------- HARVEST ----------
 export const listHarvest = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { farmId?: string }) => d)
+  .validator((d: { farmId?: string }) => d)
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("harvest_records")
@@ -218,7 +218,7 @@ export const listHarvest = createServerFn({ method: "GET" })
 
 export const upsertHarvest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     const allowed = [
       "plot_id", "variety_id", "sowing_id", "harvest_date", "harvest_time_start",
@@ -241,7 +241,7 @@ export const upsertHarvest = createServerFn({ method: "POST" })
 
 export const deleteHarvest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("harvest_records").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
