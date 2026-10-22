@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listWorkNotes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { farmId: string; period_type: "weekly" | "monthly"; period_start: string }) => d)
+  .inputValidator((d: { farmId: string; period_type: "weekly" | "monthly"; period_start: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("sevak_work_notes")
@@ -17,7 +17,7 @@ export const listWorkNotes = createServerFn({ method: "GET" })
 
 export const upsertWorkNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     worker_id: string; farm_id: string;
     period_type: "weekly" | "monthly"; period_start: string;
     notes: string | null;

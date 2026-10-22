@@ -14,7 +14,7 @@ export const listWorkers = createServerFn({ method: "GET" })
 
 export const upsertWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id?: string; values: Record<string, any> }) => d)
+  .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     const values: Record<string, any> = { ...data.values };
     if (values.worker_code === "" || values.worker_code === undefined) values.worker_code = null;
@@ -38,7 +38,7 @@ export const upsertWorker = createServerFn({ method: "POST" })
 
 export const deleteWorker = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => d)
+  .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("workers").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -65,7 +65,7 @@ function slugify(s: string) {
 
 export const upsertWorkerType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { original_value?: string; value?: string; label: string; sort_order?: number }) => d)
+  .inputValidator((d: { original_value?: string; value?: string; label: string; sort_order?: number }) => d)
   .handler(async ({ data, context }) => {
     const label = data.label.trim();
     if (!label) throw new Error("Label is required");
@@ -90,7 +90,7 @@ export const upsertWorkerType = createServerFn({ method: "POST" })
 
 export const deleteWorkerType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { value: string }) => d)
+  .inputValidator((d: { value: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await (context.supabase as any)
       .from("worker_types").delete().eq("value", data.value);
