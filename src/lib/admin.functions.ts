@@ -33,7 +33,7 @@ export const listUsers = createServerFn({ method: "GET" })
 
 export const createUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { email: string; password: string; full_name: string; role: Role }) => d)
+  .validator((d: { email: string; password: string; full_name: string; role: Role }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -54,7 +54,7 @@ export const createUser = createServerFn({ method: "POST" })
 
 export const setUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { userId: string; role: Role }) => d)
+  .validator((d: { userId: string; role: Role }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -66,7 +66,7 @@ export const setUserRole = createServerFn({ method: "POST" })
 
 export const setUserActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { userId: string; isActive: boolean }) => d)
+  .validator((d: { userId: string; isActive: boolean }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -77,7 +77,7 @@ export const setUserActive = createServerFn({ method: "POST" })
 
 export const deleteUserAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { userId: string }) => d)
+  .validator((d: { userId: string }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     if (data.userId === context.userId) throw new Error("Cannot delete your own account");

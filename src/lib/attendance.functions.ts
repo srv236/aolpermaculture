@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listAttendance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { farmId: string; year: number; month: number }) => d)
+  .validator((d: { farmId: string; year: number; month: number }) => d)
   .handler(async ({ data, context }) => {
     const start = new Date(Date.UTC(data.year, data.month - 1, 1)).toISOString().slice(0, 10);
     const end = new Date(Date.UTC(data.year, data.month, 0)).toISOString().slice(0, 10);
@@ -19,7 +19,7 @@ export const listAttendance = createServerFn({ method: "GET" })
 
 export const upsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { worker_id: string; farm_id: string; date: string; status: string; notes?: string | null; work_done?: string | null }) => d)
+  .validator((d: { worker_id: string; farm_id: string; date: string; status: string; notes?: string | null; work_done?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const payload: any = {
       worker_id: data.worker_id,
@@ -38,7 +38,7 @@ export const upsertAttendance = createServerFn({ method: "POST" })
 
 export const bulkUpsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { farm_id: string; date: string; worker_ids: string[]; status: string }) => d)
+  .validator((d: { farm_id: string; date: string; worker_ids: string[]; status: string }) => d)
   .handler(async ({ data, context }) => {
     if (!data.worker_ids.length) return { ok: true };
     const rows = data.worker_ids.map((wid) => ({
@@ -56,7 +56,7 @@ export const bulkUpsertAttendance = createServerFn({ method: "POST" })
 
 export const bulkUpsertAttendancePairs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { farm_id: string; status: string; pairs: { worker_id: string; date: string }[] }) => d)
+  .validator((d: { farm_id: string; status: string; pairs: { worker_id: string; date: string }[] }) => d)
   .handler(async ({ data, context }) => {
     if (!data.pairs.length) return { ok: true };
     const rows = data.pairs.map((p) => ({
@@ -74,7 +74,7 @@ export const bulkUpsertAttendancePairs = createServerFn({ method: "POST" })
 
 export const bulkMarkPresent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { farm_id: string; date: string; worker_ids: string[] }) => d)
+  .validator((d: { farm_id: string; date: string; worker_ids: string[] }) => d)
   .handler(async ({ data, context }) => {
     if (!data.worker_ids.length) return { ok: true };
     const rows = data.worker_ids.map((wid) => ({
@@ -92,7 +92,7 @@ export const bulkMarkPresent = createServerFn({ method: "POST" })
 
 export const deleteAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("attendance").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -102,7 +102,7 @@ export const deleteAttendance = createServerFn({ method: "POST" })
 // ----- Visitors -----
 export const listVisitors = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { farmId: string; date: string }) => d)
+  .validator((d: { farmId: string; date: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("farm_visitors")
@@ -116,7 +116,7 @@ export const listVisitors = createServerFn({ method: "GET" })
 
 export const upsertVisitor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
       const { error } = await context.supabase.from("farm_visitors").update(data.values as any).eq("id", data.id);
@@ -130,7 +130,7 @@ export const upsertVisitor = createServerFn({ method: "POST" })
 
 export const deleteVisitor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("farm_visitors").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

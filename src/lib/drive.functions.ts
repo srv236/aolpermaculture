@@ -11,7 +11,7 @@ const inputSchema = z.object({
 
 export const uploadToDrive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => inputSchema.parse(data))
+  .validator((data: unknown) => inputSchema.parse(data))
   .handler(async ({ data }) => {
     const lovableKey = process.env.LOVABLE_API_KEY;
     const driveKey = process.env.GOOGLE_DRIVE_API_KEY;
