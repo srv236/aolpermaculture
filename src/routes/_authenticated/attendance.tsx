@@ -13,6 +13,8 @@ import {
   listVisitors,
   upsertVisitor,
   deleteVisitor,
+  listDailyWorkSummaries,
+  upsertDailyWorkSummary,
 } from "@/lib/attendance.functions";
 import { listWorkNotes, upsertWorkNote } from "@/lib/work-notes.functions";
 import { AppShell, useMe } from "@/components/app-shell";
@@ -30,7 +32,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCheck, ChevronLeft, ChevronRight, Download, Pencil, Plus, Trash2, Users, Keyboard } from "lucide-react";
+import { CheckCheck, ChevronLeft, ChevronRight, Download, Pencil, Plus, Trash2, Users, Keyboard, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { cn } from "@/lib/utils";
@@ -294,6 +296,14 @@ function DailyView({
         <div className="text-sm text-muted-foreground italic">{niceDate}</div>
       </div>
 
+      {/* Daily Work Summary */}
+      <DailyWorkSummaryCard
+        farmId={farmId}
+        date={date}
+        niceDate={niceDate}
+        canEdit={canEdit}
+      />
+
       {/* Summary chips + keyboard hint */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         {STATUS.map((s) => (
@@ -366,6 +376,160 @@ function DailyView({
             );
           })}
         </ul>
+      </div>
+    </div>
+  );
+}
+
+function DailyWorkSummaryCard({
+  farmId,
+  date,
+  niceDate,
+  canEdit,
+}: {
+  farmId?: string;
+  date: string;
+  niceDate: string;
+  canEdit: boolean;
+}) {
+  const d = new Date(date + "T00:00:00");
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+
+  const listSummaryFn = useServerFn(listDailyWorkSummaries);
+  const summariesQ = useQuery({
+    queryKey: ["daily-work-summaries", farmId, year, month],
+    queryFn: () => listSummaryFn({ data: { farmId: farmId!, year, month } }),
+    enabled: !!farmId,
+  });
+
+  const serverRow = useMemo(() => {
+    return (summariesQ.data ?? []).find((r: any) => r.date === date);
+  }, [summariesQ.data, date]);
+
+  const storageKey = farmId ? `farm_daily_summary_${farmId}_${date}` : null;
+
+  const [text, setText] = useState<string>("");
+  const [isDirty, setIsDirty] = useState<boolean>(false);
+  const lastSavedRef = useRef<string>("");
+  const prevDateRef = useRef<string>(date);
+  const prevFarmIdRef = useRef<string | undefined>(farmId);
+
+  const qc = useQueryClient();
+  const upsertFn = useServerFn(upsertDailyWorkSummary);
+
+  const upsertMut = useMutation({
+    mutationFn: (summary: string | null) =>
+      upsertFn({ data: { farm_id: farmId!, date, summary } }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["daily-work-summaries", farmId, year, month] });
+      setIsDirty(false);
+      lastSavedRef.current = text.trim();
+      if (storageKey) {
+        if (text.trim()) localStorage.setItem(storageKey, text.trim());
+        else localStorage.removeItem(storageKey);
+      }
+      if ((res as any)?.notMigrated) {
+        toast.success("Saved locally. (Supabase table migration pending)");
+      } else {
+        toast.success("Daily work summary saved");
+      }
+    },
+    onError: (e: Error) => {
+      if (storageKey) localStorage.setItem(storageKey, text.trim());
+      toast.error(`Could not sync to server: ${e.message}. Saved locally.`);
+    },
+  });
+
+  // Handle switching dates: persist old date if dirty, load new date's content
+  useEffect(() => {
+    if (isDirty && prevDateRef.current && prevDateRef.current !== date && prevFarmIdRef.current) {
+      const prevKey = `farm_daily_summary_${prevFarmIdRef.current}_${prevDateRef.current}`;
+      const prevText = text.trim();
+      if (prevText) localStorage.setItem(prevKey, prevText);
+      else localStorage.removeItem(prevKey);
+      upsertFn({ data: { farm_id: prevFarmIdRef.current, date: prevDateRef.current, summary: prevText || null } }).catch(() => {});
+    }
+    prevDateRef.current = date;
+    prevFarmIdRef.current = farmId;
+
+    let initialVal = "";
+    if (serverRow?.summary !== undefined && serverRow?.summary !== null) {
+      initialVal = serverRow.summary;
+      if (storageKey) localStorage.setItem(storageKey, initialVal);
+    } else if (storageKey) {
+      initialVal = localStorage.getItem(storageKey) ?? "";
+    }
+    setText(initialVal);
+    lastSavedRef.current = initialVal;
+    setIsDirty(false);
+  }, [date, farmId, serverRow?.summary, storageKey]);
+
+  const handleSave = () => {
+    if (!canEdit || !farmId) return;
+    const trimmed = text.trim();
+    if (trimmed === lastSavedRef.current && !isDirty) return;
+    if (storageKey) {
+      if (trimmed) localStorage.setItem(storageKey, trimmed);
+      else localStorage.removeItem(storageKey);
+    }
+    upsertMut.mutate(trimmed || null);
+  };
+
+  return (
+    <div className="border rounded-xl p-4 bg-card shadow-sm mb-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="size-4 text-primary" />
+          <Label htmlFor="daily-work-summary-input" className="text-sm font-semibold tracking-tight">
+            Daily Work Summary
+          </Label>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            · {niceDate}
+          </span>
+        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            {isDirty && (
+              <span className="text-[11px] font-medium text-amber-700 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900">
+                Unsaved changes
+              </span>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={handleSave}
+              disabled={upsertMut.isPending || (!isDirty && text.trim() === lastSavedRef.current)}
+            >
+              {upsertMut.isPending ? "Saving..." : "Save summary"}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <Textarea
+        id="daily-work-summary-input"
+        rows={3}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          setIsDirty(e.target.value.trim() !== lastSavedRef.current);
+        }}
+        onBlur={handleSave}
+        placeholder={
+          canEdit
+            ? "Enter the overall summary of daily work done across the farm today (e.g. prepared plot 6 beds, weeded tomato patch, repaired drip irrigation lines, harvested greens)..."
+            : "No daily work summary recorded for this date."
+        }
+        disabled={!canEdit}
+        className="text-sm bg-background/60 focus:bg-background transition resize-y"
+      />
+      <div className="flex items-center justify-between mt-1.5 text-[11px] text-muted-foreground">
+        <span>Single overall work summary for all farm activities on this date</span>
+        {lastSavedRef.current && !isDirty && (
+          <span className="text-emerald-700 dark:text-emerald-400 font-medium">✓ Saved</span>
+        )}
       </div>
     </div>
   );

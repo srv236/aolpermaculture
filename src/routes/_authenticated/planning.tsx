@@ -231,7 +231,7 @@ function PlanningPage() {
                   <CardContent>
                     <BedPlanner
                       value={draft.config}
-                      onChange={(config) => setDraft({ ...draft, config })}
+                      onChange={(config: any) => setDraft({ ...draft, config })}
                       crops={(crops.data ?? []) as any}
                       bedName={draft.name}
                       plotLabel={
