@@ -65,41 +65,6 @@ export type Database = {
           },
         ]
       }
-      daily_work_summaries: {
-        Row: {
-          created_at: string
-          date: string
-          farm_id: string
-          id: string
-          summary: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          date: string
-          farm_id: string
-          id?: string
-          summary?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          date?: string
-          farm_id?: string
-          id?: string
-          summary?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_work_summaries_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       bed_plans: {
         Row: {
           config: Json
@@ -145,7 +110,6 @@ export type Database = {
           growing_days: number | null
           harvesting_window: string | null
           id: string
-          image_url: string | null
           is_active: boolean
           optimal_temp: string | null
           sowing_window: string | null
@@ -164,7 +128,6 @@ export type Database = {
           growing_days?: number | null
           harvesting_window?: string | null
           id?: string
-          image_url?: string | null
           is_active?: boolean
           optimal_temp?: string | null
           sowing_window?: string | null
@@ -183,7 +146,6 @@ export type Database = {
           growing_days?: number | null
           harvesting_window?: string | null
           id?: string
-          image_url?: string | null
           is_active?: boolean
           optimal_temp?: string | null
           sowing_window?: string | null
