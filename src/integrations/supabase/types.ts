@@ -107,11 +107,19 @@ export type Database = {
           crop_name: string
           cultivation_season: string | null
           description: string | null
+          germination_days: number | null
           growing_days: number | null
           harvesting_window: string | null
           id: string
+          image_url: string | null
           is_active: boolean
+          is_repeat_harvest: boolean | null
           optimal_temp: string | null
+          repeat_harvest_interval: string | null
+          seed_expiry_date: string | null
+          seed_notes: string | null
+          seed_stock_quantity: number | null
+          seed_stock_unit: string | null
           sowing_window: string | null
           typical_yield_per_acre: number | null
           updated_at: string
@@ -125,11 +133,19 @@ export type Database = {
           crop_name: string
           cultivation_season?: string | null
           description?: string | null
+          germination_days?: number | null
           growing_days?: number | null
           harvesting_window?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_repeat_harvest?: boolean | null
           optimal_temp?: string | null
+          repeat_harvest_interval?: string | null
+          seed_expiry_date?: string | null
+          seed_notes?: string | null
+          seed_stock_quantity?: number | null
+          seed_stock_unit?: string | null
           sowing_window?: string | null
           typical_yield_per_acre?: number | null
           updated_at?: string
@@ -143,11 +159,19 @@ export type Database = {
           crop_name?: string
           cultivation_season?: string | null
           description?: string | null
+          germination_days?: number | null
           growing_days?: number | null
           harvesting_window?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_repeat_harvest?: boolean | null
           optimal_temp?: string | null
+          repeat_harvest_interval?: string | null
+          seed_expiry_date?: string | null
+          seed_notes?: string | null
+          seed_stock_quantity?: number | null
+          seed_stock_unit?: string | null
           sowing_window?: string | null
           typical_yield_per_acre?: number | null
           updated_at?: string

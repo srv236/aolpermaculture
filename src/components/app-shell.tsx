@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavItem to="/about" icon={<Info className="size-4" />}>About</NavItem>
           <NavItem to="/notes" icon={<BookOpen className="size-4" />}>Notes</NavItem>
           <NavItem to="/planning" icon={<LayoutGrid className="size-4" />}>Planning</NavItem>
-          <NavItem to="/crops" icon={<Wheat className="size-4" />}>Crop Library</NavItem>
+          <NavItem to="/crops" icon={<Wheat className="size-4" />}>Seeds and Crops</NavItem>
           <NavItem to="/workers" icon={<HardHat className="size-4" />}>Sevaks</NavItem>
           <NavItem to="/attendance" icon={<CalendarCheck className="size-4" />}>Attendance</NavItem>
           {isAdmin && (
