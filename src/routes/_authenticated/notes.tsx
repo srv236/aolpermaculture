@@ -105,7 +105,10 @@ export function NotesPage() {
   const reorderMut = useMutation({
     mutationFn: async (updatedList: KnowledgeSection[]) => {
       const updates = updatedList.map((s, idx) =>
-        supabase.from("knowledge_sections").update({ sort_order: idx * 10 }).eq("id", s.id),
+        supabase
+          .from("knowledge_sections")
+          .update({ sort_order: idx * 10 })
+          .eq("id", s.id),
       );
       await Promise.all(updates);
     },
@@ -122,7 +125,9 @@ export function NotesPage() {
     reorderMut.mutate(copy);
   }
 
-  const activeMeta: SectionMeta = active ? parseKnowledgeMeta(active.images, "note") : { font: "serif", imageLayout: "grid2", items: [] };
+  const activeMeta: SectionMeta = active
+    ? parseKnowledgeMeta(active.images, "note")
+    : { font: "serif", imageLayout: "grid2", items: [] };
 
   return (
     <AppShell>
@@ -190,7 +195,9 @@ export function NotesPage() {
                         )}
                       >
                         <ImageIcon className="size-3" />
-                        <span>{meta.items.length} photo{meta.items.length === 1 ? "" : "s"}</span>
+                        <span>
+                          {meta.items.length} photo{meta.items.length === 1 ? "" : "s"}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -206,7 +213,10 @@ export function NotesPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className={cn("size-6 p-0", isSelected && "hover:bg-primary-foreground/20 text-primary-foreground")}
+                        className={cn(
+                          "size-6 p-0",
+                          isSelected && "hover:bg-primary-foreground/20 text-primary-foreground",
+                        )}
                         onClick={() => move(i, -1)}
                         disabled={i === 0}
                         title="Move Up"
@@ -216,7 +226,10 @@ export function NotesPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className={cn("size-6 p-0", isSelected && "hover:bg-primary-foreground/20 text-primary-foreground")}
+                        className={cn(
+                          "size-6 p-0",
+                          isSelected && "hover:bg-primary-foreground/20 text-primary-foreground",
+                        )}
                         onClick={() => move(i, 1)}
                         disabled={i === notesList.length - 1}
                         title="Move Down"
@@ -230,14 +243,18 @@ export function NotesPage() {
             })}
 
             {filteredList.length === 0 && notesList.length > 0 && (
-              <p className="p-4 text-center text-xs text-muted-foreground">No notes match "{search}"</p>
+              <p className="p-4 text-center text-xs text-muted-foreground">
+                No notes match "{search}"
+              </p>
             )}
 
             {notesList.length === 0 && (
               <div className="p-6 text-center text-xs text-muted-foreground space-y-2">
                 <BookOpen className="size-6 mx-auto opacity-40 mb-1" />
                 <p>No notes created yet.</p>
-                {canEdit && <p className="text-[11px]">Click "Add Note" above to write your first note.</p>}
+                {canEdit && (
+                  <p className="text-[11px]">Click "Add Note" above to write your first note.</p>
+                )}
               </div>
             )}
           </div>
@@ -260,7 +277,12 @@ export function NotesPage() {
                     {active.title}
                   </h1>
                   <div className="text-xs text-muted-foreground flex items-center gap-3 pt-1">
-                    <span>Last updated {new Date(active.updated_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</span>
+                    <span>
+                      Last updated{" "}
+                      {new Date(active.updated_at).toLocaleDateString(undefined, {
+                        dateStyle: "medium",
+                      })}
+                    </span>
                     <Badge variant="outline" className="capitalize text-[10px] font-normal">
                       Font: {activeMeta.font}
                     </Badge>
@@ -269,11 +291,7 @@ export function NotesPage() {
 
                 {canEdit && (
                   <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditing(active)}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => setEditing(active)}>
                       <Pencil className="size-3.5 mr-1.5" /> Edit Note
                     </Button>
                     <Button
@@ -307,17 +325,15 @@ export function NotesPage() {
                     className={cn(
                       "grid gap-4",
                       activeMeta.imageLayout === "hero" && "grid-cols-1",
-                      activeMeta.imageLayout === "grid3" && "grid-cols-1 sm:grid-cols-2 md:grid-cols-3",
+                      activeMeta.imageLayout === "grid3" &&
+                        "grid-cols-1 sm:grid-cols-2 md:grid-cols-3",
                       activeMeta.imageLayout === "stacked" && "grid-cols-1 max-w-2xl mx-auto",
-                      (!activeMeta.imageLayout || activeMeta.imageLayout === "grid2") && "grid-cols-1 sm:grid-cols-2",
+                      (!activeMeta.imageLayout || activeMeta.imageLayout === "grid2") &&
+                        "grid-cols-1 sm:grid-cols-2",
                     )}
                   >
                     {activeMeta.items.map((img, idx) => (
-                      <SectionImageItem
-                        key={idx}
-                        image={img}
-                        onClick={() => setLightboxImg(img)}
-                      />
+                      <SectionImageItem key={idx} image={img} onClick={() => setLightboxImg(img)} />
                     ))}
                   </div>
                 </div>
@@ -333,8 +349,8 @@ export function NotesPage() {
                 <div className="space-y-1">
                   <h2 className="font-serif text-2xl font-bold">No Notes Yet</h2>
                   <p className="text-sm text-muted-foreground">
-                    A shared reference for permaculture practices, guides, soil recipes,
-                    crop notes, and farm observations.
+                    A shared reference for permaculture practices, guides, soil recipes, crop notes,
+                    and farm observations.
                   </p>
                 </div>
 

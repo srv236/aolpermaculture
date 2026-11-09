@@ -25,7 +25,11 @@ export function FontSizeToggle() {
   function set(s: Scale) {
     setScale(s);
     apply(s);
-    try { localStorage.setItem(KEY, String(s)); } catch {}
+    try {
+      localStorage.setItem(KEY, String(s));
+    } catch {
+      // ignore storage errors
+    }
   }
 
   return (

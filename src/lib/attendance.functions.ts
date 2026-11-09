@@ -19,7 +19,16 @@ export const listAttendance = createServerFn({ method: "GET" })
 
 export const upsertAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { worker_id: string; farm_id: string; date: string; status: string; notes?: string | null; work_done?: string | null }) => d)
+  .validator(
+    (d: {
+      worker_id: string;
+      farm_id: string;
+      date: string;
+      status: string;
+      notes?: string | null;
+      work_done?: string | null;
+    }) => d,
+  )
   .handler(async ({ data, context }) => {
     const payload: any = {
       worker_id: data.worker_id,
@@ -56,7 +65,9 @@ export const bulkUpsertAttendance = createServerFn({ method: "POST" })
 
 export const bulkUpsertAttendancePairs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { farm_id: string; status: string; pairs: { worker_id: string; date: string }[] }) => d)
+  .validator(
+    (d: { farm_id: string; status: string; pairs: { worker_id: string; date: string }[] }) => d,
+  )
   .handler(async ({ data, context }) => {
     if (!data.pairs.length) return { ok: true };
     const rows = data.pairs.map((p) => ({
@@ -119,11 +130,18 @@ export const upsertVisitor = createServerFn({ method: "POST" })
   .validator((d: { id?: string; values: Record<string, any> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const { error } = await context.supabase.from("farm_visitors").update(data.values as any).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("farm_visitors")
+        .update(data.values as any)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("farm_visitors").insert(data.values as any).select("id").single();
+    const { data: ins, error } = await context.supabase
+      .from("farm_visitors")
+      .insert(data.values as any)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -186,7 +204,7 @@ export const upsertDailyWorkSummary = createServerFn({ method: "POST" })
             date: data.date,
             summary: summaryText,
           },
-          { onConflict: "farm_id,date" }
+          { onConflict: "farm_id,date" },
         )
         .select()
         .single();
@@ -204,4 +222,3 @@ export const upsertDailyWorkSummary = createServerFn({ method: "POST" })
       throw err;
     }
   });
-

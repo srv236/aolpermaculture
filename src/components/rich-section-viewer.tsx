@@ -69,7 +69,11 @@ export function useResolvedImageUrl(img?: StoredImage) {
       setUrl(img.url);
       return;
     }
-    if (img.path?.startsWith("http://") || img.path?.startsWith("https://") || img.path?.startsWith("data:")) {
+    if (
+      img.path?.startsWith("http://") ||
+      img.path?.startsWith("https://") ||
+      img.path?.startsWith("data:")
+    ) {
       setUrl(img.path);
       return;
     }
@@ -101,13 +105,7 @@ export function useResolvedImageUrl(img?: StoredImage) {
   return url;
 }
 
-export function SectionImageItem({
-  image,
-  onClick,
-}: {
-  image: StoredImage;
-  onClick: () => void;
-}) {
+export function SectionImageItem({ image, onClick }: { image: StoredImage; onClick: () => void }) {
   const url = useResolvedImageUrl(image);
 
   return (
@@ -176,9 +174,7 @@ export function ImageLightboxModal({
           </div>
 
           {image.caption && (
-            <div className="p-4 text-center text-sm text-white/90 max-w-2xl">
-              {image.caption}
-            </div>
+            <div className="p-4 text-center text-sm text-white/90 max-w-2xl">{image.caption}</div>
           )}
         </div>
       </DialogContent>
@@ -187,7 +183,13 @@ export function ImageLightboxModal({
 }
 
 // Markdown renderer
-export function MarkdownContent({ content, font = "serif" }: { content: string; font?: "serif" | "sans" | "mono" }) {
+export function MarkdownContent({
+  content,
+  font = "serif",
+}: {
+  content: string;
+  font?: "serif" | "sans" | "mono";
+}) {
   if (!content || !content.trim()) {
     return <p className="italic text-muted-foreground">No content added yet.</p>;
   }
@@ -365,7 +367,10 @@ export function MarkdownContent({ content, font = "serif" }: { content: string; 
     if (line.startsWith("#### ")) {
       flushList();
       elements.push(
-        <h4 key={`h4-${elements.length}`} className="mt-4 mb-1.5 text-base font-medium text-foreground">
+        <h4
+          key={`h4-${elements.length}`}
+          className="mt-4 mb-1.5 text-base font-medium text-foreground"
+        >
           {renderInline(line.slice(5))}
         </h4>,
       );
@@ -375,7 +380,10 @@ export function MarkdownContent({ content, font = "serif" }: { content: string; 
     if (line.startsWith("> ")) {
       flushList();
       const quoteText = line.slice(2);
-      const isCallout = quoteText.startsWith("[!NOTE]") || quoteText.startsWith("[!TIP]") || quoteText.startsWith("💡");
+      const isCallout =
+        quoteText.startsWith("[!NOTE]") ||
+        quoteText.startsWith("[!TIP]") ||
+        quoteText.startsWith("💡");
       elements.push(
         <blockquote
           key={`quote-${elements.length}`}
@@ -429,7 +437,11 @@ export function MarkdownContent({ content, font = "serif" }: { content: string; 
   flushList();
   flushTable();
 
-  return <div className={cn("space-y-1 text-[15px]", font === "mono" && "font-mono text-sm")}>{elements}</div>;
+  return (
+    <div className={cn("space-y-1 text-[15px]", font === "mono" && "font-mono text-sm")}>
+      {elements}
+    </div>
+  );
 }
 
 function renderInline(text: string): React.ReactNode {
@@ -457,7 +469,11 @@ function renderInline(text: string): React.ReactNode {
 
     const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
     if (boldMatch) {
-      parts.push(<strong key={key++} className="font-semibold text-foreground">{boldMatch[1]}</strong>);
+      parts.push(
+        <strong key={key++} className="font-semibold text-foreground">
+          {boldMatch[1]}
+        </strong>,
+      );
       remaining = remaining.slice(boldMatch[0].length);
       continue;
     }
@@ -472,7 +488,10 @@ function renderInline(text: string): React.ReactNode {
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
       parts.push(
-        <code key={key++} className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
+        <code
+          key={key++}
+          className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground"
+        >
           {codeMatch[1]}
         </code>,
       );

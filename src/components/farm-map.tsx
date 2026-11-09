@@ -13,7 +13,14 @@ type Props = {
   overlays?: Array<{ wkt: string; color?: string; label?: string }>;
 };
 
-export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter, overlays }: Props) {
+export function FarmMap({
+  value,
+  onChange,
+  readOnly,
+  height = 400,
+  initialCenter,
+  overlays,
+}: Props) {
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const polygonRef = useRef<google.maps.Polygon | null>(null);
@@ -27,7 +34,10 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
 
   function emit(poly: google.maps.Polygon) {
     if (!onChange) return;
-    const arr = poly.getPath().getArray().map((ll) => ({ lat: ll.lat(), lng: ll.lng() }));
+    const arr = poly
+      .getPath()
+      .getArray()
+      .map((ll) => ({ lat: ll.lat(), lng: ll.lng() }));
     onChange(toWkt(arr));
   }
 
@@ -73,11 +83,15 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
       if (!e.latLng) return;
       const pt = { lat: e.latLng.lat(), lng: e.latLng.lng() };
       const marker = new g.maps.Marker({
-        position: pt, map,
+        position: pt,
+        map,
         icon: {
           path: g.maps.SymbolPath.CIRCLE,
-          scale: 5, fillColor: "#15803d", fillOpacity: 1,
-          strokeColor: "#fff", strokeWeight: 2,
+          scale: 5,
+          fillColor: "#15803d",
+          fillOpacity: 1,
+          strokeColor: "#fff",
+          strokeWeight: 2,
         },
       });
       draftMarkersRef.current.push(marker);
@@ -104,10 +118,14 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
     setDrawing(false);
     if (pts.length < 3) return;
     const poly = new g.maps.Polygon({
-      paths: pts, map,
-      fillColor: "#4ade80", fillOpacity: 0.25,
-      strokeColor: "#15803d", strokeWeight: 2,
-      editable: true, clickable: true,
+      paths: pts,
+      map,
+      fillColor: "#4ade80",
+      fillOpacity: 0.25,
+      strokeColor: "#15803d",
+      strokeWeight: 2,
+      editable: true,
+      clickable: true,
     });
     polygonRef.current = poly;
     attachEdit(poly);
@@ -129,9 +147,15 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
         if (cancelled || !mapEl.current) return;
         googleRef.current = g;
         const initialPath = parseWkt(value) || undefined;
-        const overlayPaths = (overlays || []).map((o) => parseWkt(o.wkt)).filter(Boolean) as google.maps.LatLngLiteral[][];
-        const allPaths = [initialPath, ...overlayPaths].filter(Boolean) as google.maps.LatLngLiteral[][];
-        const ctr = initialPath ? centroid(initialPath) : initialCenter || centroid(allPaths[0] || []) || { lat: 12.82, lng: 77.5 };
+        const overlayPaths = (overlays || [])
+          .map((o) => parseWkt(o.wkt))
+          .filter(Boolean) as google.maps.LatLngLiteral[][];
+        const allPaths = [initialPath, ...overlayPaths].filter(
+          Boolean,
+        ) as google.maps.LatLngLiteral[][];
+        const ctr = initialPath
+          ? centroid(initialPath)
+          : initialCenter || centroid(allPaths[0] || []) || { lat: 12.82, lng: 77.5 };
         const map = new g.maps.Map(mapEl.current, {
           center: ctr!,
           zoom: initialPath ? 17 : 14,
@@ -142,21 +166,22 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
         });
         mapRef.current = map;
 
-        const refreshMap = () => requestAnimationFrame(() => {
-          if (!mapEl.current) return;
-          g.maps.event.trigger(map, "resize");
-          const bounds = new g.maps.LatLngBounds();
-          allPaths.forEach((path) => path.forEach((point) => bounds.extend(point)));
-          if (!bounds.isEmpty()) {
-            map.fitBounds(bounds, 32);
-            g.maps.event.addListenerOnce(map, "idle", () => {
-              const zoom = map.getZoom();
-              if (zoom && zoom > 19) map.setZoom(19);
-            });
-          } else {
-            map.setCenter(ctr!);
-          }
-        });
+        const refreshMap = () =>
+          requestAnimationFrame(() => {
+            if (!mapEl.current) return;
+            g.maps.event.trigger(map, "resize");
+            const bounds = new g.maps.LatLngBounds();
+            allPaths.forEach((path) => path.forEach((point) => bounds.extend(point)));
+            if (!bounds.isEmpty()) {
+              map.fitBounds(bounds, 32);
+              g.maps.event.addListenerOnce(map, "idle", () => {
+                const zoom = map.getZoom();
+                if (zoom && zoom > 19) map.setZoom(19);
+              });
+            } else {
+              map.setCenter(ctr!);
+            }
+          });
 
         // When the container becomes visible or resizes (Tabs/Dialog mount),
         // trigger a resize so Google Maps re-lays tiles and recenters.
@@ -167,18 +192,26 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
           const p = overlayPaths[index];
           if (!p) continue;
           new g.maps.Polygon({
-            paths: p, map,
-            fillColor: o.color || "#f4d35e", fillOpacity: 0.15,
-            strokeColor: o.color || "#f4d35e", strokeWeight: 1.5, clickable: false,
+            paths: p,
+            map,
+            fillColor: o.color || "#f4d35e",
+            fillOpacity: 0.15,
+            strokeColor: o.color || "#f4d35e",
+            strokeWeight: 1.5,
+            clickable: false,
           });
         }
 
         if (initialPath) {
           const poly = new g.maps.Polygon({
-            paths: initialPath, map,
-            fillColor: "#4ade80", fillOpacity: 0.25,
-            strokeColor: "#15803d", strokeWeight: 2,
-            editable: !readOnly, clickable: true,
+            paths: initialPath,
+            map,
+            fillColor: "#4ade80",
+            fillOpacity: 0.25,
+            strokeColor: "#15803d",
+            strokeWeight: 2,
+            editable: !readOnly,
+            clickable: true,
           });
           polygonRef.current = poly;
           if (!readOnly) attachEdit(poly);
@@ -189,7 +222,11 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
         window.setTimeout(refreshMap, 500);
       })
       .catch((e) => setError(e.message));
-    return () => { cancelled = true; clearDraft(); resizeObserverRef.current?.disconnect(); };
+    return () => {
+      cancelled = true;
+      clearDraft();
+      resizeObserverRef.current?.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -218,7 +255,8 @@ export function FarmMap({ value, onChange, readOnly, height = 400, initialCenter
               </>
             ) : (
               <Button type="button" variant="outline" size="sm" onClick={startDrawing}>
-                <Pencil className="size-3.5 mr-1" /> {polygonRef.current ? "Redraw" : "Draw polygon"}
+                <Pencil className="size-3.5 mr-1" />{" "}
+                {polygonRef.current ? "Redraw" : "Draw polygon"}
               </Button>
             )}
             <Button type="button" variant="ghost" size="sm" onClick={clearPolygon}>

@@ -8,13 +8,24 @@ import { listBedPlans, upsertBedPlan, deleteBedPlan } from "@/lib/planning.funct
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BedPlanner } from "@/components/bed-planner";
 import { defaultBedConfig, type BedConfig } from "@/lib/bed-plan";
@@ -79,9 +90,10 @@ function PlanningPage() {
     setDraft({
       id: target.id,
       name: target.name,
-      config: (target.config as any) && Object.keys(target.config as any).length
-        ? (target.config as BedConfig)
-        : defaultBedConfig(),
+      config:
+        (target.config as any) && Object.keys(target.config as any).length
+          ? (target.config as BedConfig)
+          : defaultBedConfig(),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [beds.data, activeBedId]);
@@ -130,19 +142,37 @@ function PlanningPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <Label className="text-xs">Farm</Label>
-            <Select value={farmId} onValueChange={(v) => { setFarmId(v); setActiveBedId(null); }}>
-              <SelectTrigger><SelectValue placeholder="Select farm" /></SelectTrigger>
+            <Select
+              value={farmId}
+              onValueChange={(v) => {
+                setFarmId(v);
+                setActiveBedId(null);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select farm" />
+              </SelectTrigger>
               <SelectContent>
                 {(farms.data ?? []).map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label className="text-xs">Plot</Label>
-            <Select value={plotId} onValueChange={(v) => { setPlotId(v); setActiveBedId(null); }}>
-              <SelectTrigger><SelectValue placeholder="Select plot" /></SelectTrigger>
+            <Select
+              value={plotId}
+              onValueChange={(v) => {
+                setPlotId(v);
+                setActiveBedId(null);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select plot" />
+              </SelectTrigger>
               <SelectContent>
                 {(plots.data ?? []).map((p) => (
                   <SelectItem key={p.id} value={p.id}>
@@ -162,21 +192,32 @@ function PlanningPage() {
         </div>
 
         {!plotId && (
-          <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Select a farm and plot to start planning beds.
-          </CardContent></Card>
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              Select a farm and plot to start planning beds.
+            </CardContent>
+          </Card>
         )}
 
         {plotId && (beds.data?.length ?? 0) === 0 && (
-          <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No beds yet for this plot. {canEdit && <>Click <b>Add bed</b> to create one.</>}
-          </CardContent></Card>
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              No beds yet for this plot.{" "}
+              {canEdit && (
+                <>
+                  Click <b>Add bed</b> to create one.
+                </>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {plotId && (beds.data?.length ?? 0) > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-6">
             <aside className="space-y-1">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Beds</div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                Beds
+              </div>
               {(beds.data ?? []).map((b) => (
                 <button
                   key={b.id}
@@ -220,7 +261,8 @@ function PlanningPage() {
                           <Save className="size-4 mr-1" /> Save
                         </Button>
                         <Button
-                          size="sm" variant="ghost"
+                          size="sm"
+                          variant="ghost"
                           onClick={() => draft.id && setConfirmDelete(draft.id)}
                         >
                           <Trash2 className="size-4" />
@@ -250,7 +292,9 @@ function PlanningPage() {
 
         <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
           <AlertDialogContent>
-            <AlertDialogHeader><AlertDialogTitle>Delete this bed plan?</AlertDialogTitle></AlertDialogHeader>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this bed plan?</AlertDialogTitle>
+            </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={() => confirmDelete && remove.mutate(confirmDelete)}>

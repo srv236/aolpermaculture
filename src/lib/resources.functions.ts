@@ -22,12 +22,19 @@ export const upsertResource = createServerFn({ method: "POST" })
     const values: any = { ...data.values };
     if (values.plot_id === "") values.plot_id = null;
     if (data.id) {
-      const { error } = await context.supabase.from("resource_records").update(values).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("resource_records")
+        .update(values)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
     values.created_by = context.userId;
-    const { data: ins, error } = await context.supabase.from("resource_records").insert(values).select("id").single();
+    const { data: ins, error } = await context.supabase
+      .from("resource_records")
+      .insert(values)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });

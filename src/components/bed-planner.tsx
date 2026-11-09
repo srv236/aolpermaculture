@@ -1,5 +1,5 @@
 // src/components/bed-planner.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Sprout,
   Calendar,
@@ -10,14 +10,14 @@ import {
   Save,
   Droplets,
   RotateCcw,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from "lucide-react";
+import { toast } from "sonner";
 
 // ============================================================================
 // DATA MODELS & DEFAULTS
 // ============================================================================
 
-export type CropCategory = 'greens' | 'ground' | 'creeper' | 'root' | 'friendly';
+export type CropCategory = "greens" | "ground" | "creeper" | "root" | "friendly";
 
 export interface PlannerCrop {
   id: string;
@@ -27,10 +27,10 @@ export interface PlannerCrop {
   bgHex: string;
   borderHex: string;
   textHex: string;
-  plantingStyle: 'column' | 'continuous' | 'border';
+  plantingStyle: "column" | "continuous" | "border";
 }
 
-export type BedZoneType = 'border' | 'pipe' | 'crop';
+export type BedZoneType = "border" | "pipe" | "crop";
 
 export interface BedZone {
   id: string;
@@ -43,7 +43,7 @@ export interface BedZone {
 
 export interface BedCycleRow {
   rowIndex: number;
-  mode: 'column' | 'continuous' | 'empty';
+  mode: "column" | "continuous" | "empty";
   continuousCropId?: string | null;
   cells: Record<string, string | null>;
 }
@@ -66,102 +66,355 @@ export interface SeasonalBedPlan {
 
 // Your 7-Zone Farm Layout:
 // outer border crop | water pipe | left crop | pipe | right crop | pipe | right border crop
-export const DEFAULT_SEVEN_ZONES: BedZone[] = [
-  { id: 'z_border_l', label: 'Outer Border', type: 'border', widthFt: 0.25, borderCropId: 'radish', spacingInches: 12 },
-  { id: 'z_pipe_l', label: 'Water Pipe', type: 'pipe', widthFt: 0.1 },
-  { id: 'z_crop_l', label: 'Left Crop', type: 'crop', widthFt: 1.5 },
-  { id: 'z_pipe_m', label: 'Pipe', type: 'pipe', widthFt: 0.1 },
-  { id: 'z_crop_r', label: 'Right Crop', type: 'crop', widthFt: 1.5 },
-  { id: 'z_pipe_r', label: 'Pipe', type: 'pipe', widthFt: 0.1 },
-  { id: 'z_border_r', label: 'Right Border', type: 'border', widthFt: 0.25, borderCropId: 'radish', spacingInches: 12 },
+const DEFAULT_SEVEN_ZONES: BedZone[] = [
+  {
+    id: "z_border_l",
+    label: "Outer Border",
+    type: "border",
+    widthFt: 0.25,
+    borderCropId: "radish",
+    spacingInches: 12,
+  },
+  { id: "z_pipe_l", label: "Water Pipe", type: "pipe", widthFt: 0.1 },
+  { id: "z_crop_l", label: "Left Crop", type: "crop", widthFt: 1.5 },
+  { id: "z_pipe_m", label: "Pipe", type: "pipe", widthFt: 0.1 },
+  { id: "z_crop_r", label: "Right Crop", type: "crop", widthFt: 1.5 },
+  { id: "z_pipe_r", label: "Pipe", type: "pipe", widthFt: 0.1 },
+  {
+    id: "z_border_r",
+    label: "Right Border",
+    type: "border",
+    widthFt: 0.25,
+    borderCropId: "radish",
+    spacingInches: 12,
+  },
 ];
 
 // Reference Image 3-Column Layout (3 cols × 1 ft + 2 drip lines + outer borders)
-export const POSTER_THREE_COL_ZONES: BedZone[] = [
-  { id: 'z_border_l', label: 'Outer Border', type: 'border', widthFt: 0.25, borderCropId: 'radish', spacingInches: 12 },
-  { id: 'z_col_1', label: 'Col 1', type: 'crop', widthFt: 1 },
-  { id: 'z_pipe_1', label: 'Drip Line 1', type: 'pipe', widthFt: 0.1 },
-  { id: 'z_col_2', label: 'Col 2', type: 'crop', widthFt: 1 },
-  { id: 'z_pipe_2', label: 'Drip Line 2', type: 'pipe', widthFt: 0.1 },
-  { id: 'z_col_3', label: 'Col 3', type: 'crop', widthFt: 1 },
-  { id: 'z_border_r', label: 'Right Border', type: 'border', widthFt: 0.25, borderCropId: 'radish', spacingInches: 12 },
+const POSTER_THREE_COL_ZONES: BedZone[] = [
+  {
+    id: "z_border_l",
+    label: "Outer Border",
+    type: "border",
+    widthFt: 0.25,
+    borderCropId: "radish",
+    spacingInches: 12,
+  },
+  { id: "z_col_1", label: "Col 1", type: "crop", widthFt: 1 },
+  { id: "z_pipe_1", label: "Drip Line 1", type: "pipe", widthFt: 0.1 },
+  { id: "z_col_2", label: "Col 2", type: "crop", widthFt: 1 },
+  { id: "z_pipe_2", label: "Drip Line 2", type: "pipe", widthFt: 0.1 },
+  { id: "z_col_3", label: "Col 3", type: "crop", widthFt: 1 },
+  {
+    id: "z_border_r",
+    label: "Right Border",
+    type: "border",
+    widthFt: 0.25,
+    borderCropId: "radish",
+    spacingInches: 12,
+  },
 ];
 
-export const DEFAULT_CROPS: PlannerCrop[] = [
+const DEFAULT_CROPS: PlannerCrop[] = [
   // Greens
-  { id: 'palak', name: 'Palak / Spinach', category: 'greens', icon: '🥬', bgHex: '#cde5b3', borderHex: '#4d7c2b', textHex: '#14330e', plantingStyle: 'continuous' },
-  { id: 'methi', name: 'Methi', category: 'greens', icon: '🌿', bgHex: '#d9f0c4', borderHex: '#3f7d20', textHex: '#193810', plantingStyle: 'continuous' },
-  { id: 'coriander', name: 'Coriander', category: 'greens', icon: '🌱', bgHex: '#dcfce7', borderHex: '#16a34a', textHex: '#14532d', plantingStyle: 'continuous' },
-  { id: 'amaranthus', name: 'Amaranthus', category: 'greens', icon: '🍃', bgHex: '#fce7f3', borderHex: '#db2777', textHex: '#831843', plantingStyle: 'continuous' },
-  { id: 'gongura', name: 'Gongura', category: 'greens', icon: '☘️', bgHex: '#ecfccb', borderHex: '#65a30d', textHex: '#365314', plantingStyle: 'continuous' },
+  {
+    id: "palak",
+    name: "Palak / Spinach",
+    category: "greens",
+    icon: "🥬",
+    bgHex: "#cde5b3",
+    borderHex: "#4d7c2b",
+    textHex: "#14330e",
+    plantingStyle: "continuous",
+  },
+  {
+    id: "methi",
+    name: "Methi",
+    category: "greens",
+    icon: "🌿",
+    bgHex: "#d9f0c4",
+    borderHex: "#3f7d20",
+    textHex: "#193810",
+    plantingStyle: "continuous",
+  },
+  {
+    id: "coriander",
+    name: "Coriander",
+    category: "greens",
+    icon: "🌱",
+    bgHex: "#dcfce7",
+    borderHex: "#16a34a",
+    textHex: "#14532d",
+    plantingStyle: "continuous",
+  },
+  {
+    id: "amaranthus",
+    name: "Amaranthus",
+    category: "greens",
+    icon: "🍃",
+    bgHex: "#fce7f3",
+    borderHex: "#db2777",
+    textHex: "#831843",
+    plantingStyle: "continuous",
+  },
+  {
+    id: "gongura",
+    name: "Gongura",
+    category: "greens",
+    icon: "☘️",
+    bgHex: "#ecfccb",
+    borderHex: "#65a30d",
+    textHex: "#365314",
+    plantingStyle: "continuous",
+  },
 
   // Ground Vegetables
-  { id: 'tomato', name: 'Tomato', category: 'ground', icon: '🍅', bgHex: '#fee2e2', borderHex: '#dc2626', textHex: '#991b1b', plantingStyle: 'column' },
-  { id: 'brinjal', name: 'Brinjal', category: 'ground', icon: '🍆', bgHex: '#f3e8ff', borderHex: '#9333ea', textHex: '#581c87', plantingStyle: 'column' },
-  { id: 'okra', name: 'Okra', category: 'ground', icon: '🫑', bgHex: '#dcfce7', borderHex: '#15803d', textHex: '#14532d', plantingStyle: 'column' },
-  { id: 'cluster_beans', name: 'Cluster beans', category: 'ground', icon: '🫛', bgHex: '#fef9c3', borderHex: '#ca8a04', textHex: '#713f12', plantingStyle: 'column' },
-  { id: 'chilli', name: 'Chilli', category: 'ground', icon: '🌶️', bgHex: '#ffedd5', borderHex: '#ea580c', textHex: '#7c2d12', plantingStyle: 'column' },
-  { id: 'cabbage', name: 'Cabbage', category: 'ground', icon: '🥬', bgHex: '#d1fae5', borderHex: '#059669', textHex: '#064e3b', plantingStyle: 'column' },
+  {
+    id: "tomato",
+    name: "Tomato",
+    category: "ground",
+    icon: "🍅",
+    bgHex: "#fee2e2",
+    borderHex: "#dc2626",
+    textHex: "#991b1b",
+    plantingStyle: "column",
+  },
+  {
+    id: "brinjal",
+    name: "Brinjal",
+    category: "ground",
+    icon: "🍆",
+    bgHex: "#f3e8ff",
+    borderHex: "#9333ea",
+    textHex: "#581c87",
+    plantingStyle: "column",
+  },
+  {
+    id: "okra",
+    name: "Okra",
+    category: "ground",
+    icon: "🫑",
+    bgHex: "#dcfce7",
+    borderHex: "#15803d",
+    textHex: "#14532d",
+    plantingStyle: "column",
+  },
+  {
+    id: "cluster_beans",
+    name: "Cluster beans",
+    category: "ground",
+    icon: "🫛",
+    bgHex: "#fef9c3",
+    borderHex: "#ca8a04",
+    textHex: "#713f12",
+    plantingStyle: "column",
+  },
+  {
+    id: "chilli",
+    name: "Chilli",
+    category: "ground",
+    icon: "🌶️",
+    bgHex: "#ffedd5",
+    borderHex: "#ea580c",
+    textHex: "#7c2d12",
+    plantingStyle: "column",
+  },
+  {
+    id: "cabbage",
+    name: "Cabbage",
+    category: "ground",
+    icon: "🥬",
+    bgHex: "#d1fae5",
+    borderHex: "#059669",
+    textHex: "#064e3b",
+    plantingStyle: "column",
+  },
 
   // Creepers
-  { id: 'snake_gourd', name: 'Snake gourd', category: 'creeper', icon: '🥒', bgHex: '#ecfccb', borderHex: '#4d7c0f', textHex: '#274006', plantingStyle: 'column' },
-  { id: 'ash_gourd', name: 'Ash gourd', category: 'creeper', icon: '🍈', bgHex: '#e0f2fe', borderHex: '#0284c7', textHex: '#0c4a6e', plantingStyle: 'column' },
-  { id: 'ridge_gourd', name: 'Ridge gourd', category: 'creeper', icon: '🥒', bgHex: '#d1fae5', borderHex: '#047857', textHex: '#064e3b', plantingStyle: 'column' },
-  { id: 'bottle_gourd', name: 'Bottle gourd', category: 'creeper', icon: '🍐', bgHex: '#ecfccb', borderHex: '#65a30d', textHex: '#365314', plantingStyle: 'column' },
-  { id: 'pumpkin', name: 'Pumpkin', category: 'creeper', icon: '🎃', bgHex: '#ffedd5', borderHex: '#d97706', textHex: '#78350f', plantingStyle: 'column' },
+  {
+    id: "snake_gourd",
+    name: "Snake gourd",
+    category: "creeper",
+    icon: "🥒",
+    bgHex: "#ecfccb",
+    borderHex: "#4d7c0f",
+    textHex: "#274006",
+    plantingStyle: "column",
+  },
+  {
+    id: "ash_gourd",
+    name: "Ash gourd",
+    category: "creeper",
+    icon: "🍈",
+    bgHex: "#e0f2fe",
+    borderHex: "#0284c7",
+    textHex: "#0c4a6e",
+    plantingStyle: "column",
+  },
+  {
+    id: "ridge_gourd",
+    name: "Ridge gourd",
+    category: "creeper",
+    icon: "🥒",
+    bgHex: "#d1fae5",
+    borderHex: "#047857",
+    textHex: "#064e3b",
+    plantingStyle: "column",
+  },
+  {
+    id: "bottle_gourd",
+    name: "Bottle gourd",
+    category: "creeper",
+    icon: "🍐",
+    bgHex: "#ecfccb",
+    borderHex: "#65a30d",
+    textHex: "#365314",
+    plantingStyle: "column",
+  },
+  {
+    id: "pumpkin",
+    name: "Pumpkin",
+    category: "creeper",
+    icon: "🎃",
+    bgHex: "#ffedd5",
+    borderHex: "#d97706",
+    textHex: "#78350f",
+    plantingStyle: "column",
+  },
 
   // Root Vegetables
-  { id: 'radish', name: 'Radish', category: 'root', icon: '🥕', bgHex: '#ffe4e6', borderHex: '#e11d48', textHex: '#881337', plantingStyle: 'border' },
-  { id: 'carrot', name: 'Carrot', category: 'root', icon: '🥕', bgHex: '#ffedd5', borderHex: '#f97316', textHex: '#7c2d12', plantingStyle: 'border' },
-  { id: 'beetroot', name: 'Beetroot', category: 'root', icon: '🫐', bgHex: '#fce7f3', borderHex: '#be185d', textHex: '#831843', plantingStyle: 'border' },
-  { id: 'onion', name: 'Onion', category: 'root', icon: '🧅', bgHex: '#fef3c7', borderHex: '#b45309', textHex: '#78350f', plantingStyle: 'border' },
-  { id: 'garlic', name: 'Garlic', category: 'root', icon: '🧄', bgHex: '#f5f5f4', borderHex: '#78716c', textHex: '#292524', plantingStyle: 'border' },
+  {
+    id: "radish",
+    name: "Radish",
+    category: "root",
+    icon: "🥕",
+    bgHex: "#ffe4e6",
+    borderHex: "#e11d48",
+    textHex: "#881337",
+    plantingStyle: "border",
+  },
+  {
+    id: "carrot",
+    name: "Carrot",
+    category: "root",
+    icon: "🥕",
+    bgHex: "#ffedd5",
+    borderHex: "#f97316",
+    textHex: "#7c2d12",
+    plantingStyle: "border",
+  },
+  {
+    id: "beetroot",
+    name: "Beetroot",
+    category: "root",
+    icon: "🫐",
+    bgHex: "#fce7f3",
+    borderHex: "#be185d",
+    textHex: "#831843",
+    plantingStyle: "border",
+  },
+  {
+    id: "onion",
+    name: "Onion",
+    category: "root",
+    icon: "🧅",
+    bgHex: "#fef3c7",
+    borderHex: "#b45309",
+    textHex: "#78350f",
+    plantingStyle: "border",
+  },
+  {
+    id: "garlic",
+    name: "Garlic",
+    category: "root",
+    icon: "🧄",
+    bgHex: "#f5f5f4",
+    borderHex: "#78716c",
+    textHex: "#292524",
+    plantingStyle: "border",
+  },
 
   // Friendly Crops
-  { id: 'moringa', name: 'Moringa', category: 'friendly', icon: '🌳', bgHex: '#dcfce7', borderHex: '#15803d', textHex: '#14532d', plantingStyle: 'column' },
-  { id: 'marigold', name: 'Marigold', category: 'friendly', icon: '🌼', bgHex: '#fef08a', borderHex: '#ca8a04', textHex: '#713f12', plantingStyle: 'column' },
-  { id: 'mustard', name: 'Mustard', category: 'friendly', icon: '🌾', bgHex: '#fef9c3', borderHex: '#eab308', textHex: '#713f12', plantingStyle: 'column' },
-  { id: 'pomegranate', name: 'Pomegranate', category: 'friendly', icon: '🍎', bgHex: '#fee2e2', borderHex: '#b91c1c', textHex: '#7f1d1d', plantingStyle: 'column' },
+  {
+    id: "moringa",
+    name: "Moringa",
+    category: "friendly",
+    icon: "🌳",
+    bgHex: "#dcfce7",
+    borderHex: "#15803d",
+    textHex: "#14532d",
+    plantingStyle: "column",
+  },
+  {
+    id: "marigold",
+    name: "Marigold",
+    category: "friendly",
+    icon: "🌼",
+    bgHex: "#fef08a",
+    borderHex: "#ca8a04",
+    textHex: "#713f12",
+    plantingStyle: "column",
+  },
+  {
+    id: "mustard",
+    name: "Mustard",
+    category: "friendly",
+    icon: "🌾",
+    bgHex: "#fef9c3",
+    borderHex: "#eab308",
+    textHex: "#713f12",
+    plantingStyle: "column",
+  },
+  {
+    id: "pomegranate",
+    name: "Pomegranate",
+    category: "friendly",
+    icon: "🍎",
+    bgHex: "#fee2e2",
+    borderHex: "#b91c1c",
+    textHex: "#7f1d1d",
+    plantingStyle: "column",
+  },
 ];
 
 function rebuildZonesForColumnCount(
   currentZones: BedZone[],
   newColCount: number,
-  bedWidthFt: number
+  bedWidthFt: number,
 ): BedZone[] {
   const count = Math.max(1, Math.min(8, newColCount));
-  const borders = currentZones.filter((z) => z.type === 'border');
+  const borders = currentZones.filter((z) => z.type === "border");
   const leftBorder: BedZone = borders[0] || {
-    id: 'z_border_l',
-    label: 'Outer Border',
-    type: 'border',
+    id: "z_border_l",
+    label: "Outer Border",
+    type: "border",
     widthFt: 0.25,
-    borderCropId: 'radish',
+    borderCropId: "radish",
     spacingInches: 12,
   };
   const rightBorder: BedZone = borders[1] || {
-    id: 'z_border_r',
-    label: 'Right Border',
-    type: 'border',
+    id: "z_border_r",
+    label: "Right Border",
+    type: "border",
     widthFt: 0.25,
-    borderCropId: 'radish',
+    borderCropId: "radish",
     spacingInches: 12,
   };
 
   const colWidth = +(bedWidthFt / count).toFixed(2);
-  const middle: BedZone[] = [{ id: 'z_pipe_l', label: 'Water Pipe', type: 'pipe', widthFt: 0.1 }];
+  const middle: BedZone[] = [{ id: "z_pipe_l", label: "Water Pipe", type: "pipe", widthFt: 0.1 }];
 
   for (let i = 1; i <= count; i++) {
     middle.push({
       id: `z_crop_${i}`,
-      label: count === 2 ? (i === 1 ? 'Left Crop' : 'Right Crop') : `Col ${i}`,
-      type: 'crop',
+      label: count === 2 ? (i === 1 ? "Left Crop" : "Right Crop") : `Col ${i}`,
+      type: "crop",
       widthFt: colWidth,
     });
     middle.push({
       id: `z_pipe_${i}`,
-      label: i === count ? 'Pipe' : 'Pipe',
-      type: 'pipe',
+      label: i === count ? "Pipe" : "Pipe",
+      type: "pipe",
       widthFt: 0.1,
     });
   }
@@ -170,26 +423,26 @@ function rebuildZonesForColumnCount(
 }
 
 function buildDefaultRowsForZones(zones: BedZone[], count = 8): BedCycleRow[] {
-  const cropCols = zones.filter((z) => z.type === 'crop');
-  const firstId = cropCols[0]?.id || 'z_crop_l';
-  const lastId = cropCols[cropCols.length - 1]?.id || 'z_crop_r';
-  const allSnake = Object.fromEntries(cropCols.map((c) => [c.id, 'snake_gourd']));
+  const cropCols = zones.filter((z) => z.type === "crop");
+  const firstId = cropCols[0]?.id || "z_crop_l";
+  const lastId = cropCols[cropCols.length - 1]?.id || "z_crop_r";
+  const allSnake = Object.fromEntries(cropCols.map((c) => [c.id, "snake_gourd"]));
 
   const base: BedCycleRow[] = [
-    { rowIndex: 1, mode: 'column', cells: { [firstId]: 'tomato', [lastId]: 'tomato' } },
-    { rowIndex: 2, mode: 'continuous', continuousCropId: 'palak', cells: {} },
-    { rowIndex: 3, mode: 'column', cells: allSnake },
-    { rowIndex: 4, mode: 'continuous', continuousCropId: 'palak', cells: {} },
-    { rowIndex: 5, mode: 'column', cells: { [firstId]: 'tomato', [lastId]: 'tomato' } },
-    { rowIndex: 6, mode: 'continuous', continuousCropId: 'palak', cells: {} },
-    { rowIndex: 7, mode: 'empty', cells: {} },
-    { rowIndex: 8, mode: 'continuous', continuousCropId: 'palak', cells: {} },
+    { rowIndex: 1, mode: "column", cells: { [firstId]: "tomato", [lastId]: "tomato" } },
+    { rowIndex: 2, mode: "continuous", continuousCropId: "palak", cells: {} },
+    { rowIndex: 3, mode: "column", cells: allSnake },
+    { rowIndex: 4, mode: "continuous", continuousCropId: "palak", cells: {} },
+    { rowIndex: 5, mode: "column", cells: { [firstId]: "tomato", [lastId]: "tomato" } },
+    { rowIndex: 6, mode: "continuous", continuousCropId: "palak", cells: {} },
+    { rowIndex: 7, mode: "empty", cells: {} },
+    { rowIndex: 8, mode: "continuous", continuousCropId: "palak", cells: {} },
   ];
 
   if (count <= base.length) return base.slice(0, count);
   const extra: BedCycleRow[] = [];
   for (let i = base.length + 1; i <= count; i++) {
-    extra.push({ rowIndex: i, mode: 'column', cells: {} });
+    extra.push({ rowIndex: i, mode: "column", cells: {} });
   }
   return [...base, ...extra];
 }
@@ -205,10 +458,7 @@ function computeBedSummary(plan: SeasonalBedPlan) {
   const unutilizedSqFt = Math.max(0, plan.totalLandSqFt - utilizedSqFt);
   const hectares = +(plan.landAcres * 0.405).toFixed(3);
 
-  const tailStartRow = Math.max(
-    plan.cycleRowsCount + 1,
-    totalRowsPerBed - plan.cycleRowsCount + 1
-  );
+  const tailStartRow = Math.max(plan.cycleRowsCount + 1, totalRowsPerBed - plan.cycleRowsCount + 1);
   const tailRows = plan.cycleRows.map((r, i) => ({
     ...r,
     actualRowNumber: tailStartRow + i,
@@ -231,9 +481,9 @@ function computeBedSummary(plan: SeasonalBedPlan) {
 
 function createDefaultSeasons(): Record<string, SeasonalBedPlan> {
   const kharif: SeasonalBedPlan = {
-    seasonKey: 'kharif',
-    seasonLabel: 'Kharif (Monsoon)',
-    plotTitle: 'Vegetable Bed Plan – Bed Layout & Land Details',
+    seasonKey: "kharif",
+    seasonLabel: "Kharif (Monsoon)",
+    plotTitle: "Vegetable Bed Plan – Bed Layout & Land Details",
     landAcres: 1,
     totalLandSqFt: 43560,
     totalBedsInPlot: 80,
@@ -250,34 +500,34 @@ function createDefaultSeasons(): Record<string, SeasonalBedPlan> {
     kharif,
     rabi: {
       ...kharif,
-      seasonKey: 'rabi',
-      seasonLabel: 'Rabi (Winter)',
-      plotTitle: 'Winter Vegetable Bed Plan – Bed Layout & Land Details',
+      seasonKey: "rabi",
+      seasonLabel: "Rabi (Winter)",
+      plotTitle: "Winter Vegetable Bed Plan – Bed Layout & Land Details",
       cycleRows: [
-        { rowIndex: 1, mode: 'column', cells: { z_crop_l: 'tomato', z_crop_r: 'cluster_beans' } },
-        { rowIndex: 2, mode: 'continuous', continuousCropId: 'methi', cells: {} },
-        { rowIndex: 3, mode: 'column', cells: { z_crop_l: 'tomato', z_crop_r: 'marigold' } },
-        { rowIndex: 4, mode: 'continuous', continuousCropId: 'coriander', cells: {} },
-        { rowIndex: 5, mode: 'column', cells: { z_crop_l: 'tomato', z_crop_r: 'cluster_beans' } },
-        { rowIndex: 6, mode: 'continuous', continuousCropId: 'palak', cells: {} },
-        { rowIndex: 7, mode: 'column', cells: { z_crop_l: 'tomato', z_crop_r: 'onion' } },
-        { rowIndex: 8, mode: 'continuous', continuousCropId: 'methi', cells: {} },
+        { rowIndex: 1, mode: "column", cells: { z_crop_l: "tomato", z_crop_r: "cluster_beans" } },
+        { rowIndex: 2, mode: "continuous", continuousCropId: "methi", cells: {} },
+        { rowIndex: 3, mode: "column", cells: { z_crop_l: "tomato", z_crop_r: "marigold" } },
+        { rowIndex: 4, mode: "continuous", continuousCropId: "coriander", cells: {} },
+        { rowIndex: 5, mode: "column", cells: { z_crop_l: "tomato", z_crop_r: "cluster_beans" } },
+        { rowIndex: 6, mode: "continuous", continuousCropId: "palak", cells: {} },
+        { rowIndex: 7, mode: "column", cells: { z_crop_l: "tomato", z_crop_r: "onion" } },
+        { rowIndex: 8, mode: "continuous", continuousCropId: "methi", cells: {} },
       ],
     },
     zaid: {
       ...kharif,
-      seasonKey: 'zaid',
-      seasonLabel: 'Zaid (Summer)',
-      plotTitle: 'Summer Vegetable Bed Plan – Bed Layout & Land Details',
+      seasonKey: "zaid",
+      seasonLabel: "Zaid (Summer)",
+      plotTitle: "Summer Vegetable Bed Plan – Bed Layout & Land Details",
       cycleRows: [
-        { rowIndex: 1, mode: 'column', cells: { z_crop_l: 'okra', z_crop_r: 'pumpkin' } },
-        { rowIndex: 2, mode: 'continuous', continuousCropId: 'amaranthus', cells: {} },
-        { rowIndex: 3, mode: 'column', cells: { z_crop_l: 'okra', z_crop_r: 'bottle_gourd' } },
-        { rowIndex: 4, mode: 'continuous', continuousCropId: 'gongura', cells: {} },
-        { rowIndex: 5, mode: 'column', cells: { z_crop_l: 'okra', z_crop_r: 'marigold' } },
-        { rowIndex: 6, mode: 'continuous', continuousCropId: 'amaranthus', cells: {} },
-        { rowIndex: 7, mode: 'empty', cells: {} },
-        { rowIndex: 8, mode: 'continuous', continuousCropId: 'gongura', cells: {} },
+        { rowIndex: 1, mode: "column", cells: { z_crop_l: "okra", z_crop_r: "pumpkin" } },
+        { rowIndex: 2, mode: "continuous", continuousCropId: "amaranthus", cells: {} },
+        { rowIndex: 3, mode: "column", cells: { z_crop_l: "okra", z_crop_r: "bottle_gourd" } },
+        { rowIndex: 4, mode: "continuous", continuousCropId: "gongura", cells: {} },
+        { rowIndex: 5, mode: "column", cells: { z_crop_l: "okra", z_crop_r: "marigold" } },
+        { rowIndex: 6, mode: "continuous", continuousCropId: "amaranthus", cells: {} },
+        { rowIndex: 7, mode: "empty", cells: {} },
+        { rowIndex: 8, mode: "continuous", continuousCropId: "gongura", cells: {} },
       ],
     },
   };
@@ -288,17 +538,18 @@ function createDefaultSeasons(): Record<string, SeasonalBedPlan> {
 // ============================================================================
 
 export interface BedPlannerProps {
-  [key: string]: any;
+  onSave?: (plan: SeasonalBedPlan) => void;
+  [key: string]: unknown;
 }
 
 export function BedPlanner(props: BedPlannerProps) {
   const [seasons, setSeasons] = useState<Record<string, SeasonalBedPlan>>(() =>
-    createDefaultSeasons()
+    createDefaultSeasons(),
   );
-  const [activeSeasonKey, setActiveSeasonKey] = useState<string>('kharif');
+  const [activeSeasonKey, setActiveSeasonKey] = useState<string>("kharif");
   const [cropCatalog] = useState<PlannerCrop[]>(DEFAULT_CROPS);
-  const [selectedBrushCropId, setSelectedBrushCropId] = useState<string>('tomato');
-  const [leftSection, setLeftSection] = useState<'anatomy' | 'dimensions'>('anatomy');
+  const [selectedBrushCropId, setSelectedBrushCropId] = useState<string>("tomato");
+  const [leftSection, setLeftSection] = useState<"anatomy" | "dimensions">("anatomy");
 
   const activePlan = seasons[activeSeasonKey] || seasons.kharif;
 
@@ -318,16 +569,16 @@ export function BedPlanner(props: BedPlannerProps) {
   }, [cropCatalog]);
 
   const cropZones = useMemo(
-    () => activePlan.zones.filter((z) => z.type === 'crop'),
-    [activePlan.zones]
+    () => activePlan.zones.filter((z) => z.type === "crop"),
+    [activePlan.zones],
   );
   const borderZones = useMemo(
-    () => activePlan.zones.filter((z) => z.type === 'border'),
-    [activePlan.zones]
+    () => activePlan.zones.filter((z) => z.type === "border"),
+    [activePlan.zones],
   );
   const pipeZones = useMemo(
-    () => activePlan.zones.filter((z) => z.type === 'pipe'),
-    [activePlan.zones]
+    () => activePlan.zones.filter((z) => z.type === "pipe"),
+    [activePlan.zones],
   );
 
   const summary = useMemo(() => computeBedSummary(activePlan), [activePlan]);
@@ -339,7 +590,7 @@ export function BedPlanner(props: BedPlannerProps) {
       const nextRows = [...prev.cycleRows];
       if (count > nextRows.length) {
         for (let i = nextRows.length + 1; i <= count; i++) {
-          nextRows.push({ rowIndex: i, mode: 'column', cells: {} });
+          nextRows.push({ rowIndex: i, mode: "column", cells: {} });
         }
       } else {
         nextRows.length = count;
@@ -355,10 +606,10 @@ export function BedPlanner(props: BedPlannerProps) {
       ...prev,
       cycleRows: prev.cycleRows.map((row) => {
         if (row.rowIndex !== rowIndex) return row;
-        if (brushCrop?.plantingStyle === 'continuous') {
+        if (brushCrop?.plantingStyle === "continuous") {
           return {
             ...row,
-            mode: 'continuous',
+            mode: "continuous",
             continuousCropId: brushCrop.id,
             cells: {},
           };
@@ -367,7 +618,7 @@ export function BedPlanner(props: BedPlannerProps) {
         const nextVal = current === selectedBrushCropId ? null : selectedBrushCropId;
         return {
           ...row,
-          mode: 'column',
+          mode: "column",
           continuousCropId: null,
           cells: { ...row.cells, [zoneId]: nextVal },
         };
@@ -381,15 +632,15 @@ export function BedPlanner(props: BedPlannerProps) {
       ...prev,
       cycleRows: prev.cycleRows.map((row) => {
         if (row.rowIndex !== rowIndex) return row;
-        if (row.mode === 'column') {
-          return { ...row, mode: 'continuous', continuousCropId: 'palak', cells: {} };
+        if (row.mode === "column") {
+          return { ...row, mode: "continuous", continuousCropId: "palak", cells: {} };
         }
-        if (row.mode === 'continuous') {
-          return { ...row, mode: 'empty', continuousCropId: null, cells: {} };
+        if (row.mode === "continuous") {
+          return { ...row, mode: "empty", continuousCropId: null, cells: {} };
         }
         return {
           ...row,
-          mode: 'column',
+          mode: "column",
           continuousCropId: null,
           cells: Object.fromEntries(cropZones.map((cz) => [cz.id, selectedBrushCropId])),
         };
@@ -400,11 +651,18 @@ export function BedPlanner(props: BedPlannerProps) {
   const handleAddZone = (type: BedZoneType) => {
     const id = `z_${type}_${Date.now().toString().slice(-4)}`;
     const newZone: BedZone =
-      type === 'pipe'
-        ? { id, label: 'Pipe', type: 'pipe', widthFt: 0.1 }
-        : type === 'border'
-        ? { id, label: 'Border', type: 'border', widthFt: 0.25, borderCropId: 'radish', spacingInches: 12 }
-        : { id, label: `Col ${cropZones.length + 1}`, type: 'crop', widthFt: 1 };
+      type === "pipe"
+        ? { id, label: "Pipe", type: "pipe", widthFt: 0.1 }
+        : type === "border"
+          ? {
+              id,
+              label: "Border",
+              type: "border",
+              widthFt: 0.25,
+              borderCropId: "radish",
+              spacingInches: 12,
+            }
+          : { id, label: `Col ${cropZones.length + 1}`, type: "crop", widthFt: 1 };
 
     updatePlan((prev) => ({ ...prev, zones: [...prev.zones, newZone] }));
   };
@@ -423,7 +681,7 @@ export function BedPlanner(props: BedPlannerProps) {
   const primaryBorderZone = borderZones[0];
   const primaryBorderCrop = primaryBorderZone?.borderCropId
     ? cropById[primaryBorderZone.borderCropId]
-    : cropById['radish'];
+    : cropById["radish"];
 
   return (
     <div className="w-full bg-[#f6f5ef] text-stone-800 p-4 md:p-6 rounded-2xl">
@@ -437,15 +695,14 @@ export function BedPlanner(props: BedPlannerProps) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-extrabold text-[#143d23]">
-                Seasonal Plot Bed Planner
-              </h2>
+              <h2 className="text-base font-extrabold text-[#143d23]">Seasonal Plot Bed Planner</h2>
               <span className="text-[11px] bg-emerald-50 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full font-bold">
                 All {activePlan.totalBedsInPlot} Beds Share This Seasonal Plan
               </span>
             </div>
             <p className="text-xs text-stone-500 mt-0.5">
-              Select a season below • Adjust bed anatomy & dimensions on the left • Live poster preview on the right
+              Select a season below • Adjust bed anatomy & dimensions on the left • Live poster
+              preview on the right
             </p>
           </div>
         </div>
@@ -461,8 +718,8 @@ export function BedPlanner(props: BedPlannerProps) {
                 onClick={() => setActiveSeasonKey(s.seasonKey)}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                   active
-                    ? 'bg-[#143d23] text-white shadow-2xs'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
+                    ? "bg-[#143d23] text-white shadow-2xs"
+                    : "text-stone-600 hover:text-stone-900 hover:bg-white/60"
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
@@ -492,21 +749,17 @@ export function BedPlanner(props: BedPlannerProps) {
           RIGHT (8 COLS): AUTHENTIC REFERENCE POSTER SHEET
          ==================================================================== */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        
         {/* ==================================================================
             LEFT STUDIO SIDEBAR (4 COLS)
            ================================================================== */}
         <div className="xl:col-span-4 space-y-4">
-          
           {/* Quick Crop Brush Picker (For clicking directly on the bed) */}
           <div className="bg-white rounded-2xl border border-stone-200/90 p-4 shadow-2xs">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-extrabold uppercase tracking-wider text-[#143d23]">
                 Active Crop Brush (Click bed cells to sow)
               </span>
-              <span className="text-[11px] text-stone-500">
-                Click row # to toggle Spinach row
-              </span>
+              <span className="text-[11px] text-stone-500">Click row # to toggle Spinach row</span>
             </div>
             <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto pr-1">
               {cropCatalog.map((crop) => {
@@ -518,8 +771,8 @@ export function BedPlanner(props: BedPlannerProps) {
                     onClick={() => setSelectedBrushCropId(crop.id)}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-left text-xs transition cursor-pointer ${
                       active
-                        ? 'bg-emerald-50 border-2 border-[#143d23] font-bold text-stone-900'
-                        : 'bg-stone-50/70 border-stone-200 text-stone-700 hover:bg-stone-100'
+                        ? "bg-emerald-50 border-2 border-[#143d23] font-bold text-stone-900"
+                        : "bg-stone-50/70 border-stone-200 text-stone-700 hover:bg-stone-100"
                     }`}
                   >
                     <span className="text-base leading-none">{crop.icon}</span>
@@ -534,11 +787,11 @@ export function BedPlanner(props: BedPlannerProps) {
           <div className="grid grid-cols-2 gap-1.5 bg-stone-200/70 p-1 rounded-xl border border-stone-300/60">
             <button
               type="button"
-              onClick={() => setLeftSection('anatomy')}
+              onClick={() => setLeftSection("anatomy")}
               className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                leftSection === 'anatomy'
-                  ? 'bg-white text-[#143d23] shadow-2xs'
-                  : 'text-stone-600 hover:text-stone-900'
+                leftSection === "anatomy"
+                  ? "bg-white text-[#143d23] shadow-2xs"
+                  : "text-stone-600 hover:text-stone-900"
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -546,11 +799,11 @@ export function BedPlanner(props: BedPlannerProps) {
             </button>
             <button
               type="button"
-              onClick={() => setLeftSection('dimensions')}
+              onClick={() => setLeftSection("dimensions")}
               className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                leftSection === 'dimensions'
-                  ? 'bg-white text-[#143d23] shadow-2xs'
-                  : 'text-stone-600 hover:text-stone-900'
+                leftSection === "dimensions"
+                  ? "bg-white text-[#143d23] shadow-2xs"
+                  : "text-stone-600 hover:text-stone-900"
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -558,7 +811,7 @@ export function BedPlanner(props: BedPlannerProps) {
             </button>
           </div>
 
-          {leftSection === 'anatomy' ? (
+          {leftSection === "anatomy" ? (
             /* CARD A: ADJUSTABLE 7-ZONE CROSS SECTION */
             <div className="bg-white rounded-2xl border border-stone-200/90 p-4 shadow-2xs space-y-3.5">
               <div>
@@ -625,11 +878,11 @@ export function BedPlanner(props: BedPlannerProps) {
                     </span>
                     <span
                       className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${
-                        zone.type === 'pipe'
-                          ? 'bg-blue-100 text-blue-800'
-                          : zone.type === 'border'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-emerald-100 text-emerald-900'
+                        zone.type === "pipe"
+                          ? "bg-blue-100 text-blue-800"
+                          : zone.type === "border"
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-emerald-100 text-emerald-900"
                       }`}
                     >
                       {zone.type}
@@ -642,14 +895,14 @@ export function BedPlanner(props: BedPlannerProps) {
                         updatePlan((p) => ({
                           ...p,
                           zones: p.zones.map((z) =>
-                            z.id === zone.id ? { ...z, label: e.target.value } : z
+                            z.id === zone.id ? { ...z, label: e.target.value } : z,
                           ),
                         }))
                       }
                       className="bg-white border border-stone-300 rounded-md px-2 py-1 font-semibold w-24 text-xs"
                     />
 
-                    {zone.type === 'crop' && (
+                    {zone.type === "crop" && (
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
@@ -662,7 +915,7 @@ export function BedPlanner(props: BedPlannerProps) {
                               zones: p.zones.map((z) =>
                                 z.id === zone.id
                                   ? { ...z, widthFt: Math.max(0.25, +e.target.value) }
-                                  : z
+                                  : z,
                               ),
                             }))
                           }
@@ -672,15 +925,15 @@ export function BedPlanner(props: BedPlannerProps) {
                       </div>
                     )}
 
-                    {zone.type === 'border' && (
+                    {zone.type === "border" && (
                       <div className="flex items-center gap-1">
                         <select
-                          value={zone.borderCropId || 'radish'}
+                          value={zone.borderCropId || "radish"}
                           onChange={(e) =>
                             updatePlan((p) => ({
                               ...p,
                               zones: p.zones.map((z) =>
-                                z.id === zone.id ? { ...z, borderCropId: e.target.value } : z
+                                z.id === zone.id ? { ...z, borderCropId: e.target.value } : z,
                               ),
                             }))
                           }
@@ -732,21 +985,21 @@ export function BedPlanner(props: BedPlannerProps) {
               <div className="flex flex-wrap gap-1.5 pt-2 border-t border-stone-200">
                 <button
                   type="button"
-                  onClick={() => handleAddZone('crop')}
+                  onClick={() => handleAddZone("crop")}
                   className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-300 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Crop Col
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddZone('pipe')}
+                  onClick={() => handleAddZone("pipe")}
                   className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-900 border border-blue-300 cursor-pointer"
                 >
                   <Droplets className="w-3.5 h-3.5" /> Water Pipe
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAddZone('border')}
+                  onClick={() => handleAddZone("border")}
                   className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-900 border border-rose-300 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Border
@@ -854,7 +1107,9 @@ export function BedPlanner(props: BedPlannerProps) {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-stone-600 mb-1">Total Beds in Plot</label>
+                  <label className="block font-semibold text-stone-600 mb-1">
+                    Total Beds in Plot
+                  </label>
                   <input
                     type="number"
                     min={1}
@@ -867,7 +1122,9 @@ export function BedPlanner(props: BedPlannerProps) {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-stone-600 mb-1">Pathway Width (ft)</label>
+                  <label className="block font-semibold text-stone-600 mb-1">
+                    Pathway Width (ft)
+                  </label>
                   <input
                     type="number"
                     step="0.25"
@@ -890,7 +1147,6 @@ export function BedPlanner(props: BedPlannerProps) {
            ================================================================== */}
         <div className="xl:col-span-8 overflow-x-auto">
           <div className="bg-white rounded-2xl border-2 border-stone-300 shadow-sm p-6 min-w-[760px] text-stone-900">
-            
             {/* POSTER TOP BANNER */}
             <div className="flex items-center gap-4 border-b-2 border-[#143d23] pb-4 mb-5">
               <div className="w-14 h-14 rounded-full border-2 border-[#143d23] bg-emerald-50 flex items-center justify-center shrink-0">
@@ -898,24 +1154,26 @@ export function BedPlanner(props: BedPlannerProps) {
               </div>
               <div className="text-center flex-1">
                 <h1 className="text-2xl font-extrabold text-[#143d23] tracking-tight">
-                  {activePlan.plotTitle} ({activePlan.landAcres} Acre / {activePlan.totalBedsInPlot} Beds)
+                  {activePlan.plotTitle} ({activePlan.landAcres} Acre / {activePlan.totalBedsInPlot}{" "}
+                  Beds)
                 </h1>
                 <p className="text-sm font-semibold text-stone-700 mt-0.5">
-                  Layout, crop cycle, crop categories, and land summary — <span className="text-[#143d23] font-bold">{activePlan.seasonLabel}</span>
+                  Layout, crop cycle, crop categories, and land summary —{" "}
+                  <span className="text-[#143d23] font-bold">{activePlan.seasonLabel}</span>
                 </p>
               </div>
             </div>
 
             {/* 2-COLUMN POSTER BODY */}
             <div className="grid grid-cols-12 gap-5 items-start">
-              
               {/* ============================================================
                   POSTER LEFT COLUMN (6 COLS): RAISED BED + LAYOUT NOTES
                  ============================================================ */}
               <div className="col-span-6 space-y-4">
                 <div className="border-2 border-stone-400 rounded-xl overflow-hidden bg-white">
                   <div className="bg-[#143d23] text-white text-center font-extrabold text-xs uppercase tracking-wider py-2 px-3">
-                    BED LAYOUT – ONE RAISED BED ({activePlan.bedLengthFt} ft × {activePlan.bedWidthFt} ft)
+                    BED LAYOUT – ONE RAISED BED ({activePlan.bedLengthFt} ft ×{" "}
+                    {activePlan.bedWidthFt} ft)
                   </div>
 
                   <div className="p-4">
@@ -933,7 +1191,10 @@ export function BedPlanner(props: BedPlannerProps) {
 
                       <div className="flex items-center justify-between mt-1.5 text-xs font-extrabold text-stone-800">
                         {cropZones.map((cz) => (
-                          <div key={cz.id} className="flex-1 flex items-center justify-center gap-1 px-1">
+                          <div
+                            key={cz.id}
+                            className="flex-1 flex items-center justify-center gap-1 px-1"
+                          >
                             <span className="text-[9px]">◀</span>
                             <span className="border-b border-stone-800 px-1">{cz.widthFt} ft</span>
                             <span className="text-[9px]">▶</span>
@@ -948,11 +1209,11 @@ export function BedPlanner(props: BedPlannerProps) {
                         <React.Fragment key={z.id}>
                           <span
                             className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                              z.type === 'pipe'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-300'
-                                : z.type === 'border'
-                                ? 'bg-rose-50 text-rose-800 border border-rose-300'
-                                : 'bg-stone-100 text-stone-800 border border-stone-300'
+                              z.type === "pipe"
+                                ? "bg-blue-50 text-blue-700 border border-blue-300"
+                                : z.type === "border"
+                                  ? "bg-rose-50 text-rose-800 border border-rose-300"
+                                  : "bg-stone-100 text-stone-800 border border-stone-300"
                             }`}
                           >
                             {z.label}
@@ -996,7 +1257,7 @@ export function BedPlanner(props: BedPlannerProps) {
                         {activePlan.cycleRows.map((row) => {
                           const contCrop = row.continuousCropId
                             ? cropById[row.continuousCropId]
-                            : cropById['palak'];
+                            : cropById["palak"];
 
                           return (
                             <div
@@ -1013,21 +1274,23 @@ export function BedPlanner(props: BedPlannerProps) {
                                 {row.rowIndex}
                               </button>
 
-                              {row.mode === 'continuous' ? (
+                              {row.mode === "continuous" ? (
                                 <div
                                   onClick={() => handleRowNumberClick(row.rowIndex)}
-                                  style={{ backgroundColor: contCrop?.bgHex || '#cde5b3' }}
+                                  style={{ backgroundColor: contCrop?.bgHex || "#cde5b3" }}
                                   className="flex-1 flex items-center justify-center gap-2.5 px-3 font-extrabold text-sm text-stone-900 cursor-pointer relative"
                                 >
-                                  <span className="text-lg leading-none">{contCrop?.icon || '🥬'}</span>
-                                  <span>{contCrop?.name || 'Palak / Spinach'}</span>
+                                  <span className="text-lg leading-none">
+                                    {contCrop?.icon || "🥬"}
+                                  </span>
+                                  <span>{contCrop?.name || "Palak / Spinach"}</span>
                                 </div>
                               ) : (
                                 <div className="flex-1 flex items-stretch bg-[#e9e6df]/60">
                                   {activePlan.zones
-                                    .filter((z) => z.type !== 'border')
+                                    .filter((z) => z.type !== "border")
                                     .map((zone) => {
-                                      if (zone.type === 'pipe') {
+                                      if (zone.type === "pipe") {
                                         return (
                                           <div
                                             key={zone.id}
@@ -1043,7 +1306,7 @@ export function BedPlanner(props: BedPlannerProps) {
                                           key={zone.id}
                                           type="button"
                                           onClick={() => handleCellClick(row.rowIndex, zone.id)}
-                                          title={`Click to sow ${cropById[selectedBrushCropId]?.name || 'crop'} in ${zone.label}`}
+                                          title={`Click to sow ${cropById[selectedBrushCropId]?.name || "crop"} in ${zone.label}`}
                                           className="flex-1 flex items-center justify-center p-1 hover:bg-white/60 transition cursor-pointer"
                                         >
                                           {cObj ? (
@@ -1051,7 +1314,9 @@ export function BedPlanner(props: BedPlannerProps) {
                                               {cObj.icon}
                                             </span>
                                           ) : (
-                                            <span className="text-stone-600 font-bold text-sm">—</span>
+                                            <span className="text-stone-600 font-bold text-sm">
+                                              —
+                                            </span>
                                           )}
                                         </button>
                                       );
@@ -1086,7 +1351,7 @@ export function BedPlanner(props: BedPlannerProps) {
                           summary.tailRows.map((row) => {
                             const contCrop = row.continuousCropId
                               ? cropById[row.continuousCropId]
-                              : cropById['palak'];
+                              : cropById["palak"];
 
                             return (
                               <div
@@ -1097,20 +1362,22 @@ export function BedPlanner(props: BedPlannerProps) {
                                   {row.actualRowNumber}
                                 </div>
 
-                                {row.mode === 'continuous' ? (
+                                {row.mode === "continuous" ? (
                                   <div
-                                    style={{ backgroundColor: contCrop?.bgHex || '#cde5b3' }}
+                                    style={{ backgroundColor: contCrop?.bgHex || "#cde5b3" }}
                                     className="flex-1 flex items-center justify-center gap-2.5 px-3 font-extrabold text-sm text-stone-900"
                                   >
-                                    <span className="text-lg leading-none">{contCrop?.icon || '🥬'}</span>
-                                    <span>{contCrop?.name || 'Palak / Spinach'}</span>
+                                    <span className="text-lg leading-none">
+                                      {contCrop?.icon || "🥬"}
+                                    </span>
+                                    <span>{contCrop?.name || "Palak / Spinach"}</span>
                                   </div>
                                 ) : (
                                   <div className="flex-1 flex items-stretch bg-[#e9e6df]/60">
                                     {activePlan.zones
-                                      .filter((z) => z.type !== 'border')
+                                      .filter((z) => z.type !== "border")
                                       .map((zone) => {
-                                        if (zone.type === 'pipe') {
+                                        if (zone.type === "pipe") {
                                           return (
                                             <div
                                               key={zone.id}
@@ -1126,9 +1393,13 @@ export function BedPlanner(props: BedPlannerProps) {
                                             className="flex-1 flex items-center justify-center p-1"
                                           >
                                             {cObj ? (
-                                              <span className="text-xl leading-none">{cObj.icon}</span>
+                                              <span className="text-xl leading-none">
+                                                {cObj.icon}
+                                              </span>
                                             ) : (
-                                              <span className="text-stone-600 font-bold text-sm">—</span>
+                                              <span className="text-stone-600 font-bold text-sm">
+                                                —
+                                              </span>
                                             )}
                                           </div>
                                         );
@@ -1161,7 +1432,7 @@ export function BedPlanner(props: BedPlannerProps) {
                           <span className="w-3 h-3 rounded-full bg-rose-600 border border-rose-800 -mt-0.5" />
                         </div>
                         <span>
-                          {primaryBorderCrop?.name || 'Radish'} planted along the outer border at{' '}
+                          {primaryBorderCrop?.name || "Radish"} planted along the outer border at{" "}
                           {primaryBorderZone.spacingInches || 12}-inch spacing (plant to plant).
                         </span>
                       </div>
@@ -1176,8 +1447,8 @@ export function BedPlanner(props: BedPlannerProps) {
                   </div>
                   <ul className="p-3.5 space-y-1.5 text-xs text-stone-900 list-disc pl-6 font-semibold">
                     <li>
-                      Bed divided into {cropZones.length} crop column(s) of{' '}
-                      {cropZones.map((c) => `${c.widthFt} ft`).join(' / ')} each.
+                      Bed divided into {cropZones.length} crop column(s) of{" "}
+                      {cropZones.map((c) => `${c.widthFt} ft`).join(" / ")} each.
                     </li>
                     <li>
                       {summary.totalRowsPerBed} horizontal rows of {activePlan.rowWidthFt} ft each.
@@ -1185,12 +1456,12 @@ export function BedPlanner(props: BedPlannerProps) {
                     <li>{pipeZones.length} water pipe / drip line(s) running through the bed.</li>
                     {primaryBorderZone && (
                       <li>
-                        {primaryBorderCrop?.name || 'Radish'} planted on the outer border at{' '}
+                        {primaryBorderCrop?.name || "Radish"} planted on the outer border at{" "}
                         {primaryBorderZone.spacingInches || 12}-inch spacing.
                       </li>
                     )}
                     <li>
-                      Palak / Spinach is sown continuously across the full width and is{' '}
+                      Palak / Spinach is sown continuously across the full width and is{" "}
                       <span className="underline font-extrabold">not</span> counted by columns.
                     </li>
                   </ul>
@@ -1202,7 +1473,6 @@ export function BedPlanner(props: BedPlannerProps) {
                   LEGEND + CROP CATEGORIES + FRIENDLY CROPS + LAND SUMMARY
                  ============================================================ */}
               <div className="col-span-6 space-y-4">
-                
                 {/* 1. LEGEND TABLE */}
                 <div className="border-2 border-stone-400 rounded-xl overflow-hidden bg-white">
                   <div className="bg-[#143d23] text-white text-center font-extrabold text-xs uppercase tracking-wider py-2 px-3">
@@ -1212,12 +1482,16 @@ export function BedPlanner(props: BedPlannerProps) {
                     <div className="grid grid-cols-12 items-center p-2.5">
                       <div className="col-span-2 flex justify-center text-xl">🍅</div>
                       <div className="col-span-4 font-extrabold text-red-700">Tomato</div>
-                      <div className="col-span-6 font-medium text-stone-800">= column-based planting</div>
+                      <div className="col-span-6 font-medium text-stone-800">
+                        = column-based planting
+                      </div>
                     </div>
                     <div className="grid grid-cols-12 items-center p-2.5">
                       <div className="col-span-2 flex justify-center text-xl">🥒</div>
                       <div className="col-span-4 font-extrabold text-emerald-800">Snake gourd</div>
-                      <div className="col-span-6 font-medium text-stone-800">= column-based planting</div>
+                      <div className="col-span-6 font-medium text-stone-800">
+                        = column-based planting
+                      </div>
                     </div>
                     <div className="grid grid-cols-12 items-center p-2.5">
                       <div className="col-span-2 flex justify-center">
@@ -1230,7 +1504,9 @@ export function BedPlanner(props: BedPlannerProps) {
                     </div>
                     <div className="grid grid-cols-12 items-center p-2.5">
                       <div className="col-span-2 flex justify-center text-xl">🥬</div>
-                      <div className="col-span-4 font-extrabold text-stone-900">Palak / Spinach</div>
+                      <div className="col-span-4 font-extrabold text-stone-900">
+                        Palak / Spinach
+                      </div>
                       <div className="col-span-6 font-medium text-stone-800 leading-snug">
                         = continuous full-width seed row, multiple seeds sown, not column-counted
                       </div>
@@ -1239,7 +1515,9 @@ export function BedPlanner(props: BedPlannerProps) {
                       <div className="col-span-2 flex justify-center">
                         <div className="h-5 border-r-2 border-dashed border-blue-600" />
                       </div>
-                      <div className="col-span-4 font-extrabold text-blue-700">Drip line / Pipe</div>
+                      <div className="col-span-4 font-extrabold text-blue-700">
+                        Drip line / Pipe
+                      </div>
                       <div className="col-span-6 font-medium text-stone-800">
                         = vertical blue dashed line
                       </div>
@@ -1252,10 +1530,11 @@ export function BedPlanner(props: BedPlannerProps) {
                         </div>
                       </div>
                       <div className="col-span-4 font-extrabold text-rose-800">
-                        {primaryBorderCrop?.name || 'Radish'} border
+                        {primaryBorderCrop?.name || "Radish"} border
                       </div>
                       <div className="col-span-6 font-medium text-stone-800">
-                        = outer border planting at {primaryBorderZone?.spacingInches || 12}-inch spacing
+                        = outer border planting at {primaryBorderZone?.spacingInches || 12}-inch
+                        spacing
                       </div>
                     </div>
                   </div>
@@ -1311,10 +1590,10 @@ export function BedPlanner(props: BedPlannerProps) {
                   </div>
                   <div className="grid grid-cols-4 divide-x divide-stone-300 py-3">
                     {[
-                      { name: 'Moringa', icon: '🌳' },
-                      { name: 'Marigold', icon: '🌼' },
-                      { name: 'Mustard', icon: '🌾' },
-                      { name: 'Pomegranate', icon: '🍎' },
+                      { name: "Moringa", icon: "🌳" },
+                      { name: "Marigold", icon: "🌼" },
+                      { name: "Mustard", icon: "🌾" },
+                      { name: "Pomegranate", icon: "🍎" },
                     ].map((fc) => (
                       <div
                         key={fc.name}
@@ -1342,7 +1621,7 @@ export function BedPlanner(props: BedPlannerProps) {
                       </div>
                     </div>
                     <div className="p-2 text-center font-bold text-stone-800 bg-stone-50">
-                      📍 {activePlan.landAcres} acre = {summary.hectares} ha ={' '}
+                      📍 {activePlan.landAcres} acre = {summary.hectares} ha ={" "}
                       {activePlan.totalLandSqFt.toLocaleString()} sq ft
                     </div>
                     <div className="grid grid-cols-12 items-center p-2">
@@ -1350,7 +1629,7 @@ export function BedPlanner(props: BedPlannerProps) {
                         🌱 Each bed size
                       </div>
                       <div className="col-span-6 font-extrabold text-right pr-2">
-                        {activePlan.bedLengthFt} ft × {activePlan.bedWidthFt} ft ={' '}
+                        {activePlan.bedLengthFt} ft × {activePlan.bedWidthFt} ft ={" "}
                         {summary.singleBedSqFt} sq ft
                       </div>
                     </div>
@@ -1412,12 +1691,10 @@ export function BedPlanner(props: BedPlannerProps) {
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -9,14 +9,42 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
-  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Cloud, Loader2, Share2, Mail, MessageCircle, MessageSquare, FileType } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Cloud,
+  Loader2,
+  Share2,
+  Mail,
+  MessageCircle,
+  MessageSquare,
+  FileType,
+} from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -39,7 +67,13 @@ type Props<T> = {
 };
 
 export function DataTable<T extends Record<string, any>>({
-  data, columns, searchKeys, searchPlaceholder = "Search...", toolbar, csvFilename, emptyMessage,
+  data,
+  columns,
+  searchKeys,
+  searchPlaceholder = "Search...",
+  toolbar,
+  csvFilename,
+  emptyMessage,
 }: Props<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filter, setFilter] = useState("");
@@ -48,7 +82,11 @@ export function DataTable<T extends Record<string, any>>({
     if (!filter.trim() || !searchKeys?.length) return data;
     const f = filter.toLowerCase();
     return data.filter((r) =>
-      searchKeys.some((k) => String(r[k] ?? "").toLowerCase().includes(f)),
+      searchKeys.some((k) =>
+        String(r[k] ?? "")
+          .toLowerCase()
+          .includes(f),
+      ),
     );
   }, [data, filter, searchKeys]);
 
@@ -82,7 +120,9 @@ export function DataTable<T extends Record<string, any>>({
   function triggerDownload(blob: Blob, ext: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `${csvFilename || "export"}.${ext}`; a.click();
+    a.href = url;
+    a.download = `${csvFilename || "export"}.${ext}`;
+    a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -104,10 +144,14 @@ export function DataTable<T extends Record<string, any>>({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
       const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
-      return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      return new Blob([buf], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
     }
     // pdf
-    const headers = rows.length ? Object.keys(rows[0]) : table.getVisibleLeafColumns().map((c) => c.id);
+    const headers = rows.length
+      ? Object.keys(rows[0])
+      : table.getVisibleLeafColumns().map((c) => c.id);
     const body = rows.map((r) => headers.map((h) => String(r[h] ?? "")));
     const doc = new jsPDF({ orientation: headers.length > 6 ? "landscape" : "portrait" });
     doc.setFontSize(14);
@@ -142,7 +186,9 @@ export function DataTable<T extends Record<string, any>>({
       });
       toast.success("Saved to Google Drive", {
         description: r.name,
-        action: r.webViewLink ? { label: "Open", onClick: () => window.open(r.webViewLink, "_blank") } : undefined,
+        action: r.webViewLink
+          ? { label: "Open", onClick: () => window.open(r.webViewLink, "_blank") }
+          : undefined,
       });
     } catch (e: any) {
       toast.error(e?.message || "Drive export failed");
@@ -201,33 +247,55 @@ export function DataTable<T extends Record<string, any>>({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="outline" size="sm" disabled={uploading}>
-              {uploading ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Download className="size-3.5 mr-1.5" />}
+              {uploading ? (
+                <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Download className="size-3.5 mr-1.5" />
+              )}
               Export
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Download</DropdownMenuLabel>
-            <DropdownMenuItem onClick={downloadCsv}><FileText className="size-3.5 mr-2" /> CSV (.csv)</DropdownMenuItem>
-            <DropdownMenuItem onClick={downloadXlsx}><FileSpreadsheet className="size-3.5 mr-2" /> Excel (.xlsx)</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => triggerDownload(buildBlob("pdf"), "pdf")}><FileType className="size-3.5 mr-2" /> PDF (.pdf)</DropdownMenuItem>
+            <DropdownMenuItem onClick={downloadCsv}>
+              <FileText className="size-3.5 mr-2" /> CSV (.csv)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={downloadXlsx}>
+              <FileSpreadsheet className="size-3.5 mr-2" /> Excel (.xlsx)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => triggerDownload(buildBlob("pdf"), "pdf")}>
+              <FileType className="size-3.5 mr-2" /> PDF (.pdf)
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger><Cloud className="size-3.5 mr-2" /> Save to Google Drive</DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger>
+                <Cloud className="size-3.5 mr-2" /> Save to Google Drive
+              </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => exportToDrive("csv")} disabled={uploading}>As CSV</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportToDrive("xlsx")} disabled={uploading}>As Excel</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportToDrive("pdf")} disabled={uploading}>As PDF</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToDrive("csv")} disabled={uploading}>
+                  As CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToDrive("xlsx")} disabled={uploading}>
+                  As Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToDrive("pdf")} disabled={uploading}>
+                  As PDF
+                </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="flex items-center gap-2"><Share2 className="size-3.5" /> Share</DropdownMenuLabel>
-            {([
+            <DropdownMenuLabel className="flex items-center gap-2">
+              <Share2 className="size-3.5" /> Share
+            </DropdownMenuLabel>
+            {[
               { ch: "email" as const, label: "Email", icon: Mail },
               { ch: "whatsapp" as const, label: "WhatsApp", icon: MessageCircle },
               { ch: "sms" as const, label: "Text message", icon: MessageSquare },
-            ]).map(({ ch, label, icon: Icon }) => (
+            ].map(({ ch, label, icon: Icon }) => (
               <DropdownMenuSub key={ch}>
-                <DropdownMenuSubTrigger><Icon className="size-3.5 mr-2" /> {label}</DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger>
+                  <Icon className="size-3.5 mr-2" /> {label}
+                </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem onClick={() => share(ch, "pdf")}>As PDF</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => share(ch, "xlsx")}>As Excel</DropdownMenuItem>
@@ -263,7 +331,10 @@ export function DataTable<T extends Record<string, any>>({
           <TableBody>
             {table.getRowModel().rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center text-muted-foreground py-10">
+                <TableCell
+                  colSpan={columns.length}
+                  className="text-center text-muted-foreground py-10"
+                >
                   {emptyMessage || "Nothing here yet."}
                 </TableCell>
               </TableRow>
@@ -282,19 +353,27 @@ export function DataTable<T extends Record<string, any>>({
         </Table>
       </div>
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <div>
-          {table.getFilteredRowModel().rows.length} row(s)
-        </div>
+        <div>{table.getFilteredRowModel().rows.length} row(s)</div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" disabled={!table.getCanPreviousPage()}
-                  onClick={() => table.previousPage()}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!table.getCanPreviousPage()}
+            onClick={() => table.previousPage()}
+          >
             <ChevronLeft className="size-4" />
           </Button>
           <span>
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
           </span>
-          <Button type="button" variant="outline" size="sm" disabled={!table.getCanNextPage()}
-                  onClick={() => table.nextPage()}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!table.getCanNextPage()}
+            onClick={() => table.nextPage()}
+          >
             <ChevronRight className="size-4" />
           </Button>
         </div>

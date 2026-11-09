@@ -157,9 +157,7 @@ export function RichSectionDialog({
   }
 
   function updateImageCaption(index: number, caption: string) {
-    setImages((prev) =>
-      prev.map((img, i) => (i === index ? { ...img, caption } : img)),
-    );
+    setImages((prev) => prev.map((img, i) => (i === index ? { ...img, caption } : img)));
   }
 
   const save = useMutation({
@@ -214,7 +212,8 @@ export function RichSectionDialog({
             {initial.id ? `Edit ${entityName}` : `Add ${entityName}`}
           </DialogTitle>
           <DialogDescription>
-            Customize headings, typography, text formatting, and images for this {entityName.toLowerCase()}.
+            Customize headings, typography, text formatting, and images for this{" "}
+            {entityName.toLowerCase()}.
           </DialogDescription>
         </DialogHeader>
 
@@ -385,7 +384,9 @@ export function RichSectionDialog({
                   onClick={() => setEditorTab("write")}
                   className={cn(
                     "px-2.5 py-1 rounded font-medium transition",
-                    editorTab === "write" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground",
+                    editorTab === "write"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted text-muted-foreground",
                   )}
                 >
                   Write
@@ -395,7 +396,9 @@ export function RichSectionDialog({
                   onClick={() => setEditorTab("split")}
                   className={cn(
                     "hidden sm:flex items-center gap-1 px-2.5 py-1 rounded font-medium transition",
-                    editorTab === "split" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground",
+                    editorTab === "split"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted text-muted-foreground",
                   )}
                 >
                   <Columns2 className="size-3" /> Split
@@ -405,7 +408,9 @@ export function RichSectionDialog({
                   onClick={() => setEditorTab("preview")}
                   className={cn(
                     "flex items-center gap-1 px-2.5 py-1 rounded font-medium transition",
-                    editorTab === "preview" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground",
+                    editorTab === "preview"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted text-muted-foreground",
                   )}
                 >
                   <Eye className="size-3" /> Preview
@@ -523,7 +528,12 @@ export function RichSectionDialog({
                   placeholder="https://example.com/photo.jpg"
                   className="h-8 text-xs"
                 />
-                <Button type="button" size="sm" onClick={addImageUrl} className="h-8 text-xs shrink-0">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={addImageUrl}
+                  className="h-8 text-xs shrink-0"
+                >
                   Add Image
                 </Button>
                 <Button
@@ -575,7 +585,8 @@ export function RichSectionDialog({
               <div className="p-6 border border-dashed rounded-lg text-center space-y-1.5 bg-muted/10">
                 <ImageIcon className="size-8 mx-auto text-muted-foreground/50" />
                 <p className="text-xs text-muted-foreground">
-                  No images attached yet. Click <strong>Upload Photos</strong> or <strong>Add from URL</strong> to attach pictures.
+                  No images attached yet. Click <strong>Upload Photos</strong> or{" "}
+                  <strong>Add from URL</strong> to attach pictures.
                 </p>
               </div>
             )}
@@ -600,9 +611,7 @@ function ThumbnailImage({ img }: { img: StoredImage }) {
   const url = useResolvedImageUrl(img);
   if (!url) {
     return (
-      <div className="size-full grid place-items-center text-[10px] text-muted-foreground">
-        ...
-      </div>
+      <div className="size-full grid place-items-center text-[10px] text-muted-foreground">...</div>
     );
   }
   return <img src={url} alt="" className="size-full object-cover" />;

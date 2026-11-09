@@ -10,8 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, MapPin, Pencil, Trash2, ArrowRight } from "lucide-react";
 import { FarmFormDialog } from "@/components/farm-form-dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
@@ -77,7 +83,9 @@ function FarmsPage() {
                   </div>
                 </div>
                 {f.farming_type && (
-                  <Badge variant="secondary" className="capitalize shrink-0">{f.farming_type}</Badge>
+                  <Badge variant="secondary" className="capitalize shrink-0">
+                    {f.farming_type}
+                  </Badge>
                 )}
               </div>
 
@@ -117,7 +125,12 @@ function FarmsPage() {
         {(adding || editing) && (
           <FarmFormDialog
             open
-            onOpenChange={(v) => { if (!v) { setAdding(false); setEditing(null); } }}
+            onOpenChange={(v) => {
+              if (!v) {
+                setAdding(false);
+                setEditing(null);
+              }
+            }}
             initial={editing}
           />
         )}
@@ -127,12 +140,16 @@ function FarmsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this farm?</AlertDialogTitle>
               <AlertDialogDescription>
-                "{confirmDelete?.name}" and all its plots, sowings, and harvests will be removed. This cannot be undone.
+                "{confirmDelete?.name}" and all its plots, sowings, and harvests will be removed.
+                This cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => delMut.mutate(confirmDelete.id)} className="bg-destructive">
+              <AlertDialogAction
+                onClick={() => delMut.mutate(confirmDelete.id)}
+                className="bg-destructive"
+              >
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>

@@ -60,12 +60,12 @@ export function MonthCalendarPicker({
       const startMatch = MONTHS.find(
         (m) =>
           m.short.toLowerCase() === parts[0].slice(0, 3).toLowerCase() ||
-          parts[0].toLowerCase().startsWith(m.short.toLowerCase())
+          parts[0].toLowerCase().startsWith(m.short.toLowerCase()),
       );
       const endMatch = MONTHS.find(
         (m) =>
           m.short.toLowerCase() === parts[1].slice(0, 3).toLowerCase() ||
-          parts[1].toLowerCase().startsWith(m.short.toLowerCase())
+          parts[1].toLowerCase().startsWith(m.short.toLowerCase()),
       );
       return {
         start: startMatch ? startMatch.short : null,
@@ -76,7 +76,7 @@ export function MonthCalendarPicker({
       const match = MONTHS.find(
         (m) =>
           m.short.toLowerCase() === parts[0].slice(0, 3).toLowerCase() ||
-          parts[0].toLowerCase().startsWith(m.short.toLowerCase())
+          parts[0].toLowerCase().startsWith(m.short.toLowerCase()),
       );
       return {
         start: match ? match.short : null,
@@ -205,7 +205,7 @@ export function MonthCalendarPicker({
                   "text-[11px] px-2 py-1 rounded-md border transition-all cursor-pointer flex items-center gap-1",
                   isMatch
                     ? "bg-primary text-primary-foreground border-primary font-medium shadow-2xs"
-                    : "bg-background hover:bg-muted text-foreground border-border/80"
+                    : "bg-background hover:bg-muted text-foreground border-border/80",
                 )}
               >
                 {isMatch && <Check className="size-3" />}
@@ -241,7 +241,7 @@ export function MonthCalendarPicker({
                   isSelected
                     ? "bg-primary text-primary-foreground border-primary font-semibold shadow-2xs scale-[1.02]"
                     : "bg-background text-foreground hover:bg-muted border-border/70",
-                  (isStart || isEnd) && "ring-2 ring-primary ring-offset-1"
+                  (isStart || isEnd) && "ring-2 ring-primary ring-offset-1",
                 )}
                 title={m.label}
               >
@@ -255,10 +255,7 @@ export function MonthCalendarPicker({
         <div className="pt-2 border-t grid grid-cols-2 gap-2 text-xs">
           <div>
             <Label className="text-[10px] text-muted-foreground block mb-1">From Month</Label>
-            <Select
-              value={parsedRange.start || ""}
-              onValueChange={handleStartChange}
-            >
+            <Select value={parsedRange.start || ""} onValueChange={handleStartChange}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Start month" />
               </SelectTrigger>
@@ -296,4 +293,3 @@ export function MonthCalendarPicker({
     </div>
   );
 }
-

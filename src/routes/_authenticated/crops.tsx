@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listCrops, upsertCrop, deleteCrop } from "@/lib/farm.functions";
@@ -54,14 +54,21 @@ import { SeedStorageView } from "@/components/seed-storage-tab";
 import { MonthCalendarPicker } from "@/components/month-calendar-picker";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { Database } from "@/integrations/supabase/types";
+
+type CropRow = Database["public"]["Tables"]["crops"]["Row"];
 
 export const Route = createFileRoute("/_authenticated/crops")({
   component: CropsPage,
 });
 
-function CropThumbnail({ crop, onClick }: { crop: any; onClick?: () => void }) {
+function CropThumbnail({ crop, onClick }: { crop: CropRow; onClick?: () => void }) {
   const [loadError, setLoadError] = useState(false);
   const imageUrl = crop.image_url;
+
+  useEffect(() => {
+    setLoadError(false);
+  }, [imageUrl]);
 
   if (!imageUrl || loadError) {
     return (
@@ -97,7 +104,7 @@ function CropLightboxDialog({
   open,
   onOpenChange,
 }: {
-  crop: any | null;
+  crop: CropRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -119,14 +126,12 @@ function CropLightboxDialog({
             )}
           </div>
           {crop.description && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              {crop.description}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{crop.description}</p>
           )}
         </DialogHeader>
         <div className="w-full max-h-[70vh] flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden border p-1">
           <img
-            src={crop.image_url}
+            src={crop.image_url || undefined}
             alt={`${crop.crop_name || "Crop"} ${crop.variety_name || ""}`}
             className="max-h-[65vh] w-auto max-w-full object-contain rounded-md"
           />
@@ -143,10 +148,10 @@ function CropsPage() {
   const del = useServerFn(deleteCrop);
   const crops = useQuery({ queryKey: ["crops"], queryFn: () => list() });
   const qc = useQueryClient();
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<CropRow | null>(null);
   const [adding, setAdding] = useState(false);
-  const [confirmDel, setConfirmDel] = useState<any>(null);
-  const [lightboxCrop, setLightboxCrop] = useState<any | null>(null);
+  const [confirmDel, setConfirmDel] = useState<CropRow | null>(null);
+  const [lightboxCrop, setLightboxCrop] = useState<CropRow | null>(null);
 
   const delMut = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
@@ -160,13 +165,13 @@ function CropsPage() {
 
   // Shortened Crop Library table columns
   // Crop variety & category combined into one column for compact viewing
-  const columns: ColumnDef<any>[] = [
+  const columns: ColumnDef<CropRow>[] = [
     {
       id: "image",
       header: "Photo",
       enableSorting: false,
       meta: { excludeFromCsv: true },
-      cell: ({ row }: any) => (
+      cell: ({ row }) => (
         <CropThumbnail
           crop={row.original}
           onClick={() => row.original.image_url && setLightboxCrop(row.original)}
@@ -175,9 +180,10 @@ function CropsPage() {
     },
     {
       id: "crop_info",
-      accessorFn: (row: any) => `${row.crop_name} ${row.variety_name || ""} ${row.crop_category || ""}`,
+      accessorFn: (row: CropRow) =>
+        `${row.crop_name} ${row.variety_name || ""} ${row.crop_category || ""}`,
       header: "Crop & Variety",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const c = row.original;
         return (
           <div className="space-y-0.5 min-w-[140px]">
@@ -203,7 +209,7 @@ function CropsPage() {
       id: "sowing",
       accessorKey: "sowing_window",
       header: "Sowing",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const c = row.original;
         const sowing = c.sowing_window || c.cultivation_season;
         return sowing ? (
@@ -220,7 +226,7 @@ function CropsPage() {
       id: "germination_days",
       accessorKey: "germination_days",
       header: "Germination",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const days = row.original.germination_days;
         if (!days && days !== 0) return <span className="text-xs text-muted-foreground">—</span>;
         return (
@@ -236,8 +242,8 @@ function CropsPage() {
       id: "growing_days",
       accessorKey: "growing_days",
       header: "Growing days",
-      cell: ({ getValue }: any) => {
-        const val = getValue();
+      cell: ({ getValue }) => {
+        const val = getValue<number | null>();
         return val ? (
           <span className="text-xs font-medium">{val} days</span>
         ) : (
@@ -249,7 +255,7 @@ function CropsPage() {
       id: "harvesting_window",
       accessorKey: "harvesting_window",
       header: "Harvest",
-      cell: ({ getValue }: any) => (
+      cell: ({ getValue }) => (
         <span className="text-xs text-foreground">{String(getValue() || "—")}</span>
       ),
     },
@@ -257,7 +263,7 @@ function CropsPage() {
       id: "repeat_harvest",
       accessorKey: "is_repeat_harvest",
       header: "Repeat harvest",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const c = row.original;
         if (!c.is_repeat_harvest) {
           return <span className="text-xs text-muted-foreground">Single</span>;
@@ -277,7 +283,7 @@ function CropsPage() {
       id: "typical_yield_per_acre",
       accessorKey: "typical_yield_per_acre",
       header: "Yield/acre",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const c = row.original;
         return c.typical_yield_per_acre ? (
           <span className="text-xs font-mono">
@@ -292,7 +298,7 @@ function CropsPage() {
       id: "water_requirement",
       accessorKey: "water_requirement",
       header: "Water / Temp",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const c = row.original;
         const parts = [];
         if (c.water_requirement) parts.push(c.water_requirement);
@@ -308,7 +314,7 @@ function CropsPage() {
       id: "is_active",
       accessorKey: "is_active",
       header: "Active",
-      cell: ({ getValue }: any) => (
+      cell: ({ getValue }) => (
         <Badge variant={getValue() ? "secondary" : "outline"} className="text-xs">
           {getValue() ? "Yes" : "No"}
         </Badge>
@@ -320,7 +326,7 @@ function CropsPage() {
             id: "actions",
             header: "",
             meta: { excludeFromCsv: true },
-            cell: ({ row }: any) => (
+            cell: ({ row }: { row: { original: CropRow } }) => (
               <div className="flex gap-1 justify-end">
                 <Button
                   size="sm"
@@ -376,7 +382,13 @@ function CropsPage() {
             <DataTable
               data={crops.data || []}
               columns={columns}
-              searchKeys={["crop_name", "variety_name", "crop_category", "sowing_window", "cultivation_season"]}
+              searchKeys={[
+                "crop_name",
+                "variety_name",
+                "crop_category",
+                "sowing_window",
+                "cultivation_season",
+              ]}
               searchPlaceholder="Search crops by name, variety, season..."
               csvFilename="crop-library"
               toolbar={
@@ -394,12 +406,14 @@ function CropsPage() {
               crops={crops.data || []}
               canEdit={!!canEdit}
               onOpenLightbox={(crop) => setLightboxCrop(crop)}
+              onAddNewCrop={() => setAdding(true)}
             />
           </TabsContent>
         </Tabs>
 
         {(adding || editing) && (
           <CropDialog
+            key={editing?.id || "new-crop"}
             open
             onOpenChange={(v) => {
               if (!v) {
@@ -419,7 +433,8 @@ function CropsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                Delete "{confirmDel?.crop_name} — {confirmDel?.variety_name}"?
+                Delete "{confirmDel?.crop_name}
+                {confirmDel?.variety_name ? ` — ${confirmDel.variety_name}` : ""}"?
               </AlertDialogTitle>
               <AlertDialogDescription>
                 This will delete this variety from both the Crop Library and Seed Storage.
@@ -429,7 +444,7 @@ function CropsPage() {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive"
-                onClick={() => delMut.mutate(confirmDel.id)}
+                onClick={() => confirmDel && delMut.mutate(confirmDel.id)}
               >
                 Delete
               </AlertDialogAction>
@@ -446,6 +461,27 @@ function CropsPage() {
 // Updated with modern card elements, sowing presets, germination,
 // and repeat harvest settings.
 // -------------------------------------------------------------
+type CropFormState = {
+  id?: string;
+  crop_name: string;
+  variety_name: string;
+  crop_category: string;
+  yield_unit: string;
+  typical_yield_per_acre: string;
+  growing_days: string;
+  cultivation_season: string;
+  sowing_window: string;
+  harvesting_window: string;
+  optimal_temp: string;
+  water_requirement: string;
+  description: string;
+  is_active: boolean;
+  image_url: string | null;
+  germination_days: string;
+  is_repeat_harvest: boolean;
+  repeat_harvest_interval: string;
+};
+
 function CropDialog({
   open,
   onOpenChange,
@@ -453,9 +489,9 @@ function CropDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  initial?: any;
+  initial?: CropRow | null;
 }) {
-  const [f, setF] = useState(() =>
+  const [f, setF] = useState<CropFormState>(() =>
     initial
       ? {
           id: initial.id,
@@ -504,7 +540,7 @@ function CropDialog({
           germination_days: "",
           is_repeat_harvest: false,
           repeat_harvest_interval: "",
-        }
+        },
   );
 
   const upsert = useServerFn(upsertCrop);
@@ -514,7 +550,7 @@ function CropDialog({
     mutationFn: () => {
       const { id, ...rawValues } = f;
 
-      const values: Record<string, any> = {
+      const values: Record<string, unknown> = {
         crop_name: rawValues.crop_name?.trim(),
         variety_name: rawValues.variety_name?.trim() || null,
         crop_category: rawValues.crop_category || null,
@@ -556,8 +592,8 @@ function CropDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function set(k: string, v: any) {
-    setF((p: any) => ({ ...p, [k]: v }));
+  function set<K extends keyof CropFormState>(k: K, v: CropFormState[K]) {
+    setF((p) => ({ ...p, [k]: v }));
   }
 
   return (
@@ -571,7 +607,8 @@ function CropDialog({
             </DialogTitle>
           </div>
           <DialogDescription className="text-xs text-muted-foreground">
-            Configure crop variety details, sowing and germination window, harvest cycle, and growing conditions.
+            Configure crop variety details, sowing and germination window, harvest cycle, and
+            growing conditions.
           </DialogDescription>
         </DialogHeader>
 
@@ -597,7 +634,7 @@ function CropDialog({
               />
             </div>
             <div>
-              <Label className="text-xs font-medium">Variety / Cultivar *</Label>
+              <Label className="text-xs font-medium">Variety / Cultivar</Label>
               <Input
                 value={f.variety_name}
                 onChange={(e) => set("variety_name", e.target.value)}
@@ -680,9 +717,7 @@ function CropDialog({
                         "Spring / Summer",
                         "Autumn / Winter",
                       ].includes(f.cultivation_season) && (
-                        <SelectItem value={f.cultivation_season}>
-                          {f.cultivation_season}
-                        </SelectItem>
+                        <SelectItem value={f.cultivation_season}>{f.cultivation_season}</SelectItem>
                       )}
                   </SelectContent>
                 </Select>
@@ -728,7 +763,9 @@ function CropDialog({
               </div>
 
               <div>
-                <Label className="text-xs font-medium">Harvesting Window (Range of Dates / Months)</Label>
+                <Label className="text-xs font-medium">
+                  Harvesting Window (Range of Dates / Months)
+                </Label>
                 <Select
                   value={f.harvesting_window || ""}
                   onValueChange={(v) => {
@@ -744,13 +781,27 @@ function CropDialog({
                     <SelectValue placeholder="Select harvest window or duration..." />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    <SelectItem value="30 - 45 days (1 - 1.5 months)">30 - 45 days (1 - 1.5 months)</SelectItem>
-                    <SelectItem value="45 - 60 days (1.5 - 2 months)">45 - 60 days (1.5 - 2 months)</SelectItem>
-                    <SelectItem value="60 - 75 days (2 - 2.5 months)">60 - 75 days (2 - 2.5 months)</SelectItem>
-                    <SelectItem value="75 - 90 days (2.5 - 3 months)">75 - 90 days (2.5 - 3 months)</SelectItem>
-                    <SelectItem value="90 - 120 days (3 - 4 months)">90 - 120 days (3 - 4 months)</SelectItem>
-                    <SelectItem value="120 - 150 days (4 - 5 months)">120 - 150 days (4 - 5 months)</SelectItem>
-                    <SelectItem value="150 - 180 days (5 - 6 months)">150 - 180 days (5 - 6 months)</SelectItem>
+                    <SelectItem value="30 - 45 days (1 - 1.5 months)">
+                      30 - 45 days (1 - 1.5 months)
+                    </SelectItem>
+                    <SelectItem value="45 - 60 days (1.5 - 2 months)">
+                      45 - 60 days (1.5 - 2 months)
+                    </SelectItem>
+                    <SelectItem value="60 - 75 days (2 - 2.5 months)">
+                      60 - 75 days (2 - 2.5 months)
+                    </SelectItem>
+                    <SelectItem value="75 - 90 days (2.5 - 3 months)">
+                      75 - 90 days (2.5 - 3 months)
+                    </SelectItem>
+                    <SelectItem value="90 - 120 days (3 - 4 months)">
+                      90 - 120 days (3 - 4 months)
+                    </SelectItem>
+                    <SelectItem value="120 - 150 days (4 - 5 months)">
+                      120 - 150 days (4 - 5 months)
+                    </SelectItem>
+                    <SelectItem value="150 - 180 days (5 - 6 months)">
+                      150 - 180 days (5 - 6 months)
+                    </SelectItem>
                     <SelectItem value="6 - 9 months">6 - 9 months</SelectItem>
                     <SelectItem value="9 - 12 months">9 - 12 months</SelectItem>
                     <SelectItem value="Over 1 year (Perennial)">Over 1 year (Perennial)</SelectItem>
@@ -766,9 +817,15 @@ function CropDialog({
                     <SelectItem value="Oct - Nov">Oct - Nov</SelectItem>
                     <SelectItem value="Nov - Dec">Nov - Dec</SelectItem>
                     <SelectItem value="Dec - Jan">Dec - Jan</SelectItem>
-                    <SelectItem value="Sep - Nov (Kharif Harvest)">Sep - Nov (Kharif Harvest)</SelectItem>
-                    <SelectItem value="Feb - Apr (Rabi Harvest)">Feb - Apr (Rabi Harvest)</SelectItem>
-                    <SelectItem value="May - Jun (Zaid Harvest)">May - Jun (Zaid Harvest)</SelectItem>
+                    <SelectItem value="Sep - Nov (Kharif Harvest)">
+                      Sep - Nov (Kharif Harvest)
+                    </SelectItem>
+                    <SelectItem value="Feb - Apr (Rabi Harvest)">
+                      Feb - Apr (Rabi Harvest)
+                    </SelectItem>
+                    <SelectItem value="May - Jun (Zaid Harvest)">
+                      May - Jun (Zaid Harvest)
+                    </SelectItem>
                     <SelectItem value="All year round">All year round (Continuous)</SelectItem>
                     {f.harvesting_window &&
                       ![
@@ -799,9 +856,7 @@ function CropDialog({
                         "May - Jun (Zaid Harvest)",
                         "All year round",
                       ].includes(f.harvesting_window) && (
-                        <SelectItem value={f.harvesting_window}>
-                          {f.harvesting_window}
-                        </SelectItem>
+                        <SelectItem value={f.harvesting_window}>{f.harvesting_window}</SelectItem>
                       )}
                   </SelectContent>
                 </Select>
@@ -821,9 +876,7 @@ function CropDialog({
                   checked={!!f.is_repeat_harvest}
                   onCheckedChange={(v) => set("is_repeat_harvest", v)}
                 />
-                <span className="text-xs font-medium">
-                  {f.is_repeat_harvest ? "Yes" : "No"}
-                </span>
+                <span className="text-xs font-medium">{f.is_repeat_harvest ? "Yes" : "No"}</span>
               </div>
             </div>
 
@@ -877,10 +930,7 @@ function CropDialog({
           <div className="grid gap-3 sm:grid-cols-2 p-3.5 rounded-lg border bg-muted/20">
             <div>
               <Label className="text-xs font-medium">Optimal Temperature</Label>
-              <Select
-                value={f.optimal_temp || ""}
-                onValueChange={(v) => set("optimal_temp", v)}
-              >
+              <Select value={f.optimal_temp || ""} onValueChange={(v) => set("optimal_temp", v)}>
                 <SelectTrigger className="mt-1 text-sm bg-background">
                   <SelectValue placeholder="Select optimal temperature..." />
                 </SelectTrigger>
@@ -906,9 +956,7 @@ function CropDialog({
                       "25°C - 35°C (Warm / Tropical)",
                       "30°C - 40°C (Hot / Heat tolerant)",
                     ].includes(f.optimal_temp) && (
-                      <SelectItem value={f.optimal_temp}>
-                        {f.optimal_temp}
-                      </SelectItem>
+                      <SelectItem value={f.optimal_temp}>{f.optimal_temp}</SelectItem>
                     )}
                 </SelectContent>
               </Select>
@@ -935,10 +983,7 @@ function CropDialog({
 
             <div>
               <Label className="text-xs font-medium">Yield Unit</Label>
-              <Select
-                value={f.yield_unit || "kg"}
-                onValueChange={(v) => set("yield_unit", v)}
-              >
+              <Select value={f.yield_unit || "kg"} onValueChange={(v) => set("yield_unit", v)}>
                 <SelectTrigger className="mt-1 text-sm bg-background">
                   <SelectValue placeholder="Select yield unit..." />
                 </SelectTrigger>
@@ -964,9 +1009,7 @@ function CropDialog({
                       "boxes",
                       "lbs",
                     ].includes(f.yield_unit) && (
-                      <SelectItem value={f.yield_unit}>
-                        {f.yield_unit}
-                      </SelectItem>
+                      <SelectItem value={f.yield_unit}>{f.yield_unit}</SelectItem>
                     )}
                 </SelectContent>
               </Select>
@@ -1005,10 +1048,7 @@ function CropDialog({
                 Active crops appear in planting, sowing, and bed planning drop-downs.
               </p>
             </div>
-            <Switch
-              checked={!!f.is_active}
-              onCheckedChange={(v) => set("is_active", v)}
-            />
+            <Switch checked={!!f.is_active} onCheckedChange={(v) => set("is_active", v)} />
           </div>
         </div>
 
@@ -1016,10 +1056,7 @@ function CropDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={() => mut.mutate()}
-            disabled={mut.isPending || !f.crop_name?.trim()}
-          >
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending || !f.crop_name?.trim()}>
             {mut.isPending ? "Saving..." : initial ? "Save changes" : "Add crop"}
           </Button>
         </DialogFooter>

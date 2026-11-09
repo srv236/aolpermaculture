@@ -32,22 +32,17 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DataTable } from "@/components/data-table";
 import { ImageUploadSection } from "@/components/image-upload-section";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { Database } from "@/integrations/supabase/types";
+
+type CropRow = Database["public"]["Tables"]["crops"]["Row"];
+
 import {
   Plus,
   Pencil,
@@ -63,7 +58,7 @@ import {
   Info,
 } from "lucide-react";
 
-export function getExpiryStatus(expiryStr?: string | null): {
+function getExpiryStatus(expiryStr?: string | null): {
   status: "none" | "expired" | "expiring_soon" | "valid" | "text";
   label: string;
   badgeVariant: "default" | "secondary" | "destructive" | "outline";
@@ -74,7 +69,7 @@ export function getExpiryStatus(expiryStr?: string | null): {
   }
 
   const trimmed = expiryStr.trim();
-  const dateMatch = trimmed.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
+  const dateMatch = trimmed.match(/^(\d{4})[-/](\d{2})(?:[-/](\d{2}))?$/);
   if (dateMatch) {
     const year = parseInt(dateMatch[1], 10);
     const month = parseInt(dateMatch[2], 10) - 1;
@@ -93,6 +88,14 @@ export function getExpiryStatus(expiryStr?: string | null): {
           label: `Expired (${Math.abs(diffDays)}d ago)`,
           badgeVariant: "destructive",
           daysLeft: diffDays,
+        };
+      }
+      if (diffDays === 0) {
+        return {
+          status: "expiring_soon",
+          label: "Expires today",
+          badgeVariant: "secondary",
+          daysLeft: 0,
         };
       }
       if (diffDays <= 60) {
@@ -121,20 +124,22 @@ export function getExpiryStatus(expiryStr?: string | null): {
 }
 
 interface SeedStorageViewProps {
-  crops: any[];
+  crops: CropRow[];
   canEdit: boolean;
-  onOpenLightbox: (crop: any) => void;
+  onOpenLightbox: (crop: CropRow) => void;
+  onAddNewCrop?: () => void;
 }
 
 export function SeedStorageView({
   crops,
   canEdit,
   onOpenLightbox,
+  onAddNewCrop,
 }: SeedStorageViewProps) {
   const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
-  const [adjusting, setAdjusting] = useState<any | null>(null);
-  const [confirmClear, setConfirmClear] = useState<any | null>(null);
+  const [editing, setEditing] = useState<CropRow | null>(null);
+  const [adjusting, setAdjusting] = useState<CropRow | null>(null);
+  const [confirmClear, setConfirmClear] = useState<CropRow | null>(null);
   const [statusFilter, setStatusFilter] = useState<
     "all" | "in_stock" | "out_of_stock" | "expiring"
   >("all");
@@ -144,7 +149,7 @@ export function SeedStorageView({
 
   // Clear seed storage stock for a crop (keeps the crop in library, resets seed stock)
   const clearMut = useMutation({
-    mutationFn: (crop: any) =>
+    mutationFn: (crop: CropRow) =>
       upsert({
         data: {
           id: crop.id,
@@ -203,7 +208,7 @@ export function SeedStorageView({
         (c) =>
           c.seed_stock_quantity !== null &&
           c.seed_stock_quantity !== undefined &&
-          Number(c.seed_stock_quantity) > 0
+          Number(c.seed_stock_quantity) > 0,
       );
     }
     if (statusFilter === "out_of_stock") {
@@ -211,7 +216,7 @@ export function SeedStorageView({
         (c) =>
           c.seed_stock_quantity === null ||
           c.seed_stock_quantity === undefined ||
-          Number(c.seed_stock_quantity) <= 0
+          Number(c.seed_stock_quantity) <= 0,
       );
     }
     if (statusFilter === "expiring") {
@@ -223,13 +228,13 @@ export function SeedStorageView({
     return crops;
   }, [crops, statusFilter]);
 
-  const columns: ColumnDef<any>[] = [
+  const columns: ColumnDef<CropRow>[] = [
     {
       id: "thumbnail",
       header: "Photo",
       enableSorting: false,
       meta: { excludeFromCsv: true },
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const crop = row.original;
         const imageUrl = crop.image_url;
         if (!imageUrl) {
@@ -263,7 +268,7 @@ export function SeedStorageView({
       id: "seed_name",
       accessorKey: "crop_name",
       header: "Seed & Variety",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const c = row.original;
         return (
           <div className="space-y-0.5 min-w-[140px]">
@@ -272,9 +277,7 @@ export function SeedStorageView({
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {c.variety_name ? (
-                <span className="text-xs text-muted-foreground">
-                  {c.variety_name}
-                </span>
+                <span className="text-xs text-muted-foreground">{c.variety_name}</span>
               ) : null}
               {c.crop_category ? (
                 <Badge
@@ -293,7 +296,7 @@ export function SeedStorageView({
       id: "current_stock",
       accessorKey: "seed_stock_quantity",
       header: "Seeds in Stock",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const c = row.original;
         const qty =
           c.seed_stock_quantity !== null && c.seed_stock_quantity !== undefined
@@ -331,7 +334,7 @@ export function SeedStorageView({
               className={cn(
                 "font-mono font-medium text-xs px-2 py-0.5",
                 !isZero &&
-                  "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40"
+                  "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40",
               )}
             >
               {qty.toLocaleString()} {unit}
@@ -355,7 +358,7 @@ export function SeedStorageView({
       id: "seed_expiry_date",
       accessorKey: "seed_expiry_date",
       header: "Expiry Period",
-      cell: ({ row }: any) => {
+      cell: ({ row }) => {
         const c = row.original;
         const exp = getExpiryStatus(c.seed_expiry_date);
         if (exp.status === "none") {
@@ -384,10 +387,7 @@ export function SeedStorageView({
         }
 
         return (
-          <Badge
-            variant="outline"
-            className="text-xs font-normal border-border text-foreground"
-          >
+          <Badge variant="outline" className="text-xs font-normal border-border text-foreground">
             {exp.label}
           </Badge>
         );
@@ -397,8 +397,8 @@ export function SeedStorageView({
       id: "seed_notes",
       accessorKey: "seed_notes",
       header: "Storage Notes",
-      cell: ({ row }: any) => {
-        const notes = row.original.seed_notes || row.original.description;
+      cell: ({ row }) => {
+        const notes = row.original.seed_notes;
         if (!notes) {
           return <span className="text-xs text-muted-foreground">—</span>;
         }
@@ -419,9 +419,7 @@ export function SeedStorageView({
               <div className="font-semibold text-foreground mb-1">
                 {row.original.crop_name} Seed Notes
               </div>
-              <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                {notes}
-              </p>
+              <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{notes}</p>
             </PopoverContent>
           </Popover>
         );
@@ -433,7 +431,7 @@ export function SeedStorageView({
             id: "actions",
             header: "",
             meta: { excludeFromCsv: true },
-            cell: ({ row }: any) => {
+            cell: ({ row }: { row: { original: CropRow } }) => {
               const crop = row.original;
               return (
                 <div className="flex gap-1 justify-end">
@@ -481,9 +479,7 @@ export function SeedStorageView({
 
         <Card className="border bg-card/60 backdrop-blur-xs">
           <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              In Stock
-            </CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">In Stock</CardTitle>
             <CheckCircle2 className="size-4 text-emerald-600 opacity-80" />
           </CardHeader>
           <CardContent className="p-3 pt-0">
@@ -590,16 +586,13 @@ export function SeedStorageView({
           }}
           initial={editing}
           allCrops={crops}
+          onAddNewCrop={onAddNewCrop}
         />
       )}
 
       {/* Quick Stock Adjust Dialog */}
       {adjusting && (
-        <StockAdjustDialog
-          open
-          onOpenChange={(v) => !v && setAdjusting(null)}
-          crop={adjusting}
-        />
+        <StockAdjustDialog open onOpenChange={(v) => !v && setAdjusting(null)} crop={adjusting} />
       )}
 
       {/* Clear Seed Stock Alert */}
@@ -611,15 +604,15 @@ export function SeedStorageView({
               {confirmClear?.variety_name ? ` — ${confirmClear.variety_name}` : ""}"?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will set current seed stock to 0 and clear its expiry date in Seed Storage.
-              The crop will remain safe and intact in the Crop Library.
+              This will set current seed stock to 0 and clear its expiry date in Seed Storage. The
+              crop will remain safe and intact in the Crop Library.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive"
-              onClick={() => clearMut.mutate(confirmClear)}
+              onClick={() => confirmClear && clearMut.mutate(confirmClear)}
             >
               Clear Stock
             </AlertDialogAction>
@@ -637,21 +630,31 @@ export function SeedStorageView({
 interface SeedStorageDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  initial?: any | null;
-  allCrops: any[];
+  initial?: CropRow | null;
+  allCrops: CropRow[];
+  onAddNewCrop?: () => void;
 }
+
+type SeedStorageFormState = {
+  seed_stock_quantity: string;
+  seed_stock_unit: string;
+  seed_expiry_date: string;
+  image_url: string | null;
+  seed_notes: string;
+};
 
 export function SeedStorageDialog({
   open,
   onOpenChange,
   initial,
   allCrops = [],
+  onAddNewCrop,
 }: SeedStorageDialogProps) {
   // If editing an existing seed storage row, lock to that crop; otherwise let the user choose
   const [selectedCropId, setSelectedCropId] = useState<string>(() => initial?.id || "");
 
   // Form state holding seed storage properties
-  const [f, setF] = useState(() => {
+  const [f, setF] = useState<SeedStorageFormState>(() => {
     if (initial) {
       return {
         seed_stock_quantity:
@@ -661,7 +664,7 @@ export function SeedStorageDialog({
         seed_stock_unit: initial.seed_stock_unit || "count",
         seed_expiry_date: initial.seed_expiry_date || "",
         image_url: initial.image_url ?? null,
-        seed_notes: initial.seed_notes || initial.description || "",
+        seed_notes: initial.seed_notes || "",
       };
     }
     return {
@@ -684,11 +687,17 @@ export function SeedStorageDialog({
     mutationFn: () => {
       if (!selectedCropId) throw new Error("Please select a seed from the crop library");
 
-      const values: Record<string, any> = {
-        seed_stock_quantity:
-          f.seed_stock_quantity !== "" && f.seed_stock_quantity !== null
-            ? Number(f.seed_stock_quantity)
-            : null,
+      const parsedQty =
+        f.seed_stock_quantity !== "" && f.seed_stock_quantity !== null
+          ? Number(f.seed_stock_quantity)
+          : null;
+
+      if (parsedQty !== null && isNaN(parsedQty)) {
+        throw new Error("Seed quantity must be a valid number");
+      }
+
+      const values: Record<string, unknown> = {
+        seed_stock_quantity: parsedQty,
         seed_stock_unit: f.seed_stock_unit?.trim() || "count",
         seed_expiry_date: f.seed_expiry_date?.trim() || null,
         image_url: f.image_url || null,
@@ -717,18 +726,21 @@ export function SeedStorageDialog({
         seed_stock_unit: found.seed_stock_unit || "count",
         seed_expiry_date: found.seed_expiry_date || "",
         image_url: found.image_url ?? null,
-        seed_notes: found.seed_notes || found.description || "",
+        seed_notes: found.seed_notes || "",
       });
     }
   }
 
-  function set(k: string, v: any) {
-    setF((prev: any) => ({ ...prev, [k]: v }));
+  function set<K extends keyof SeedStorageFormState>(k: K, v: SeedStorageFormState[K]) {
+    setF((prev) => ({ ...prev, [k]: v }));
   }
 
   function addMonthsToDate(months: number) {
-    const d = new Date();
-    d.setMonth(d.getMonth() + months);
+    const now = new Date();
+    const targetMonth = now.getMonth() + months;
+    const d = new Date(now.getFullYear(), targetMonth, 1);
+    const maxDays = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(now.getDate(), maxDays));
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
@@ -750,7 +762,8 @@ export function SeedStorageDialog({
             </DialogTitle>
           </div>
           <DialogDescription className="text-xs text-muted-foreground">
-            Track seed inventory stock, count, and expiry period. Seeds are always linked to crops in your Crop Library.
+            Track seed inventory stock, count, and expiry period. Seeds are always linked to crops
+            in your Crop Library.
           </DialogDescription>
         </DialogHeader>
 
@@ -770,11 +783,10 @@ export function SeedStorageDialog({
               // Locked to current crop when editing
               <div className="p-3 rounded-lg border bg-muted/40 flex items-center justify-between">
                 <div>
-                  <div className="font-medium text-foreground text-sm">
-                    {initial.crop_name}
-                  </div>
+                  <div className="font-medium text-foreground text-sm">{initial.crop_name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {initial.variety_name || "Standard variety"} • {initial.crop_category || "General"}
+                    {initial.variety_name || "Standard variety"} •{" "}
+                    {initial.crop_category || "General"}
                   </div>
                 </div>
                 {initial.crop_category && (
@@ -786,28 +798,59 @@ export function SeedStorageDialog({
             ) : allCrops.length === 0 ? (
               <div className="p-3.5 rounded-lg border border-amber-300/60 bg-amber-50/50 dark:bg-amber-950/20 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
                 <Info className="size-4 shrink-0 text-amber-600 mt-0.5" />
-                <div>
-                  <p className="font-medium">No crops found in your Crop Library.</p>
-                  <p className="mt-0.5 text-muted-foreground">
-                    Please add your varieties under the <strong>Crop Library</strong> tab first.
-                  </p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="font-medium">No crops found in your Crop Library.</p>
+                    <p className="mt-0.5 text-muted-foreground">
+                      Please add your varieties under the <strong>Crop Library</strong> tab first.
+                    </p>
+                  </div>
+                  {onAddNewCrop && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7"
+                      onClick={() => {
+                        onOpenChange(false);
+                        onAddNewCrop();
+                      }}
+                    >
+                      <Plus className="size-3 mr-1" /> Add Crop to Library
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
-              <Select value={selectedCropId} onValueChange={handleSelectCrop}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Choose an available crop from the library..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {allCrops.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span className="font-medium">{c.crop_name}</span>
-                      {c.variety_name ? ` (${c.variety_name})` : ""}
-                      {c.crop_category ? ` • ${c.crop_category}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1.5">
+                <Select value={selectedCropId} onValueChange={handleSelectCrop}>
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Choose an available crop from the library..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {allCrops.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="font-medium">{c.crop_name}</span>
+                        {c.variety_name ? ` (${c.variety_name})` : ""}
+                        {c.crop_category ? ` • ${c.crop_category}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {onAddNewCrop && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      className="text-[11px] text-primary hover:underline cursor-pointer"
+                      onClick={() => {
+                        onOpenChange(false);
+                        onAddNewCrop();
+                      }}
+                    >
+                      + Need a variety not listed? Add to Crop Library
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Selected Crop Preview */}
@@ -906,7 +949,15 @@ export function SeedStorageDialog({
                 </Label>
                 <Input
                   type="date"
-                  value={f.seed_expiry_date?.match(/^\d{4}-\d{2}-\d{2}$/) ? f.seed_expiry_date : ""}
+                  value={
+                    f.seed_expiry_date
+                      ? f.seed_expiry_date.match(/^\d{4}-\d{2}-\d{2}$/)
+                        ? f.seed_expiry_date
+                        : f.seed_expiry_date.match(/^\d{4}-\d{2}$/)
+                          ? `${f.seed_expiry_date}-01`
+                          : ""
+                      : ""
+                  }
                   onChange={(e) => set("seed_expiry_date", e.target.value)}
                   className="text-sm bg-background"
                 />
@@ -986,10 +1037,7 @@ export function SeedStorageDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={() => mut.mutate()}
-            disabled={mut.isPending || !selectedCropId}
-          >
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending || !selectedCropId}>
             {mut.isPending ? "Saving..." : initial ? "Save changes" : "Save Seed Storage"}
           </Button>
         </DialogFooter>
@@ -1004,14 +1052,10 @@ export function SeedStorageDialog({
 interface StockAdjustDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  crop: any;
+  crop: CropRow;
 }
 
-export function StockAdjustDialog({
-  open,
-  onOpenChange,
-  crop,
-}: StockAdjustDialogProps) {
+export function StockAdjustDialog({ open, onOpenChange, crop }: StockAdjustDialogProps) {
   const currentQty =
     crop.seed_stock_quantity !== null && crop.seed_stock_quantity !== undefined
       ? Number(crop.seed_stock_quantity)
@@ -1029,8 +1073,8 @@ export function StockAdjustDialog({
     mode === "set"
       ? numVal
       : mode === "add"
-      ? currentQty + numVal
-      : Math.max(0, currentQty - numVal);
+        ? currentQty + numVal
+        : Math.max(0, currentQty - numVal);
 
   const mut = useMutation({
     mutationFn: () => {
@@ -1060,7 +1104,10 @@ export function StockAdjustDialog({
             Adjust Stock: {crop.crop_name}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Current stock: <strong className="text-foreground">{currentQty} {unit}</strong>
+            Current stock:{" "}
+            <strong className="text-foreground">
+              {currentQty} {unit}
+            </strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -1074,7 +1121,9 @@ export function StockAdjustDialog({
               }}
               className={cn(
                 "py-1.5 px-2 rounded-md font-medium text-center transition cursor-pointer",
-                mode === "set" ? "bg-background text-foreground shadow-2xs" : "text-muted-foreground"
+                mode === "set"
+                  ? "bg-background text-foreground shadow-2xs"
+                  : "text-muted-foreground",
               )}
             >
               Set Exact (=)
@@ -1087,7 +1136,9 @@ export function StockAdjustDialog({
               }}
               className={cn(
                 "py-1.5 px-2 rounded-md font-medium text-center transition cursor-pointer",
-                mode === "add" ? "bg-background text-foreground shadow-2xs" : "text-muted-foreground"
+                mode === "add"
+                  ? "bg-background text-foreground shadow-2xs"
+                  : "text-muted-foreground",
               )}
             >
               Add (+)
@@ -1100,7 +1151,9 @@ export function StockAdjustDialog({
               }}
               className={cn(
                 "py-1.5 px-2 rounded-md font-medium text-center transition cursor-pointer",
-                mode === "deduct" ? "bg-background text-foreground shadow-2xs" : "text-muted-foreground"
+                mode === "deduct"
+                  ? "bg-background text-foreground shadow-2xs"
+                  : "text-muted-foreground",
               )}
             >
               Deduct (-)
@@ -1112,8 +1165,8 @@ export function StockAdjustDialog({
               {mode === "set"
                 ? `New Stock Amount (${unit})`
                 : mode === "add"
-                ? `Amount to Add (${unit})`
-                : `Amount to Deduct (${unit})`}
+                  ? `Amount to Add (${unit})`
+                  : `Amount to Deduct (${unit})`}
             </Label>
             <div className="relative">
               <Input
@@ -1144,7 +1197,11 @@ export function StockAdjustDialog({
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={() => mut.mutate()} disabled={mut.isPending}>
+          <Button
+            size="sm"
+            onClick={() => mut.mutate()}
+            disabled={mut.isPending || val.trim() === ""}
+          >
             {mut.isPending ? "Saving..." : "Save Stock"}
           </Button>
         </DialogFooter>

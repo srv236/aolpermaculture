@@ -15,7 +15,8 @@ export function loadGoogleMaps(): Promise<typeof google> {
 
   loadPromise = new Promise((resolve, reject) => {
     const key = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string;
-    const channel = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined;
+    const channel = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as
+      string | undefined;
     if (!key) {
       reject(new Error("Google Maps key missing"));
       return;
@@ -64,21 +65,33 @@ export function parseWkt(wkt: string | null | undefined): google.maps.LatLngLite
 
 export function toWkt(path: google.maps.LatLngLiteral[]): string {
   if (!path.length) return "";
-  const closed = path[0].lat === path[path.length - 1].lat && path[0].lng === path[path.length - 1].lng
-    ? path : [...path, path[0]];
+  const closed =
+    path[0].lat === path[path.length - 1].lat && path[0].lng === path[path.length - 1].lng
+      ? path
+      : [...path, path[0]];
   // Store lng lat (standard WKT order)
   return `POLYGON((${closed.map((p) => `${p.lng} ${p.lat}`).join(",")}))`;
 }
 
 export function centroid(path: google.maps.LatLngLiteral[]): google.maps.LatLngLiteral | null {
   if (!path.length) return null;
-  let lat = 0, lng = 0;
-  for (const p of path) { lat += p.lat; lng += p.lng; }
+  let lat = 0,
+    lng = 0;
+  for (const p of path) {
+    lat += p.lat;
+    lng += p.lng;
+  }
   return { lat: lat / path.length, lng: lng / path.length };
 }
 
 function isValidPath(path: google.maps.LatLngLiteral[]) {
-  return path.every((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180);
+  return path.every(
+    (p) =>
+      Number.isFinite(p.lat) &&
+      Number.isFinite(p.lng) &&
+      Math.abs(p.lat) <= 90 &&
+      Math.abs(p.lng) <= 180,
+  );
 }
 
 function normalizePath(path: google.maps.LatLngLiteral[]) {

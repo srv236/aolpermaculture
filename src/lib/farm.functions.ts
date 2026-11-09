@@ -1,14 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
+
+type FarmInsert = Database["public"]["Tables"]["farms"]["Insert"];
+type FarmUpdate = Database["public"]["Tables"]["farms"]["Update"];
+type PlotInsert = Database["public"]["Tables"]["plots"]["Insert"];
+type PlotUpdate = Database["public"]["Tables"]["plots"]["Update"];
+type CropRow = Database["public"]["Tables"]["crops"]["Row"];
+type CropInsert = Database["public"]["Tables"]["crops"]["Insert"];
+type CropUpdate = Database["public"]["Tables"]["crops"]["Update"];
+type SowingInsert = Database["public"]["Tables"]["sowing_records"]["Insert"];
+type SowingUpdate = Database["public"]["Tables"]["sowing_records"]["Update"];
+type HarvestInsert = Database["public"]["Tables"]["harvest_records"]["Insert"];
+type HarvestUpdate = Database["public"]["Tables"]["harvest_records"]["Update"];
 
 // ---------- FARMS ----------
 export const listFarms = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("farms")
-      .select("*")
-      .order("name");
+    const { data, error } = await context.supabase.from("farms").select("*").order("name");
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -28,15 +38,22 @@ export const getFarm = createServerFn({ method: "GET" })
 
 export const upsertFarm = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Partial<FarmInsert> }) => d)
   .handler(async ({ data, context }) => {
-    const payload: any = { ...data.values };
+    const payload = { ...data.values };
     if (data.id) {
-      const { error } = await context.supabase.from("farms").update(payload as any).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("farms")
+        .update(payload as FarmUpdate)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("farms").insert(payload as any).select("id").single();
+    const { data: ins, error } = await context.supabase
+      .from("farms")
+      .insert(payload as FarmInsert)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -64,14 +81,21 @@ export const listPlots = createServerFn({ method: "GET" })
 
 export const upsertPlot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Partial<PlotInsert> }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const { error } = await context.supabase.from("plots").update(data.values as any).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("plots")
+        .update(data.values as PlotUpdate)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("plots").insert(data.values as any).select("id").single();
+    const { data: ins, error } = await context.supabase
+      .from("plots")
+      .insert(data.values as PlotInsert)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -81,19 +105,26 @@ export const deletePlot = createServerFn({ method: "POST" })
   .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("plots").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "23503" || error.message?.includes("violates foreign key constraint")) {
+        throw new Error(
+          "Cannot delete this plot because it has associated sowing or harvest records.",
+        );
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
 // ---------- CROPS & SEEDS ----------
-export function unpackSeedMetadata(crop: any) {
+export function unpackSeedMetadata<T extends Partial<CropRow> | null | undefined>(crop: T): T {
   if (!crop) return crop;
-  let meta: any = {};
+  let meta: Record<string, unknown> = {};
   if (crop.description && typeof crop.description === "string") {
     const match = crop.description.match(/<!--seed_meta:([\s\S]*?)-->/);
     if (match) {
       try {
-        meta = JSON.parse(match[1]);
+        meta = JSON.parse(match[1]) as Record<string, unknown>;
       } catch {
         // ignore parse error
       }
@@ -103,32 +134,32 @@ export function unpackSeedMetadata(crop: any) {
   const cleanDescription =
     crop.description && typeof crop.description === "string"
       ? crop.description.replace(/<!--seed_meta:[\s\S]*?-->/g, "").trim()
-      : crop.description ?? "";
+      : (crop.description ?? "");
 
   return {
     ...crop,
-    description: cleanDescription || (crop.description ?? null),
+    description: cleanDescription || null,
     seed_stock_quantity:
       crop.seed_stock_quantity !== undefined && crop.seed_stock_quantity !== null
         ? Number(crop.seed_stock_quantity)
         : meta.seed_stock_quantity !== undefined && meta.seed_stock_quantity !== null
-        ? Number(meta.seed_stock_quantity)
-        : null,
-    seed_stock_unit: crop.seed_stock_unit ?? meta.seed_stock_unit ?? "g",
+          ? Number(meta.seed_stock_quantity)
+          : null,
+    seed_stock_unit: crop.seed_stock_unit ?? (meta.seed_stock_unit as string | null) ?? "count",
     germination_days:
       crop.germination_days !== undefined && crop.germination_days !== null
         ? Number(crop.germination_days)
         : meta.germination_days !== undefined && meta.germination_days !== null
-        ? Number(meta.germination_days)
-        : null,
+          ? Number(meta.germination_days)
+          : null,
     is_repeat_harvest:
       crop.is_repeat_harvest !== undefined && crop.is_repeat_harvest !== null
         ? Boolean(crop.is_repeat_harvest)
         : Boolean(meta.is_repeat_harvest ?? false),
     repeat_harvest_interval:
-      crop.repeat_harvest_interval ?? meta.repeat_harvest_interval ?? null,
-    seed_expiry_date: crop.seed_expiry_date ?? meta.seed_expiry_date ?? null,
-    seed_notes: crop.seed_notes ?? meta.seed_notes ?? (cleanDescription || null),
+      crop.repeat_harvest_interval ?? (meta.repeat_harvest_interval as string | null) ?? null,
+    seed_expiry_date: crop.seed_expiry_date ?? (meta.seed_expiry_date as string | null) ?? null,
+    seed_notes: crop.seed_notes ?? (meta.seed_notes as string | null) ?? null,
   };
 }
 
@@ -142,39 +173,35 @@ export function packSeedMetadata(
     repeat_harvest_interval?: string | null;
     seed_expiry_date?: string | null;
     seed_notes?: string | null;
-  }
+  },
 ): string | null {
-  const cleanDescription = (description || "")
-    .replace(/<!--seed_meta:[\s\S]*?-->/g, "")
-    .trim();
-
-  const effectiveNotes = seedData.seed_notes?.trim() || cleanDescription;
+  const cleanDescription = (description || "").replace(/<!--seed_meta:[\s\S]*?-->/g, "").trim();
 
   const hasSeedData =
     (seedData.seed_stock_quantity !== undefined && seedData.seed_stock_quantity !== null) ||
-    seedData.seed_stock_unit ||
+    Boolean(seedData.seed_stock_unit) ||
     (seedData.germination_days !== undefined && seedData.germination_days !== null) ||
-    seedData.is_repeat_harvest ||
-    seedData.repeat_harvest_interval ||
-    seedData.seed_expiry_date ||
-    seedData.seed_notes;
+    Boolean(seedData.is_repeat_harvest) ||
+    Boolean(seedData.repeat_harvest_interval) ||
+    Boolean(seedData.seed_expiry_date) ||
+    Boolean(seedData.seed_notes);
 
   if (!hasSeedData) {
-    return effectiveNotes || null;
+    return cleanDescription || null;
   }
 
   const metaPayload = {
     seed_stock_quantity: seedData.seed_stock_quantity ?? null,
-    seed_stock_unit: seedData.seed_stock_unit || "g",
+    seed_stock_unit: seedData.seed_stock_unit || "count",
     germination_days: seedData.germination_days ?? null,
-    is_repeat_harvest: !!seedData.is_repeat_harvest,
+    is_repeat_harvest: Boolean(seedData.is_repeat_harvest),
     repeat_harvest_interval: seedData.repeat_harvest_interval || null,
     seed_expiry_date: seedData.seed_expiry_date || null,
-    seed_notes: effectiveNotes || null,
+    seed_notes: seedData.seed_notes?.trim() || null,
   };
 
   const tag = `<!--seed_meta:${JSON.stringify(metaPayload)}-->`;
-  return effectiveNotes ? `${tag}\n${effectiveNotes}` : tag;
+  return cleanDescription ? `${tag}\n${cleanDescription}` : tag;
 }
 
 export const listCrops = createServerFn({ method: "GET" })
@@ -187,13 +214,31 @@ export const listCrops = createServerFn({ method: "GET" })
       .order("variety_name");
     if (error) throw new Error(error.message);
     const rows = data ?? [];
-    return rows.map(unpackSeedMetadata);
+    return rows.map((crop) => unpackSeedMetadata(crop));
   });
 
 export const upsertCrop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Record<string, unknown> }) => d)
   .handler(async ({ data, context }) => {
+    // If updating, fetch existing crop to merge and prevent data loss on partial updates
+    let existingCrop: CropRow | null = null;
+    if (data.id) {
+      const { data: found } = await context.supabase
+        .from("crops")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (found) {
+        existingCrop = unpackSeedMetadata(found);
+      }
+    }
+
+    const mergedValues: Record<string, unknown> = {
+      ...(existingCrop ? (existingCrop as unknown as Record<string, unknown>) : {}),
+      ...data.values,
+    };
+
     const allowed = [
       "crop_name",
       "variety_name",
@@ -218,32 +263,36 @@ export const upsertCrop = createServerFn({ method: "POST" })
       "seed_expiry_date",
       "seed_notes",
     ];
-    const sanitized: Record<string, any> = {};
+    const sanitized: Record<string, unknown> = {};
     for (const key of allowed) {
-      if (key in data.values) {
-        sanitized[key] = data.values[key];
+      if (key in mergedValues) {
+        sanitized[key] = mergedValues[key];
       }
     }
 
     // Always preserve seed metadata safely inside description for resilient fallback
-    sanitized.description = packSeedMetadata(
-      sanitized.description ?? sanitized.seed_notes,
-      {
-        seed_stock_quantity: sanitized.seed_stock_quantity,
-        seed_stock_unit: sanitized.seed_stock_unit,
-        germination_days: sanitized.germination_days,
-        is_repeat_harvest: sanitized.is_repeat_harvest,
-        repeat_harvest_interval: sanitized.repeat_harvest_interval,
-        seed_expiry_date: sanitized.seed_expiry_date,
-        seed_notes: sanitized.seed_notes,
-      }
-    );
+    sanitized.description = packSeedMetadata(sanitized.description as string | null | undefined, {
+      seed_stock_quantity: sanitized.seed_stock_quantity as number | null | undefined,
+      seed_stock_unit: sanitized.seed_stock_unit as string | null | undefined,
+      germination_days: sanitized.germination_days as number | null | undefined,
+      is_repeat_harvest: sanitized.is_repeat_harvest as boolean | null | undefined,
+      repeat_harvest_interval: sanitized.repeat_harvest_interval as string | null | undefined,
+      seed_expiry_date: sanitized.seed_expiry_date as string | null | undefined,
+      seed_notes: sanitized.seed_notes as string | null | undefined,
+    });
 
-    const execute = async (payload: Record<string, any>) => {
+    const execute = async (payload: Record<string, unknown>) => {
       if (data.id) {
-        return await context.supabase.from("crops").update(payload as any).eq("id", data.id);
+        return await context.supabase
+          .from("crops")
+          .update(payload as CropUpdate)
+          .eq("id", data.id);
       }
-      return await context.supabase.from("crops").insert(payload as any).select("id").single();
+      return await context.supabase
+        .from("crops")
+        .insert(payload as CropInsert)
+        .select("id")
+        .single();
     };
 
     let result = await execute(sanitized);
@@ -265,7 +314,7 @@ export const upsertCrop = createServerFn({ method: "POST" })
       const hasMissingImageCol = errMsg.includes("image_url");
 
       if (hasMissingSeedCol || hasMissingImageCol) {
-        const fallbackPayload: Record<string, any> = { ...sanitized };
+        const fallbackPayload: Record<string, unknown> = { ...sanitized };
         if (hasMissingSeedCol) {
           for (const col of seedColumns) {
             delete fallbackPayload[col];
@@ -287,7 +336,14 @@ export const deleteCrop = createServerFn({ method: "POST" })
   .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("crops").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "23503" || error.message?.includes("violates foreign key constraint")) {
+        throw new Error(
+          "Cannot delete this crop because it is used in existing sowing or harvest records. Deactivate it instead.",
+        );
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
@@ -308,24 +364,42 @@ export const listSowing = createServerFn({ method: "GET" })
 
 export const upsertSowing = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Partial<SowingInsert> }) => d)
   .handler(async ({ data, context }) => {
     const allowed = [
-      "plot_id", "variety_id", "planting_date", "quantity_planted", "quantity_unit",
-      "seed_source", "expected_first_harvest", "expected_final_harvest", "status",
-      "is_continuous_harvest", "estimated_harvest_interval_days", "is_replanting",
-      "original_sowing_id", "area_utilized_percent", "notes",
-    ];
-    const payload: Record<string, any> = {};
+      "plot_id",
+      "variety_id",
+      "planting_date",
+      "quantity_planted",
+      "quantity_unit",
+      "seed_source",
+      "expected_first_harvest",
+      "expected_final_harvest",
+      "status",
+      "is_continuous_harvest",
+      "estimated_harvest_interval_days",
+      "is_replanting",
+      "original_sowing_id",
+      "area_utilized_percent",
+      "notes",
+    ] as const;
+    const payload: Record<string, unknown> = {};
     for (const k of allowed) {
       if (data.values && k in data.values) payload[k] = data.values[k];
     }
     if (data.id) {
-      const { error } = await context.supabase.from("sowing_records").update(payload as any).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("sowing_records")
+        .update(payload as SowingUpdate)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("sowing_records").insert(payload as any).select("id").single();
+    const { data: ins, error } = await context.supabase
+      .from("sowing_records")
+      .insert(payload as SowingInsert)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -346,7 +420,9 @@ export const listHarvest = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("harvest_records")
-      .select("*, plots!inner(id, plot_number, farm_id), crops:variety_id(crop_name, variety_name, crop_category)")
+      .select(
+        "*, plots!inner(id, plot_number, farm_id), crops:variety_id(crop_name, variety_name, crop_category)",
+      )
       .order("harvest_date", { ascending: false });
     if (data.farmId) q = q.eq("plots.farm_id", data.farmId);
     const { data: rows, error } = await q;
@@ -356,23 +432,38 @@ export const listHarvest = createServerFn({ method: "GET" })
 
 export const upsertHarvest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id?: string; values: Record<string, any> }) => d)
+  .validator((d: { id?: string; values: Partial<HarvestInsert> }) => d)
   .handler(async ({ data, context }) => {
     const allowed = [
-      "plot_id", "variety_id", "sowing_id", "harvest_date", "harvest_time_start",
-      "harvest_time_end", "quantity_harvested", "quality_grade",
-      "harvest_sequence_number", "estimated_remaining_yield", "notes",
-    ];
-    const payload: Record<string, any> = {};
+      "plot_id",
+      "variety_id",
+      "sowing_id",
+      "harvest_date",
+      "harvest_time_start",
+      "harvest_time_end",
+      "quantity_harvested",
+      "quality_grade",
+      "harvest_sequence_number",
+      "estimated_remaining_yield",
+      "notes",
+    ] as const;
+    const payload: Record<string, unknown> = {};
     for (const k of allowed) {
       if (data.values && k in data.values) payload[k] = data.values[k];
     }
     if (data.id) {
-      const { error } = await context.supabase.from("harvest_records").update(payload as any).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("harvest_records")
+        .update(payload as HarvestUpdate)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await context.supabase.from("harvest_records").insert(payload as any).select("id").single();
+    const { data: ins, error } = await context.supabase
+      .from("harvest_records")
+      .insert(payload as HarvestInsert)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });

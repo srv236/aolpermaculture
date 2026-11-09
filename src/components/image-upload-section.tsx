@@ -3,13 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  UploadCloud,
-  Upload,
-  Trash2,
-  Link as LinkIcon,
-  Loader2,
-} from "lucide-react";
+import { UploadCloud, Upload, Trash2, Link as LinkIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -45,13 +39,11 @@ export function ImageUploadSection({
       const ext = file.name.split(".").pop() || "jpg";
       const path = `crops/${crypto.randomUUID()}.${ext}`;
 
-      const { error } = await supabase.storage
-        .from("knowledge-images")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type,
-        });
+      const { error } = await supabase.storage.from("knowledge-images").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
 
       if (error) {
         // Fallback to Base64 Data URL if Supabase storage upload fails or bucket not configured
@@ -67,9 +59,7 @@ export function ImageUploadSection({
         return;
       }
 
-      const { data: pub } = supabase.storage
-        .from("knowledge-images")
-        .getPublicUrl(path);
+      const { data: pub } = supabase.storage.from("knowledge-images").getPublicUrl(path);
 
       onChange(pub.publicUrl);
       toast.success("Image uploaded successfully");
@@ -196,7 +186,7 @@ export function ImageUploadSection({
               "px-2 py-0.5 rounded transition-colors text-xs cursor-pointer",
               activeTab === "upload"
                 ? "bg-muted text-foreground font-medium"
-                : "hover:text-foreground"
+                : "hover:text-foreground",
             )}
           >
             File upload
@@ -209,7 +199,7 @@ export function ImageUploadSection({
               "px-2 py-0.5 rounded transition-colors text-xs cursor-pointer",
               activeTab === "url"
                 ? "bg-muted text-foreground font-medium"
-                : "hover:text-foreground"
+                : "hover:text-foreground",
             )}
           >
             Image URL
@@ -231,7 +221,7 @@ export function ImageUploadSection({
             dragOver
               ? "border-primary bg-primary/5"
               : "border-border/80 hover:border-muted-foreground/50 hover:bg-muted/30",
-            uploading && "opacity-70 pointer-events-none"
+            uploading && "opacity-70 pointer-events-none",
           )}
         >
           <input
@@ -258,9 +248,7 @@ export function ImageUploadSection({
               <p className="text-xs font-medium text-foreground">
                 Click to upload or drag and drop
               </p>
-              <p className="text-[11px] text-muted-foreground">
-                PNG, JPG, or WebP up to 15MB
-              </p>
+              <p className="text-[11px] text-muted-foreground">PNG, JPG, or WebP up to 15MB</p>
             </div>
           )}
         </div>
@@ -295,4 +283,3 @@ export function ImageUploadSection({
     </div>
   );
 }
-

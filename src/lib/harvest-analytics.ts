@@ -1,5 +1,10 @@
 import {
-  startOfDay, startOfWeek, startOfMonth, format, parseISO, isWithinInterval,
+  startOfDay,
+  startOfWeek,
+  startOfMonth,
+  format,
+  parseISO,
+  isWithinInterval,
 } from "date-fns";
 
 export type HarvestRow = {
@@ -13,7 +18,11 @@ export type HarvestRow = {
   crop_id?: string;
   variety_id?: string;
   plots?: { plot_number?: string | null } | null;
-  crops?: { crop_name?: string | null; variety_name?: string | null; crop_category?: string | null } | null;
+  crops?: {
+    crop_name?: string | null;
+    variety_name?: string | null;
+    crop_category?: string | null;
+  } | null;
 };
 
 export type Granularity = "day" | "week" | "month";
@@ -31,7 +40,6 @@ export type Filters = {
 export function cropKey(r: HarvestRow): string | undefined {
   return r.crop_id ?? r.variety_id;
 }
-
 
 export function cropLabel(r: HarvestRow): string {
   const n = r.crops?.crop_name || "Unknown";
@@ -58,7 +66,6 @@ export function applyFilters(rows: HarvestRow[], f: Filters): HarvestRow[] {
     return true;
   });
 }
-
 
 function bucketStart(d: Date, g: Granularity): Date {
   if (g === "day") return startOfDay(d);
@@ -145,11 +152,10 @@ export function monthlyMatrix(rows: HarvestRow[]) {
     const key = `${c}|${ts}`;
     cell.set(key, (cell.get(key) || 0) + (r.quantity_harvested || 0));
   }
-  const months = [...monthSet].sort((a, b) => a - b)
+  const months = [...monthSet]
+    .sort((a, b) => a - b)
     .map((ts) => ({ ts, label: format(new Date(ts), "MMM ''yy") }));
-  const crops = [...cropTotals.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([c]) => c);
+  const crops = [...cropTotals.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
   let max = 0;
   for (const v of cell.values()) if (v > max) max = v;
   return { months, crops, cell, max };
@@ -213,7 +219,6 @@ export function colorFor(key: string): string {
   return `hsl(${hue.toFixed(1)} ${sat}% ${light}%)`;
 }
 
-
 export function cropCategory(r: HarvestRow): string {
   return (r.crops?.crop_category || "other").toLowerCase();
 }
@@ -225,13 +230,22 @@ export function perCropStats(rows: HarvestRow[]) {
   for (const r of rows) {
     const k = cropLabel(r);
     let e = m.get(k);
-    if (!e) { e = { kg: 0, events: 0, plots: new Set() }; m.set(k, e); }
+    if (!e) {
+      e = { kg: 0, events: 0, plots: new Set() };
+      m.set(k, e);
+    }
     e.kg += r.quantity_harvested || 0;
     e.events += 1;
     if (r.plot_id) e.plots.add(r.plot_id);
   }
   const out = new Map<string, { kg: number; events: number; plotCount: number; pct: number }>();
-  for (const [k, v] of m) out.set(k, { kg: v.kg, events: v.events, plotCount: v.plots.size, pct: total ? (v.kg / total) * 100 : 0 });
+  for (const [k, v] of m)
+    out.set(k, {
+      kg: v.kg,
+      events: v.events,
+      plotCount: v.plots.size,
+      pct: total ? (v.kg / total) * 100 : 0,
+    });
   return out;
 }
 
@@ -242,19 +256,35 @@ export function perPlotStats(rows: HarvestRow[]) {
   for (const r of rows) {
     const k = plotLabel(r);
     let e = m.get(k);
-    if (!e) { e = { kg: 0, events: 0, crops: new Map() }; m.set(k, e); }
+    if (!e) {
+      e = { kg: 0, events: 0, crops: new Map() };
+      m.set(k, e);
+    }
     e.kg += r.quantity_harvested || 0;
     e.events += 1;
     const ck = cropLabel(r);
     e.crops.set(ck, (e.crops.get(ck) || 0) + (r.quantity_harvested || 0));
   }
-  const out = new Map<string, { kg: number; events: number; pct: number; topCrops: { name: string; kg: number; pct: number }[] }>();
+  const out = new Map<
+    string,
+    {
+      kg: number;
+      events: number;
+      pct: number;
+      topCrops: { name: string; kg: number; pct: number }[];
+    }
+  >();
   for (const [k, v] of m) {
     const topCropsArr = [...v.crops.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([name, kg]) => ({ name, kg, pct: v.kg ? (kg / v.kg) * 100 : 0 }));
-    out.set(k, { kg: v.kg, events: v.events, pct: total ? (v.kg / total) * 100 : 0, topCrops: topCropsArr });
+    out.set(k, {
+      kg: v.kg,
+      events: v.events,
+      pct: total ? (v.kg / total) * 100 : 0,
+      topCrops: topCropsArr,
+    });
   }
   return out;
 }
@@ -270,7 +300,10 @@ export function perBucketStats(
     const d = bucketStart(parseISO(r.harvest_date), g);
     const label = bucketLabel(d, g);
     let e = m.get(label);
-    if (!e) { e = { kg: 0, events: 0, ts: d.getTime() }; m.set(label, e); }
+    if (!e) {
+      e = { kg: 0, events: 0, ts: d.getTime() };
+      m.set(label, e);
+    }
     e.kg += r.quantity_harvested || 0;
     e.events += 1;
   }

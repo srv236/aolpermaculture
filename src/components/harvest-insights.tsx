@@ -1,35 +1,85 @@
 import { useMemo, useState } from "react";
 import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
-  BarChart, Bar, PieChart, Pie, Cell,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
-import { subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, format } from "date-fns";
+import {
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  parseISO,
+  format,
+} from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import { Check, ChevronDown, RotateCcw, Sprout, Leaf, MapPin, CalendarRange, Scale, BarChart3 } from "lucide-react";
+  Check,
+  ChevronDown,
+  RotateCcw,
+  Sprout,
+  Leaf,
+  MapPin,
+  CalendarRange,
+  Scale,
+  BarChart3,
+} from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import {
-  applyFilters, aggregateByPeriod, cumulativeByPeriod, topCrops, plotShare, monthlyMatrix,
-  summaryStats, colorFor, cropLabel, plotLabel, cropKey, cropCategory,
-  perCropStats, perPlotStats, perBucketStats,
-  type HarvestRow, type Filters, type Granularity,
+  applyFilters,
+  aggregateByPeriod,
+  cumulativeByPeriod,
+  topCrops,
+  plotShare,
+  monthlyMatrix,
+  summaryStats,
+  colorFor,
+  cropLabel,
+  plotLabel,
+  cropKey,
+  cropCategory,
+  perCropStats,
+  perPlotStats,
+  perBucketStats,
+  type HarvestRow,
+  type Filters,
+  type Granularity,
 } from "@/lib/harvest-analytics";
-import { TooltipCard, TooltipHeader, TooltipRow, Delta, fmtKg } from "@/components/insights-tooltip";
+import {
+  TooltipCard,
+  TooltipHeader,
+  TooltipRow,
+  Delta,
+  fmtKg,
+} from "@/components/insights-tooltip";
 import { Input } from "@/components/ui/input";
-
 
 type Preset = "30d" | "3m" | "ytd" | "12m" | "all";
 
 const PRESETS: { id: Preset; label: string }[] = [
   { id: "30d", label: "Last 30 days" },
-  { id: "3m",  label: "Last 3 months" },
+  { id: "3m", label: "Last 3 months" },
   { id: "ytd", label: "This year" },
   { id: "12m", label: "Last 12 months" },
   { id: "all", label: "All time" },
@@ -38,12 +88,19 @@ const PRESETS: { id: Preset; label: string }[] = [
 function rangeFromPreset(p: Preset, rows: HarvestRow[]): { from?: Date; to?: Date } {
   const now = new Date();
   switch (p) {
-    case "30d": return { from: subMonths(now, 1), to: now };
-    case "3m":  return { from: subMonths(now, 3), to: now };
-    case "ytd": return { from: startOfYear(now), to: now };
-    case "12m": return { from: subMonths(now, 12), to: now };
+    case "30d":
+      return { from: subMonths(now, 1), to: now };
+    case "3m":
+      return { from: subMonths(now, 3), to: now };
+    case "ytd":
+      return { from: startOfYear(now), to: now };
+    case "12m":
+      return { from: subMonths(now, 12), to: now };
     case "all": {
-      const dates = rows.map((r) => r.harvest_date).filter(Boolean).sort();
+      const dates = rows
+        .map((r) => r.harvest_date)
+        .filter(Boolean)
+        .sort();
       return { from: dates.length ? parseISO(dates[0]) : undefined, to: now };
     }
   }
@@ -57,15 +114,28 @@ function autoGran(from?: Date, to?: Date): Granularity {
   return "month";
 }
 
-const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   const [preset, setPreset] = useState<Preset>("all");
   const [granOverride, setGranOverride] = useState<Granularity | "auto">("auto");
   const [plotIds, setPlotIds] = useState<string[]>([]);
   const [cropIds, setCropIds] = useState<string[]>([]);
-  const [year, setYear] = useState<string>("all");       // "all" or "2025"
-  const [month, setMonth] = useState<string>("all");     // "all" or "1".."12"
+  const [year, setYear] = useState<string>("all"); // "all" or "2025"
+  const [month, setMonth] = useState<string>("all"); // "all" or "1".."12"
 
   // Years derived from data, descending
   const years = useMemo(() => {
@@ -95,8 +165,14 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   const stats = useMemo(() => summaryStats(filtered), [filtered]);
   // When the user has picked specific crops, show each as its own area.
   const seriesTopN = cropIds.length > 0 ? Math.max(cropIds.length, 6) : 6;
-  const series = useMemo(() => aggregateByPeriod(filtered, granularity, seriesTopN), [filtered, granularity, seriesTopN]);
-  const cumulative = useMemo(() => cumulativeByPeriod(filtered, granularity, seriesTopN), [filtered, granularity, seriesTopN]);
+  const series = useMemo(
+    () => aggregateByPeriod(filtered, granularity, seriesTopN),
+    [filtered, granularity, seriesTopN],
+  );
+  const cumulative = useMemo(
+    () => cumulativeByPeriod(filtered, granularity, seriesTopN),
+    [filtered, granularity, seriesTopN],
+  );
   const top = useMemo(() => topCrops(filtered, 10), [filtered]);
   const plotsAgg = useMemo(() => plotShare(filtered), [filtered]);
   const matrix = useMemo(() => monthlyMatrix(filtered), [filtered]);
@@ -106,14 +182,16 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   const plotStatsMap = useMemo(() => perPlotStats(filtered), [filtered]);
   const filteredTotalKg = useMemo(
     () => filtered.reduce((s, r) => s + (r.quantity_harvested || 0), 0),
-    [filtered]
+    [filtered],
   );
 
   // option lists from full rows so filters always show every choice
   const plotOptions = useMemo(() => {
     const m = new Map<string, string>();
     for (const r of rows) if (r.plot_id) m.set(r.plot_id, plotLabel(r));
-    return [...m.entries()].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+    return [...m.entries()]
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [rows]);
   const cropOptions = useMemo(() => {
     const m = new Map<string, { id: string; label: string; category: string }>();
@@ -137,12 +215,20 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   }, [rows, from, to, plotIds]);
 
   const reset = () => {
-    setPreset("all"); setGranOverride("auto"); setPlotIds([]); setCropIds([]);
-    setYear("all"); setMonth("all");
+    setPreset("all");
+    setGranOverride("auto");
+    setPlotIds([]);
+    setCropIds([]);
+    setYear("all");
+    setMonth("all");
   };
-  const filtersActive = preset !== "all" || granOverride !== "auto"
-    || plotIds.length || cropIds.length || year !== "all" || month !== "all";
-
+  const filtersActive =
+    preset !== "all" ||
+    granOverride !== "auto" ||
+    plotIds.length ||
+    cropIds.length ||
+    year !== "all" ||
+    month !== "all";
 
   if (rows.length === 0) {
     return (
@@ -161,15 +247,23 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
           <div className="flex items-center gap-2">
             <CalendarRange className="size-4 text-muted-foreground" />
             <Select value={preset} onValueChange={(v) => setPreset(v as Preset)}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {PRESETS.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                {PRESETS.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <Select value={granOverride} onValueChange={(v) => setGranOverride(v as any)}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="auto">Auto ({granularity})</SelectItem>
               <SelectItem value="day">Daily</SelectItem>
@@ -178,22 +272,39 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
             </SelectContent>
           </Select>
 
-          <Select value={year} onValueChange={(v) => { setYear(v); if (v === "all") setMonth("all"); }}>
-            <SelectTrigger className="w-[110px]"><SelectValue placeholder="Year" /></SelectTrigger>
+          <Select
+            value={year}
+            onValueChange={(v) => {
+              setYear(v);
+              if (v === "all") setMonth("all");
+            }}
+          >
+            <SelectTrigger className="w-[110px]">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All years</SelectItem>
-              {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+              {years.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
           <Select value={month} onValueChange={setMonth} disabled={year === "all"}>
-            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Month" /></SelectTrigger>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All months</SelectItem>
-              {MONTH_NAMES.map((n, i) => <SelectItem key={n} value={String(i + 1)}>{n}</SelectItem>)}
+              {MONTH_NAMES.map((n, i) => (
+                <SelectItem key={n} value={String(i + 1)}>
+                  {n}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-
 
           <MultiSelect
             icon={<MapPin className="size-3.5" />}
@@ -218,7 +329,6 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
             }}
           />
 
-
           {filtersActive ? (
             <Button variant="ghost" size="sm" onClick={reset} className="ml-auto">
               <RotateCcw className="size-3.5 mr-1" /> Reset
@@ -227,24 +337,46 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
         </div>
         <div className="text-xs text-muted-foreground mt-3">
           Showing {filtered.length} of {rows.length} records
-          {from && to ? <> · {formatDate(from.toISOString())} – {formatDate(to.toISOString())}</> : null}
+          {from && to ? (
+            <>
+              {" "}
+              · {formatDate(from.toISOString())} – {formatDate(to.toISOString())}
+            </>
+          ) : null}
         </div>
       </Card>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Stat icon={<Scale className="size-4" />} label="Total harvest" value={`${stats.totalKg.toFixed(1)} kg`} />
+        <Stat
+          icon={<Scale className="size-4" />}
+          label="Total harvest"
+          value={`${stats.totalKg.toFixed(1)} kg`}
+        />
         <Stat icon={<Sprout className="size-4" />} label="Crops" value={stats.cropCount} />
         <Stat icon={<MapPin className="size-4" />} label="Plots" value={stats.plotCount} />
-        <Stat icon={<Leaf className="size-4" />} label="Top crop"
-              value={stats.topCrop?.name || "—"}
-              sub={stats.topCrop ? `${stats.topCrop.kg.toFixed(1)} kg · ${stats.topCrop.pct.toFixed(0)}%` : undefined} />
-        <Stat icon={<CalendarRange className="size-4" />} label="Best month"
-              value={stats.bestMonth?.label || "—"}
-              sub={stats.bestMonth ? `${stats.bestMonth.kg.toFixed(1)} kg` : undefined} />
-        <Stat icon={<BarChart3 className="size-4" />} label="Avg per event"
-              value={`${stats.avgPerEvent.toFixed(1)} kg`}
-              sub={`${stats.events} events`} />
+        <Stat
+          icon={<Leaf className="size-4" />}
+          label="Top crop"
+          value={stats.topCrop?.name || "—"}
+          sub={
+            stats.topCrop
+              ? `${stats.topCrop.kg.toFixed(1)} kg · ${stats.topCrop.pct.toFixed(0)}%`
+              : undefined
+          }
+        />
+        <Stat
+          icon={<CalendarRange className="size-4" />}
+          label="Best month"
+          value={stats.bestMonth?.label || "—"}
+          sub={stats.bestMonth ? `${stats.bestMonth.kg.toFixed(1)} kg` : undefined}
+        />
+        <Stat
+          icon={<BarChart3 className="size-4" />}
+          label="Avg per event"
+          value={`${stats.avgPerEvent.toFixed(1)} kg`}
+          sub={`${stats.events} events`}
+        />
       </div>
 
       {/* Time series */}
@@ -252,11 +384,15 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="font-medium">Harvest over time</h3>
-            <p className="text-xs text-muted-foreground">Kilograms per {granularity}, stacked by crop</p>
+            <p className="text-xs text-muted-foreground">
+              Kilograms per {granularity}, stacked by crop
+            </p>
           </div>
         </div>
         <div className="h-[320px]">
-          {series.data.length === 0 ? <EmptyChart /> : (
+          {series.data.length === 0 ? (
+            <EmptyChart />
+          ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series.data} margin={{ top: 5, right: 12, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -265,11 +401,7 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                 <Tooltip
                   cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.3 }}
                   content={(props: any) => (
-                    <TimeSeriesTooltip
-                      {...props}
-                      series={series.data}
-                      bucketStats={bucketStats}
-                    />
+                    <TimeSeriesTooltip {...props} series={series.data} bucketStats={bucketStats} />
                   )}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -295,7 +427,9 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="font-medium">Cumulative yield</h3>
-            <p className="text-xs text-muted-foreground">Running total kilograms over time, stacked by crop</p>
+            <p className="text-xs text-muted-foreground">
+              Running total kilograms over time, stacked by crop
+            </p>
           </div>
           {cumulative.data.length > 0 && (
             <Badge variant="secondary" className="font-mono">
@@ -304,9 +438,14 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
           )}
         </div>
         <div className="h-[320px]">
-          {cumulative.data.length === 0 ? <EmptyChart /> : (
+          {cumulative.data.length === 0 ? (
+            <EmptyChart />
+          ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={cumulative.data} margin={{ top: 5, right: 12, left: -10, bottom: 0 }}>
+              <AreaChart
+                data={cumulative.data}
+                margin={{ top: 5, right: 12, left: -10, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="period" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -347,23 +486,33 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
           </div>
           <p className="text-xs text-muted-foreground mb-3">Click a bar to filter by that crop</p>
           <div className="h-[340px]">
-            {top.length === 0 ? <EmptyChart /> : (
+            {top.length === 0 ? (
+              <EmptyChart />
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={top} layout="vertical" margin={{ top: 5, right: 24, left: 8, bottom: 0 }}>
+                <BarChart
+                  data={top}
+                  layout="vertical"
+                  margin={{ top: 5, right: 24, left: 8, bottom: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="crop" type="category" tick={{ fontSize: 11 }} width={140} />
                   <Tooltip
                     cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
-                    content={(props: any) => (
-                      <TopCropTooltip {...props} statsMap={cropStatsMap} />
-                    )}
+                    content={(props: any) => <TopCropTooltip {...props} statsMap={cropStatsMap} />}
                   />
-                  <Bar dataKey="kg" radius={[0, 4, 4, 0]} onClick={(d: any) => {
-                    const opt = cropOptions.find((o) => o.label === d.crop);
-                    if (opt) setCropIds([opt.id]);
-                  }}>
-                    {top.map((d) => <Cell key={d.crop} fill={colorFor(d.crop)} cursor="pointer" />)}
+                  <Bar
+                    dataKey="kg"
+                    radius={[0, 4, 4, 0]}
+                    onClick={(d: any) => {
+                      const opt = cropOptions.find((o) => o.label === d.crop);
+                      if (opt) setCropIds([opt.id]);
+                    }}
+                  >
+                    {top.map((d) => (
+                      <Cell key={d.crop} fill={colorFor(d.crop)} cursor="pointer" />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -382,7 +531,9 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
           </div>
           <p className="text-xs text-muted-foreground mb-3">Click a slice to filter by that plot</p>
           <div className="h-[340px]">
-            {plotsAgg.length === 0 ? <EmptyChart /> : (
+            {plotsAgg.length === 0 ? (
+              <EmptyChart />
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -397,12 +548,12 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                       if (opt) setPlotIds([opt.id]);
                     }}
                   >
-                    {plotsAgg.map((d) => <Cell key={d.plot} fill={colorFor(d.plot)} cursor="pointer" />)}
+                    {plotsAgg.map((d) => (
+                      <Cell key={d.plot} fill={colorFor(d.plot)} cursor="pointer" />
+                    ))}
                   </Pie>
                   <Tooltip
-                    content={(props: any) => (
-                      <PlotTooltip {...props} statsMap={plotStatsMap} />
-                    )}
+                    content={(props: any) => <PlotTooltip {...props} statsMap={plotStatsMap} />}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
@@ -415,15 +566,26 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
       {/* Heatmap */}
       <Card className="p-5">
         <h3 className="font-medium mb-1">Seasonality</h3>
-        <p className="text-xs text-muted-foreground mb-3">Kilograms harvested per crop per month — darker is more</p>
-        {matrix.crops.length === 0 || matrix.months.length === 0 ? <EmptyChart /> : (
+        <p className="text-xs text-muted-foreground mb-3">
+          Kilograms harvested per crop per month — darker is more
+        </p>
+        {matrix.crops.length === 0 || matrix.months.length === 0 ? (
+          <EmptyChart />
+        ) : (
           <div className="overflow-x-auto">
             <table className="text-xs border-separate border-spacing-1">
               <thead>
                 <tr>
-                  <th className="text-left pr-3 font-normal text-muted-foreground sticky left-0 bg-card">Crop</th>
+                  <th className="text-left pr-3 font-normal text-muted-foreground sticky left-0 bg-card">
+                    Crop
+                  </th>
                   {matrix.months.map((m) => (
-                    <th key={m.ts} className="font-normal text-muted-foreground px-1 whitespace-nowrap">{m.label}</th>
+                    <th
+                      key={m.ts}
+                      className="font-normal text-muted-foreground px-1 whitespace-nowrap"
+                    >
+                      {m.label}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -435,13 +597,21 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
                       const v = matrix.cell.get(`${c}|${m.ts}`) || 0;
                       const intensity = matrix.max ? v / matrix.max : 0;
                       return (
-                        <td key={m.ts}
-                            title={v ? `${c} · ${format(new Date(m.ts), "MMM yyyy")} — ${v.toFixed(1)} kg` : "—"}
-                            className="rounded w-10 h-7 text-center align-middle"
-                            style={{
-                              backgroundColor: v ? `hsl(95 45% ${Math.max(20, 85 - intensity * 60)}%)` : "hsl(var(--muted))",
-                              color: intensity > 0.5 ? "white" : "hsl(var(--foreground))",
-                            }}>
+                        <td
+                          key={m.ts}
+                          title={
+                            v
+                              ? `${c} · ${format(new Date(m.ts), "MMM yyyy")} — ${v.toFixed(1)} kg`
+                              : "—"
+                          }
+                          className="rounded w-10 h-7 text-center align-middle"
+                          style={{
+                            backgroundColor: v
+                              ? `hsl(95 45% ${Math.max(20, 85 - intensity * 60)}%)`
+                              : "hsl(var(--muted))",
+                            color: intensity > 0.5 ? "white" : "hsl(var(--foreground))",
+                          }}
+                        >
                           {v ? v.toFixed(0) : ""}
                         </td>
                       );
@@ -457,24 +627,52 @@ export function HarvestInsights({ rows }: { rows: HarvestRow[] }) {
   );
 }
 
-function Stat({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string }) {
+function Stat({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+}) {
   return (
     <Card className="p-4">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
-      <div className="mt-1.5 text-lg font-medium truncate" title={typeof value === "string" ? value : undefined}>{value}</div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {icon}
+        {label}
+      </div>
+      <div
+        className="mt-1.5 text-lg font-medium truncate"
+        title={typeof value === "string" ? value : undefined}
+      >
+        {value}
+      </div>
       {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
     </Card>
   );
 }
 
 function EmptyChart() {
-  return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No data for the current filters</div>;
+  return (
+    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+      No data for the current filters
+    </div>
+  );
 }
 
 type MultiOption = { id: string; label: string; category?: string };
 
 function MultiSelect({
-  icon, label, options, value, onChange, groupByCategory, topN,
+  icon,
+  label,
+  options,
+  value,
+  onChange,
+  groupByCategory,
+  topN,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -494,8 +692,8 @@ function MultiSelect({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return options;
-    return options.filter((o) =>
-      o.label.toLowerCase().includes(q) || (o.category || "").toLowerCase().includes(q)
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(q) || (o.category || "").toLowerCase().includes(q),
     );
   }, [options, query]);
 
@@ -532,10 +730,12 @@ function MultiSelect({
           sel && "text-foreground",
         )}
       >
-        <span className={cn(
-          "size-4 rounded border flex items-center justify-center",
-          sel ? "bg-primary border-primary text-primary-foreground" : "border-input",
-        )}>
+        <span
+          className={cn(
+            "size-4 rounded border flex items-center justify-center",
+            sel ? "bg-primary border-primary text-primary-foreground" : "border-input",
+          )}
+        >
           {sel && <Check className="size-3" />}
         </span>
         <span className="truncate">{o.label}</span>
@@ -562,17 +762,41 @@ function MultiSelect({
             className="h-8 text-sm"
           />
           <div className="flex items-center gap-1 flex-wrap">
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={selectAllVisible}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={selectAllVisible}
+            >
               Select all{query ? " (filtered)" : ""}
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onChange([])}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onChange([])}
+            >
               Clear
             </Button>
             {topN && (
               <>
                 <span className="mx-1 h-4 w-px bg-border" />
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => topN(5)}>Top 5</Button>
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => topN(10)}>Top 10</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => topN(5)}
+                >
+                  Top 5
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => topN(10)}
+                >
+                  Top 10
+                </Button>
               </>
             )}
           </div>
@@ -604,7 +828,9 @@ function MultiSelect({
         {value.length > 0 && (
           <div className="border-t p-2 flex items-center justify-between">
             <Badge variant="secondary">{value.length} selected</Badge>
-            <Button variant="ghost" size="sm" onClick={() => onChange([])}>Clear all</Button>
+            <Button variant="ghost" size="sm" onClick={() => onChange([])}>
+              Clear all
+            </Button>
           </div>
         )}
       </PopoverContent>
@@ -613,7 +839,11 @@ function MultiSelect({
 }
 
 function TimeSeriesTooltip({
-  active, payload, label, series, bucketStats,
+  active,
+  payload,
+  label,
+  series,
+  bucketStats,
 }: {
   active?: boolean;
   payload?: any[];
@@ -656,17 +886,32 @@ function TimeSeriesTooltip({
     <TooltipCard>
       <TooltipHeader
         title={label}
-        subtitle={<>Total {fmtKg(total)} · {events} {events === 1 ? "event" : "events"}</>}
+        subtitle={
+          <>
+            Total {fmtKg(total)} · {events} {events === 1 ? "event" : "events"}
+          </>
+        }
       />
       <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b">
-        {idx > 0 ? <Delta deltaKg={deltaKg} deltaPct={deltaPct} /> : <span className="text-[11px] text-muted-foreground">First period</span>}
+        {idx > 0 ? (
+          <Delta deltaKg={deltaKg} deltaPct={deltaPct} />
+        ) : (
+          <span className="text-[11px] text-muted-foreground">First period</span>
+        )}
         <span className="text-[11px] text-muted-foreground">Σ {fmtKg(cumulative)}</span>
       </div>
       <div className="space-y-0">
         {rows.map((p) => {
           const prevVal = idx > 0 ? Number(series[idx - 1]?.[p.dataKey]) || 0 : 0;
           const curVal = Number(p.value) || 0;
-          const dPct = idx > 0 ? (prevVal > 0 ? ((curVal - prevVal) / prevVal) * 100 : (curVal > 0 ? 100 : 0)) : null;
+          const dPct =
+            idx > 0
+              ? prevVal > 0
+                ? ((curVal - prevVal) / prevVal) * 100
+                : curVal > 0
+                  ? 100
+                  : 0
+              : null;
           return (
             <TooltipRow
               key={p.dataKey}
@@ -684,7 +929,9 @@ function TimeSeriesTooltip({
 }
 
 function TopCropTooltip({
-  active, payload, statsMap,
+  active,
+  payload,
+  statsMap,
 }: {
   active?: boolean;
   payload?: any[];
@@ -707,11 +954,21 @@ function TopCropTooltip({
 }
 
 function PlotTooltip({
-  active, payload, statsMap,
+  active,
+  payload,
+  statsMap,
 }: {
   active?: boolean;
   payload?: any[];
-  statsMap: Map<string, { kg: number; events: number; pct: number; topCrops: { name: string; kg: number; pct: number }[] }>;
+  statsMap: Map<
+    string,
+    {
+      kg: number;
+      events: number;
+      pct: number;
+      topCrops: { name: string; kg: number; pct: number }[];
+    }
+  >;
 }) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload as { plot: string; kg: number };
@@ -720,11 +977,15 @@ function PlotTooltip({
     <TooltipCard>
       <TooltipHeader
         title={d.plot}
-        subtitle={s ? `${fmtKg(s.kg)} · ${s.pct.toFixed(1)}% of farm · ${s.events} events` : fmtKg(d.kg)}
+        subtitle={
+          s ? `${fmtKg(s.kg)} · ${s.pct.toFixed(1)}% of farm · ${s.events} events` : fmtKg(d.kg)
+        }
       />
       {s && s.topCrops.length > 0 && (
         <>
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mt-1 mb-1">Top crops</div>
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground mt-1 mb-1">
+            Top crops
+          </div>
           {s.topCrops.map((c) => (
             <TooltipRow key={c.name} name={c.name} value={fmtKg(c.kg)} pct={c.pct} />
           ))}
@@ -735,7 +996,10 @@ function PlotTooltip({
 }
 
 function CumulativeTooltip({
-  active, payload, label, series,
+  active,
+  payload,
+  label,
+  series,
 }: {
   active?: boolean;
   payload?: any[];
@@ -750,7 +1014,10 @@ function CumulativeTooltip({
   let prevTotal = 0;
   for (let i = idx - 1; i >= 0; i--) {
     const t = Number(series[i]?._total);
-    if (t > 0) { prevTotal = t; break; }
+    if (t > 0) {
+      prevTotal = t;
+      break;
+    }
   }
   const deltaKg = idx > 0 ? total - prevTotal : 0;
   const deltaPct = prevTotal > 0 ? (deltaKg / prevTotal) * 100 : null;
@@ -763,16 +1030,27 @@ function CumulativeTooltip({
     <TooltipCard>
       <TooltipHeader title={label} subtitle={<>Running total {fmtKg(total)}</>} />
       <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b">
-        {idx > 0
-          ? <Delta deltaKg={deltaKg} deltaPct={deltaPct} />
-          : <span className="text-[11px] text-muted-foreground">Starting period</span>}
-        {idx > 0 && <span className="text-[11px] text-muted-foreground">prev {fmtKg(prevTotal)}</span>}
+        {idx > 0 ? (
+          <Delta deltaKg={deltaKg} deltaPct={deltaPct} />
+        ) : (
+          <span className="text-[11px] text-muted-foreground">Starting period</span>
+        )}
+        {idx > 0 && (
+          <span className="text-[11px] text-muted-foreground">prev {fmtKg(prevTotal)}</span>
+        )}
       </div>
       <div className="space-y-0">
         {rows.map((p) => {
           const prevVal = idx > 0 ? Number(series[idx - 1]?.[p.dataKey]) || 0 : 0;
           const curVal = Number(p.value) || 0;
-          const dPct = idx > 0 ? (prevVal > 0 ? ((curVal - prevVal) / prevVal) * 100 : (curVal > 0 ? 100 : 0)) : null;
+          const dPct =
+            idx > 0
+              ? prevVal > 0
+                ? ((curVal - prevVal) / prevVal) * 100
+                : curVal > 0
+                  ? 100
+                  : 0
+              : null;
           return (
             <TooltipRow
               key={p.dataKey}
@@ -788,5 +1066,3 @@ function CumulativeTooltip({
     </TooltipCard>
   );
 }
-
-

@@ -1,17 +1,43 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { listPlots } from "@/lib/farm.functions";
 import { upsertResource } from "@/lib/resources.functions";
 import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
 
-const RESOURCE_TYPES = ["equipment", "labor", "material", "water", "biological", "energy", "other"] as const;
+type PlotRow = Database["public"]["Tables"]["plots"]["Row"];
+type ResourceRecordInsert = Database["public"]["Tables"]["resource_records"]["Insert"];
+
+const RESOURCE_TYPES = [
+  "equipment",
+  "labor",
+  "material",
+  "water",
+  "biological",
+  "energy",
+  "other",
+] as const;
+type ResourceType = (typeof RESOURCE_TYPES)[number];
 const COMMON_UNITS = ["nos", "litres", "kilogram", "grams", "hours", "kWh", "metres", "bags"];
 
 type Form = {
@@ -19,7 +45,7 @@ type Form = {
   farm_id: string;
   plot_id?: string | null;
   resource_name: string;
-  resource_type: typeof RESOURCE_TYPES[number];
+  resource_type: (typeof RESOURCE_TYPES)[number];
   quantity?: number | null;
   unit?: string;
   used_for?: string;
@@ -36,8 +62,16 @@ function toLocal(dt?: string | null) {
 }
 
 export function ResourceFormDialog({
-  open, onOpenChange, initial, farmId,
-}: { open: boolean; onOpenChange: (v: boolean) => void; initial?: Partial<Form> | null; farmId: string }) {
+  open,
+  onOpenChange,
+  initial,
+  farmId,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  initial?: Partial<Form> | null;
+  farmId: string;
+}) {
   const [f, setF] = useState<Form>(() => ({
     farm_id: farmId,
     resource_name: "",
@@ -50,11 +84,14 @@ export function ResourceFormDialog({
   const qc = useQueryClient();
   const listPlotsFn = useServerFn(listPlots);
   const upsert = useServerFn(upsertResource);
-  const plots = useQuery({ queryKey: ["plots", farmId], queryFn: () => listPlotsFn({ data: { farmId } }) });
+  const plots = useQuery({
+    queryKey: ["plots", farmId],
+    queryFn: () => listPlotsFn({ data: { farmId } }),
+  });
 
   const mut = useMutation({
     mutationFn: (v: Form) => {
-      const payload: any = {
+      const payload: ResourceRecordInsert = {
         farm_id: v.farm_id,
         plot_id: v.plot_id || null,
         resource_name: v.resource_name,
@@ -76,60 +113,116 @@ export function ResourceFormDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function set<K extends keyof Form>(k: K, v: Form[K]) { setF((p) => ({ ...p, [k]: v })); }
+  function set<K extends keyof Form>(k: K, v: Form[K]) {
+    setF((p) => ({ ...p, [k]: v }));
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif text-2xl">{initial?.id ? "Edit resource" : "Record a resource"}</DialogTitle>
+          <DialogTitle className="font-serif text-2xl">
+            {initial?.id ? "Edit resource" : "Record a resource"}
+          </DialogTitle>
           <DialogDescription>What was used, where, and when.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Resource name *">
-            <Input value={f.resource_name} onChange={(e) => set("resource_name", e.target.value)} placeholder="Tractor, Compost, Drip line..." />
+            <Input
+              value={f.resource_name}
+              onChange={(e) => set("resource_name", e.target.value)}
+              placeholder="Tractor, Compost, Drip line..."
+            />
           </Field>
           <Field label="Type *">
-            <Select value={f.resource_type} onValueChange={(v) => set("resource_type", v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={f.resource_type}
+              onValueChange={(v) => set("resource_type", v as ResourceType)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {RESOURCE_TYPES.map((t) => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                {RESOURCE_TYPES.map((t) => (
+                  <SelectItem key={t} value={t} className="capitalize">
+                    {t}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
           <Field label="Quantity">
-            <Input type="number" step="0.01" value={f.quantity ?? ""} onChange={(e) => set("quantity", e.target.value ? +e.target.value : null)} />
+            <Input
+              type="number"
+              step="0.01"
+              value={f.quantity ?? ""}
+              onChange={(e) => set("quantity", e.target.value ? +e.target.value : null)}
+            />
           </Field>
           <Field label="Unit">
-            <Input list="resource-units" value={f.unit || ""} onChange={(e) => set("unit", e.target.value)} placeholder="nos, litres, kilogram" />
+            <Input
+              list="resource-units"
+              value={f.unit || ""}
+              onChange={(e) => set("unit", e.target.value)}
+              placeholder="nos, litres, kilogram"
+            />
             <datalist id="resource-units">
-              {COMMON_UNITS.map((u) => <option key={u} value={u} />)}
+              {COMMON_UNITS.map((u) => (
+                <option key={u} value={u} />
+              ))}
             </datalist>
           </Field>
           <Field label="Plot">
-            <Select value={f.plot_id || "__none"} onValueChange={(v) => set("plot_id", v === "__none" ? null : v)}>
-              <SelectTrigger><SelectValue placeholder="Whole farm" /></SelectTrigger>
+            <Select
+              value={f.plot_id || "__none"}
+              onValueChange={(v) => set("plot_id", v === "__none" ? null : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Whole farm" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">Whole farm</SelectItem>
-                {plots.data?.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.plot_number}</SelectItem>)}
+                {plots.data?.map((p: PlotRow) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.plot_number}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
           <Field label="Used for">
-            <Input value={f.used_for || ""} onChange={(e) => set("used_for", e.target.value)} placeholder="Tilling north field, Irrigation cycle..." />
+            <Input
+              value={f.used_for || ""}
+              onChange={(e) => set("used_for", e.target.value)}
+              placeholder="Tilling north field, Irrigation cycle..."
+            />
           </Field>
           <Field label="Start time">
-            <Input type="datetime-local" value={f.start_time || ""} onChange={(e) => set("start_time", e.target.value)} />
+            <Input
+              type="datetime-local"
+              value={f.start_time || ""}
+              onChange={(e) => set("start_time", e.target.value)}
+            />
           </Field>
           <Field label="End time">
-            <Input type="datetime-local" value={f.end_time || ""} onChange={(e) => set("end_time", e.target.value)} />
+            <Input
+              type="datetime-local"
+              value={f.end_time || ""}
+              onChange={(e) => set("end_time", e.target.value)}
+            />
           </Field>
           <Field label="Notes" className="md:col-span-2">
-            <Textarea rows={2} value={f.notes || ""} onChange={(e) => set("notes", e.target.value)} />
+            <Textarea
+              rows={2}
+              value={f.notes || ""}
+              onChange={(e) => set("notes", e.target.value)}
+            />
           </Field>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button disabled={mut.isPending || !f.resource_name.trim()} onClick={() => mut.mutate(f)}>
             {mut.isPending ? "Saving..." : "Save"}
           </Button>
@@ -139,10 +232,20 @@ export function ResourceFormDialog({
   );
 }
 
-function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <div className={className}>
-      <Label className="mb-1.5 block text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
+      <Label className="mb-1.5 block text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Label>
       {children}
     </div>
   );

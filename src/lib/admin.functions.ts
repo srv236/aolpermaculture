@@ -59,7 +59,9 @@ export const setUserRole = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
-    const { error } = await supabaseAdmin.from("user_roles").insert({ user_id: data.userId, role: data.role });
+    const { error } = await supabaseAdmin
+      .from("user_roles")
+      .insert({ user_id: data.userId, role: data.role });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -71,7 +73,9 @@ export const setUserActive = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("profiles").update({ is_active: data.isActive }).eq("id", data.userId);
-    await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: data.isActive ? "none" : "876000h" });
+    await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+      ban_duration: data.isActive ? "none" : "876000h",
+    });
     return { ok: true };
   });
 

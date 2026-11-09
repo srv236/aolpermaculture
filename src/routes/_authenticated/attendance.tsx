@@ -19,7 +19,13 @@ import {
 import { listWorkNotes, upsertWorkNote } from "@/lib/work-notes.functions";
 import { AppShell, useMe } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -27,12 +33,35 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCheck, ChevronLeft, ChevronRight, Download, Pencil, Plus, Trash2, Users, Keyboard, ClipboardList } from "lucide-react";
+import {
+  CheckCheck,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Pencil,
+  Plus,
+  Trash2,
+  Users,
+  Keyboard,
+  ClipboardList,
+} from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { cn } from "@/lib/utils";
@@ -42,11 +71,41 @@ export const Route = createFileRoute("/_authenticated/attendance")({
 });
 
 const STATUS: { value: string; label: string; short: string; key: string; cls: string }[] = [
-  { value: "present", label: "Present", short: "P", key: "p", cls: "bg-[#D4E8D4] text-[#1B3022] ring-[#1B3022]/15" },
-  { value: "absent", label: "Absent", short: "A", key: "a", cls: "bg-[#F8D7DA] text-[#721C24] ring-[#721C24]/15" },
-  { value: "half_day", label: "Half day", short: "H", key: "h", cls: "bg-[#FFF3CD] text-[#856404] ring-[#856404]/15" },
-  { value: "leave", label: "On leave", short: "L", key: "l", cls: "bg-[#E5EEF5] text-[#4A6D8C] ring-[#4A6D8C]/15" },
-  { value: "holiday", label: "Holiday", short: "·", key: "o", cls: "bg-muted text-muted-foreground ring-border" },
+  {
+    value: "present",
+    label: "Present",
+    short: "P",
+    key: "p",
+    cls: "bg-[#D4E8D4] text-[#1B3022] ring-[#1B3022]/15",
+  },
+  {
+    value: "absent",
+    label: "Absent",
+    short: "A",
+    key: "a",
+    cls: "bg-[#F8D7DA] text-[#721C24] ring-[#721C24]/15",
+  },
+  {
+    value: "half_day",
+    label: "Half day",
+    short: "H",
+    key: "h",
+    cls: "bg-[#FFF3CD] text-[#856404] ring-[#856404]/15",
+  },
+  {
+    value: "leave",
+    label: "On leave",
+    short: "L",
+    key: "l",
+    cls: "bg-[#E5EEF5] text-[#4A6D8C] ring-[#4A6D8C]/15",
+  },
+  {
+    value: "holiday",
+    label: "Holiday",
+    short: "·",
+    key: "o",
+    cls: "bg-muted text-muted-foreground ring-border",
+  },
 ];
 const statusMeta = (v?: string | null) => STATUS.find((s) => s.value === v);
 
@@ -94,15 +153,23 @@ function AttendancePage() {
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
             <h1 className="font-serif text-3xl">Attendance</h1>
-            <p className="text-sm text-muted-foreground mt-1">Daily sevak presence and farm visitors</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Daily sevak presence and farm visitors
+            </p>
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Farm</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Farm
+            </Label>
             <Select value={farmId} onValueChange={(v) => setFarmId(v)}>
-              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Select farm" /></SelectTrigger>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Select farm" />
+              </SelectTrigger>
               <SelectContent>
                 {(farms.data ?? []).map((f: any) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -142,11 +209,7 @@ function AttendancePage() {
           </TabsContent>
 
           <TabsContent value="worklog" className="mt-6">
-            <WorkLogPanel
-              farmId={farmId}
-              workers={workers.data ?? []}
-              canEdit={!!canEdit}
-            />
+            <WorkLogPanel farmId={farmId} workers={workers.data ?? []} canEdit={!!canEdit} />
           </TabsContent>
 
           <TabsContent value="visitors" className="mt-6">
@@ -167,10 +230,17 @@ function AttendancePage() {
 /* ---------- DAILY VIEW ---------- */
 
 function DailyView({
-  farmId, workers, date, setDate, canEdit,
+  farmId,
+  workers,
+  date,
+  setDate,
+  canEdit,
 }: {
-  farmId?: string; workers: any[]; date: string;
-  setDate: (d: string) => void; canEdit: boolean;
+  farmId?: string;
+  workers: any[];
+  date: string;
+  setDate: (d: string) => void;
+  canEdit: boolean;
 }) {
   const activeWorkers = useMemo(() => {
     return workers
@@ -202,8 +272,12 @@ function DailyView({
   const qc = useQueryClient();
   const upsertFn = useServerFn(upsertAttendance);
   const upsertMut = useMutation({
-    mutationFn: (v: { worker_id: string; status: string; notes?: string | null; work_done?: string | null }) =>
-      upsertFn({ data: { ...v, farm_id: farmId!, date } }),
+    mutationFn: (v: {
+      worker_id: string;
+      status: string;
+      notes?: string | null;
+      work_done?: string | null;
+    }) => upsertFn({ data: { ...v, farm_id: farmId!, date } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance", farmId, year, month] }),
     onError: (e: Error) => toast.error(e.message),
   });
@@ -214,7 +288,9 @@ function DailyView({
       bulkFn({ data: { farm_id: farmId!, date, ...v } }),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["attendance", farmId, year, month] });
-      toast.success(`Marked ${v.worker_ids.length} sevak${v.worker_ids.length === 1 ? "" : "s"} ${statusMeta(v.status)?.label.toLowerCase()}`);
+      toast.success(
+        `Marked ${v.worker_ids.length} sevak${v.worker_ids.length === 1 ? "" : "s"} ${statusMeta(v.status)?.label.toLowerCase()}`,
+      );
       setSelected(new Set());
     },
     onError: (e: Error) => toast.error(e.message),
@@ -227,7 +303,11 @@ function DailyView({
   const toggle = (id: string) => {
     setSelected((s) => {
       const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) {
+        n.delete(id);
+      } else {
+        n.add(id);
+      }
       return n;
     });
   };
@@ -241,7 +321,8 @@ function DailyView({
     if (!canEdit) return;
     function handler(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+        return;
       const status = STATUS.find((s) => s.key === e.key.toLowerCase());
       if (!status) return;
       let ids: string[] = [];
@@ -266,7 +347,10 @@ function DailyView({
   }
 
   const niceDate = new Date(date + "T00:00:00").toLocaleDateString("default", {
-    weekday: "long", month: "long", day: "numeric", year: "numeric",
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 
   const counts = useMemo(() => {
@@ -283,37 +367,47 @@ function DailyView({
       {/* Date header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => shiftDate(-1)}><ChevronLeft className="size-4" /></Button>
+          <Button variant="outline" size="icon" onClick={() => shiftDate(-1)}>
+            <ChevronLeft className="size-4" />
+          </Button>
           <Input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="w-[170px]"
           />
-          <Button variant="outline" size="icon" onClick={() => shiftDate(1)}><ChevronRight className="size-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => setDate(ymd(new Date()))}>Today</Button>
+          <Button variant="outline" size="icon" onClick={() => shiftDate(1)}>
+            <ChevronRight className="size-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDate(ymd(new Date()))}>
+            Today
+          </Button>
         </div>
         <div className="text-sm text-muted-foreground italic">{niceDate}</div>
       </div>
 
       {/* Daily Work Summary */}
-      <DailyWorkSummaryCard
-        farmId={farmId}
-        date={date}
-        niceDate={niceDate}
-        canEdit={canEdit}
-      />
+      <DailyWorkSummaryCard farmId={farmId} date={date} niceDate={niceDate} canEdit={canEdit} />
 
       {/* Summary chips + keyboard hint */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         {STATUS.map((s) => (
-          <span key={s.value} className={cn("inline-flex items-center gap-1.5 rounded-full ring-1 px-2.5 py-1 text-xs", s.cls)}>
+          <span
+            key={s.value}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full ring-1 px-2.5 py-1 text-xs",
+              s.cls,
+            )}
+          >
             <span className="font-bold">{s.short}</span>
             {s.label} · {counts[s.value] ?? 0}
           </span>
         ))}
         <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Keyboard className="size-3.5" /> select rows then press <kbd className="px-1 border rounded">P</kbd> <kbd className="px-1 border rounded">A</kbd> <kbd className="px-1 border rounded">H</kbd> <kbd className="px-1 border rounded">L</kbd> <kbd className="px-1 border rounded">O</kbd>
+          <Keyboard className="size-3.5" /> select rows then press{" "}
+          <kbd className="px-1 border rounded">P</kbd> <kbd className="px-1 border rounded">A</kbd>{" "}
+          <kbd className="px-1 border rounded">H</kbd> <kbd className="px-1 border rounded">L</kbd>{" "}
+          <kbd className="px-1 border rounded">O</kbd>
         </span>
       </div>
 
@@ -328,13 +422,22 @@ function DailyView({
                 size="sm"
                 variant="outline"
                 className={cn("h-7", s.cls)}
-                onClick={() => bulkMut.mutate({ worker_ids: Array.from(selected), status: s.value })}
+                onClick={() =>
+                  bulkMut.mutate({ worker_ids: Array.from(selected), status: s.value })
+                }
               >
                 {s.short} · {s.label}
               </Button>
             ))}
           </div>
-          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelected(new Set())}>Clear</Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setSelected(new Set())}
+          >
+            Clear
+          </Button>
         </div>
       )}
 
@@ -347,7 +450,14 @@ function DailyView({
               onCheckedChange={toggleAll}
             />
             <span>Select all</span>
-            <Button variant="ghost" size="sm" className="ml-auto h-7" onClick={() => bulkMut.mutate({ worker_ids: activeWorkers.map((w) => w.id), status: "present" })}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-7"
+              onClick={() =>
+                bulkMut.mutate({ worker_ids: activeWorkers.map((w) => w.id), status: "present" })
+              }
+            >
               <CheckCheck className="size-3.5 mr-1" /> Mark all present
             </Button>
           </div>
@@ -371,7 +481,9 @@ function DailyView({
                 onFocus={() => setFocusedIdx(idx)}
                 canEdit={canEdit}
                 onStatus={(status) => upsertMut.mutate({ worker_id: w.id, status })}
-                onDetail={(v) => upsertMut.mutate({ worker_id: w.id, status: rec?.status ?? "present", ...v })}
+                onDetail={(v) =>
+                  upsertMut.mutate({ worker_id: w.id, status: rec?.status ?? "present", ...v })
+                }
               />
             );
           })}
@@ -419,8 +531,7 @@ function DailyWorkSummaryCard({
   const upsertFn = useServerFn(upsertDailyWorkSummary);
 
   const upsertMut = useMutation({
-    mutationFn: (summary: string | null) =>
-      upsertFn({ data: { farm_id: farmId!, date, summary } }),
+    mutationFn: (summary: string | null) => upsertFn({ data: { farm_id: farmId!, date, summary } }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["daily-work-summaries", farmId, year, month] });
       setIsDirty(false);
@@ -448,7 +559,13 @@ function DailyWorkSummaryCard({
       const prevText = text.trim();
       if (prevText) localStorage.setItem(prevKey, prevText);
       else localStorage.removeItem(prevKey);
-      upsertFn({ data: { farm_id: prevFarmIdRef.current, date: prevDateRef.current, summary: prevText || null } }).catch(() => {});
+      upsertFn({
+        data: {
+          farm_id: prevFarmIdRef.current,
+          date: prevDateRef.current,
+          summary: prevText || null,
+        },
+      }).catch(() => {});
     }
     prevDateRef.current = date;
     prevFarmIdRef.current = farmId;
@@ -481,12 +598,13 @@ function DailyWorkSummaryCard({
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <ClipboardList className="size-4 text-primary" />
-          <Label htmlFor="daily-work-summary-input" className="text-sm font-semibold tracking-tight">
+          <Label
+            htmlFor="daily-work-summary-input"
+            className="text-sm font-semibold tracking-tight"
+          >
             Daily Work Summary
           </Label>
-          <span className="text-xs text-muted-foreground hidden sm:inline">
-            · {niceDate}
-          </span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">· {niceDate}</span>
         </div>
         {canEdit && (
           <div className="flex items-center gap-2">
@@ -536,11 +654,22 @@ function DailyWorkSummaryCard({
 }
 
 function DailyRow({
-  worker, rec, checked, onCheck, focused, onFocus, canEdit, onStatus, onDetail,
+  worker,
+  rec,
+  checked,
+  onCheck,
+  focused,
+  onFocus,
+  canEdit,
+  onStatus,
+  onDetail,
 }: {
-  worker: any; rec?: any;
-  checked: boolean; onCheck: () => void;
-  focused: boolean; onFocus: () => void;
+  worker: any;
+  rec?: any;
+  checked: boolean;
+  onCheck: () => void;
+  focused: boolean;
+  onFocus: () => void;
   canEdit: boolean;
   onStatus: (s: string) => void;
   onDetail: (v: { notes?: string | null; work_done?: string | null }) => void;
@@ -548,7 +677,10 @@ function DailyRow({
   const [expanded, setExpanded] = useState(false);
   const [work, setWork] = useState(rec?.work_done ?? "");
   const [notes, setNotes] = useState(rec?.notes ?? "");
-  useEffect(() => { setWork(rec?.work_done ?? ""); setNotes(rec?.notes ?? ""); }, [rec?.work_done, rec?.notes]);
+  useEffect(() => {
+    setWork(rec?.work_done ?? "");
+    setNotes(rec?.notes ?? "");
+  }, [rec?.work_done, rec?.notes]);
 
   const meta = statusMeta(rec?.status);
   return (
@@ -563,7 +695,11 @@ function DailyRow({
     >
       <div className="flex items-center gap-3">
         {canEdit && (
-          <Checkbox checked={checked} onCheckedChange={onCheck} onClick={(e) => e.stopPropagation()} />
+          <Checkbox
+            checked={checked}
+            onCheckedChange={onCheck}
+            onClick={(e) => e.stopPropagation()}
+          />
         )}
         <div className="flex-1 min-w-0">
           <div className="font-medium truncate">{worker.full_name}</div>
@@ -583,7 +719,9 @@ function DailyRow({
               className={cn(
                 "w-8 h-8 rounded-full ring-1 flex items-center justify-center text-[11px] font-bold transition",
                 s.cls,
-                rec?.status === s.value ? "scale-110 ring-2 ring-foreground/40" : "opacity-50 hover:opacity-100",
+                rec?.status === s.value
+                  ? "scale-110 ring-2 ring-foreground/40"
+                  : "opacity-50 hover:opacity-100",
               )}
             >
               {s.short}
@@ -591,20 +729,17 @@ function DailyRow({
           ))}
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-2"
-          onClick={() => setExpanded((e) => !e)}
-        >
-          {expanded ? "Hide" : (rec?.work_done || rec?.notes) ? "Details ✓" : "Details"}
+        <Button variant="ghost" size="sm" className="ml-2" onClick={() => setExpanded((e) => !e)}>
+          {expanded ? "Hide" : rec?.work_done || rec?.notes ? "Details ✓" : "Details"}
         </Button>
       </div>
 
       {expanded && (
         <div className="mt-3 ml-7 grid md:grid-cols-2 gap-3">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Work done today</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Work done today
+            </Label>
             <Textarea
               rows={2}
               value={work}
@@ -618,7 +753,9 @@ function DailyRow({
             />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Notes (optional)</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Notes (optional)
+            </Label>
             <Textarea
               rows={2}
               value={notes}
@@ -636,7 +773,11 @@ function DailyRow({
 
       {!expanded && (rec?.work_done || rec?.notes) && (
         <div className="ml-7 mt-1 text-xs text-muted-foreground truncate">
-          {rec.work_done && <span><span className="font-medium text-foreground/70">Work:</span> {rec.work_done}</span>}
+          {rec.work_done && (
+            <span>
+              <span className="font-medium text-foreground/70">Work:</span> {rec.work_done}
+            </span>
+          )}
           {rec.work_done && rec.notes && <span> · </span>}
           {rec.notes && <span className="italic">{rec.notes}</span>}
         </div>
@@ -649,12 +790,24 @@ function DailyRow({
 /* ---------- MONTHLY GRID ---------- */
 
 function MonthlyGrid({
-  farmId, workers, year, month, setYear, setMonth, selectedDate, setSelectedDate, canEdit,
+  farmId,
+  workers,
+  year,
+  month,
+  setYear,
+  setMonth,
+  selectedDate,
+  setSelectedDate,
+  canEdit,
 }: {
-  farmId?: string; workers: any[];
-  year: number; month: number;
-  setYear: (n: number) => void; setMonth: (n: number) => void;
-  selectedDate: string; setSelectedDate: (d: string) => void;
+  farmId?: string;
+  workers: any[];
+  year: number;
+  month: number;
+  setYear: (n: number) => void;
+  setMonth: (n: number) => void;
+  selectedDate: string;
+  setSelectedDate: (d: string) => void;
   canEdit: boolean;
 }) {
   const today = new Date();
@@ -709,7 +862,9 @@ function MonthlyGrid({
       pairsFn({ data: { farm_id: farmId!, ...v } }),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["attendance", farmId, year, month] });
-      toast.success(`Marked ${v.pairs.length} cell${v.pairs.length === 1 ? "" : "s"} ${statusMeta(v.status)?.label.toLowerCase()}`);
+      toast.success(
+        `Marked ${v.pairs.length} cell${v.pairs.length === 1 ? "" : "s"} ${statusMeta(v.status)?.label.toLowerCase()}`,
+      );
       setSelected(new Set());
     },
     onError: (e: Error) => toast.error(e.message),
@@ -726,8 +881,10 @@ function MonthlyGrid({
   } | null>(null);
 
   function rectKeys(a: { wIdx: number; day: number }, b: { wIdx: number; day: number }) {
-    const w1 = Math.min(a.wIdx, b.wIdx), w2 = Math.max(a.wIdx, b.wIdx);
-    const d1 = Math.min(a.day, b.day), d2 = Math.max(a.day, b.day);
+    const w1 = Math.min(a.wIdx, b.wIdx),
+      w2 = Math.max(a.wIdx, b.wIdx);
+    const d1 = Math.min(a.day, b.day),
+      d2 = Math.max(a.day, b.day);
     const keys: string[] = [];
     for (let i = w1; i <= w2; i++) {
       const w = activeWorkers[i];
@@ -755,7 +912,9 @@ function MonthlyGrid({
     setSelected(next);
   }
   useEffect(() => {
-    function up() { dragRef.current = null; }
+    function up() {
+      dragRef.current = null;
+    }
     window.addEventListener("mouseup", up);
     return () => window.removeEventListener("mouseup", up);
   }, []);
@@ -765,8 +924,12 @@ function MonthlyGrid({
     if (!canEdit || selected.size === 0) return;
     function handler(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
-      if (e.key === "Escape") { setSelected(new Set()); return; }
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+        return;
+      if (e.key === "Escape") {
+        setSelected(new Set());
+        return;
+      }
       const status = STATUS.find((s) => s.key === e.key.toLowerCase());
       if (!status) return;
       e.preventDefault();
@@ -794,8 +957,13 @@ function MonthlyGrid({
         const date = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const rec = lookup.get(`${w.id}|${date}`);
         rows.push({
-          sevak: w.full_name, sevak_id: w.worker_code ?? "", role: w.role ?? "",
-          date, status: rec?.status ?? "", work_done: rec?.work_done ?? "", notes: rec?.notes ?? "",
+          sevak: w.full_name,
+          sevak_id: w.worker_code ?? "",
+          role: w.role ?? "",
+          date,
+          status: rec?.status ?? "",
+          work_done: rec?.work_done ?? "",
+          notes: rec?.notes ?? "",
         });
       }
     }
@@ -814,9 +982,13 @@ function MonthlyGrid({
       <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
         <div className="flex items-end gap-3">
           <div className="flex flex-col gap-1">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Month</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Month
+            </Label>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                   <SelectItem key={m} value={String(m)}>
@@ -827,12 +999,18 @@ function MonthlyGrid({
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Year</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Year
+            </Label>
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[110px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 6 }, (_, i) => today.getFullYear() - 3 + i).map((y) => (
-                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -846,18 +1024,30 @@ function MonthlyGrid({
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground mb-3">
         {STATUS.map((s) => (
           <div key={s.value} className="flex items-center gap-1.5">
-            <span className={cn("inline-flex w-5 h-5 rounded-full ring-1 items-center justify-center text-[10px] font-bold", s.cls)}>{s.short}</span>
+            <span
+              className={cn(
+                "inline-flex w-5 h-5 rounded-full ring-1 items-center justify-center text-[10px] font-bold",
+                s.cls,
+              )}
+            >
+              {s.short}
+            </span>
             {s.label}
           </div>
         ))}
         <div className="ml-auto italic inline-flex items-center gap-1.5">
-          <Keyboard className="size-3.5" /> drag across cells, then press <kbd className="px-1 border rounded">P</kbd> <kbd className="px-1 border rounded">A</kbd> <kbd className="px-1 border rounded">H</kbd> <kbd className="px-1 border rounded">L</kbd> <kbd className="px-1 border rounded">O</kbd>
+          <Keyboard className="size-3.5" /> drag across cells, then press{" "}
+          <kbd className="px-1 border rounded">P</kbd> <kbd className="px-1 border rounded">A</kbd>{" "}
+          <kbd className="px-1 border rounded">H</kbd> <kbd className="px-1 border rounded">L</kbd>{" "}
+          <kbd className="px-1 border rounded">O</kbd>
         </div>
       </div>
 
       {canEdit && selected.size > 0 && (
         <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-primary/10 border border-primary/20 sticky top-0 z-40">
-          <span className="text-sm font-medium ml-2">{selected.size} cell{selected.size === 1 ? "" : "s"} selected</span>
+          <span className="text-sm font-medium ml-2">
+            {selected.size} cell{selected.size === 1 ? "" : "s"} selected
+          </span>
           <div className="flex flex-wrap gap-1 ml-2">
             {STATUS.map((s) => (
               <Button
@@ -871,7 +1061,14 @@ function MonthlyGrid({
               </Button>
             ))}
           </div>
-          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelected(new Set())}>Clear</Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setSelected(new Set())}
+          >
+            Clear
+          </Button>
         </div>
       )}
 
@@ -896,14 +1093,25 @@ function MonthlyGrid({
                         dateStr === selectedDate && "bg-primary/10",
                       )}
                     >
-                      <button type="button" onClick={() => setSelectedDate(dateStr)} className="block w-full">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDate(dateStr)}
+                        className="block w-full"
+                      >
                         <div className="text-[10px] text-muted-foreground">
-                          {new Date(year, month - 1, d).toLocaleDateString("default", { weekday: "short" }).slice(0, 2)}
+                          {new Date(year, month - 1, d)
+                            .toLocaleDateString("default", { weekday: "short" })
+                            .slice(0, 2)}
                         </div>
                         <div className="text-xs font-semibold">{String(d).padStart(2, "0")}</div>
                       </button>
                       {canEdit && (
-                        <button type="button" onClick={() => bulkMut.mutate(dateStr)} className="mt-1 text-muted-foreground/60 hover:text-primary" title="Mark all present">
+                        <button
+                          type="button"
+                          onClick={() => bulkMut.mutate(dateStr)}
+                          className="mt-1 text-muted-foreground/60 hover:text-primary"
+                          title="Mark all present"
+                        >
                           <CheckCheck className="size-3 mx-auto" />
                         </button>
                       )}
@@ -914,13 +1122,24 @@ function MonthlyGrid({
             </thead>
             <tbody>
               {activeWorkers.length === 0 && (
-                <tr><td colSpan={days.length + 1} className="text-center text-muted-foreground italic py-10">No sevaks active in this month.</td></tr>
+                <tr>
+                  <td
+                    colSpan={days.length + 1}
+                    className="text-center text-muted-foreground italic py-10"
+                  >
+                    No sevaks active in this month.
+                  </td>
+                </tr>
               )}
               {activeWorkers.map((w, wIdx) => (
                 <tr key={w.id} className="group">
                   <th className="sticky left-0 z-10 bg-card group-hover:bg-muted/30 border-b border-r px-4 py-3 text-left font-medium align-top">
                     <div className="text-sm">{w.full_name}</div>
-                    {w.role && <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{w.role}</div>}
+                    {w.role && (
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
+                        {w.role}
+                      </div>
+                    )}
                   </th>
                   {days.map((d) => {
                     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -932,7 +1151,10 @@ function MonthlyGrid({
                     return (
                       <td
                         key={d}
-                        onMouseDown={(e) => { e.preventDefault(); onCellMouseDown(e, wIdx, d); }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          onCellMouseDown(e, wIdx, d);
+                        }}
                         onMouseEnter={() => onCellMouseEnter(wIdx, d)}
                         className={cn(
                           "border-b border-r p-1 text-center cursor-cell",
@@ -945,7 +1167,9 @@ function MonthlyGrid({
                           disabled={!canEdit}
                           current={rec}
                           suppress={() => !!dragRef.current?.moved || selected.size > 1}
-                          onSave={(status, notes) => upsertMut.mutate({ worker_id: w.id, date: dateStr, status, notes })}
+                          onSave={(status, notes) =>
+                            upsertMut.mutate({ worker_id: w.id, date: dateStr, status, notes })
+                          }
                         >
                           <button
                             type="button"
@@ -974,10 +1198,16 @@ function MonthlyGrid({
 }
 
 function MonthlyCell({
-  children, current, onSave, disabled, suppress,
+  children,
+  current,
+  onSave,
+  disabled,
+  suppress,
 }: {
-  children: React.ReactNode; current?: any;
-  onSave: (status: string, notes: string | null) => void; disabled?: boolean;
+  children: React.ReactNode;
+  current?: any;
+  onSave: (status: string, notes: string | null) => void;
+  disabled?: boolean;
   suppress?: () => boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -985,28 +1215,63 @@ function MonthlyCell({
   const [notes, setNotes] = useState<string>(current?.notes ?? "");
   if (disabled) return <>{children}</>;
   return (
-    <Popover open={open} onOpenChange={(o) => {
-      if (o && suppress?.()) return;
-      setOpen(o);
-      if (o) { setStatus(current?.status ?? "present"); setNotes(current?.notes ?? ""); }
-    }}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        if (o && suppress?.()) return;
+        setOpen(o);
+        if (o) {
+          setStatus(current?.status ?? "present");
+          setNotes(current?.notes ?? "");
+        }
+      }}
+    >
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent className="w-64 p-3" align="center">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Status</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+          Status
+        </div>
         <div className="grid grid-cols-3 gap-1 mb-3">
           {STATUS.map((s) => (
-            <button key={s.value} type="button" onClick={() => setStatus(s.value)} className={cn("px-2 py-1.5 rounded text-[11px] font-medium ring-1 transition", s.cls, status === s.value ? "ring-2 ring-foreground/40 scale-105" : "opacity-60 hover:opacity-100")}>
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => setStatus(s.value)}
+              className={cn(
+                "px-2 py-1.5 rounded text-[11px] font-medium ring-1 transition",
+                s.cls,
+                status === s.value
+                  ? "ring-2 ring-foreground/40 scale-105"
+                  : "opacity-60 hover:opacity-100",
+              )}
+            >
               {s.label}
             </button>
           ))}
         </div>
         {current?.work_done && (
-          <div className="text-xs text-muted-foreground mb-2"><span className="font-medium">Work:</span> {current.work_done}</div>
+          <div className="text-xs text-muted-foreground mb-2">
+            <span className="font-medium">Work:</span> {current.work_done}
+          </div>
         )}
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Note</Label>
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Optional" className="mt-1 text-xs" />
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="Optional"
+          className="mt-1 text-xs"
+        />
         <div className="flex justify-end mt-3">
-          <Button size="sm" onClick={() => { onSave(status, notes.trim() ? notes.trim() : null); setOpen(false); }}>Save</Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              onSave(status, notes.trim() ? notes.trim() : null);
+              setOpen(false);
+            }}
+          >
+            Save
+          </Button>
         </div>
       </PopoverContent>
     </Popover>
@@ -1016,8 +1281,18 @@ function MonthlyCell({
 /* ---------- VISITORS ---------- */
 
 function VisitorsPanel({
-  farmId, farmName, date, setDate, canEdit,
-}: { farmId?: string; farmName?: string; date: string; setDate: (d: string) => void; canEdit: boolean }) {
+  farmId,
+  farmName,
+  date,
+  setDate,
+  canEdit,
+}: {
+  farmId?: string;
+  farmName?: string;
+  date: string;
+  setDate: (d: string) => void;
+  canEdit: boolean;
+}) {
   const fn = useServerFn(listVisitors);
   const visitors = useQuery({
     queryKey: ["visitors", farmId, date],
@@ -1032,11 +1307,18 @@ function VisitorsPanel({
   const qc = useQueryClient();
   const delMut = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["visitors", farmId, date] }); setConfirmDel(null); toast.success("Visitor removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["visitors", farmId, date] });
+      setConfirmDel(null);
+      toast.success("Visitor removed");
+    },
   });
 
   const niceDate = new Date(date + "T00:00:00").toLocaleDateString("default", {
-    weekday: "long", month: "long", day: "numeric", year: "numeric",
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 
   return (
@@ -1046,10 +1328,18 @@ function VisitorsPanel({
           <h2 className="font-serif text-2xl flex items-center gap-2">
             <Users className="size-5 text-primary" /> Visitors
           </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">{farmName ? `${farmName} — ` : ""}{niceDate}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {farmName ? `${farmName} — ` : ""}
+            {niceDate}
+          </p>
         </div>
         <div className="flex items-end gap-2">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-[170px]" />
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-[170px]"
+          />
           {canEdit && (
             <Button size="sm" onClick={() => setAdding(true)} disabled={!farmId}>
               <Plus className="size-3.5 mr-1" /> Log visitor
@@ -1082,8 +1372,12 @@ function VisitorsPanel({
             )}
             {canEdit && (
               <div className="flex justify-end gap-1 mt-auto pt-3 opacity-0 group-hover:opacity-100 transition">
-                <Button size="sm" variant="ghost" onClick={() => setEditing(v)}><Pencil className="size-3.5" /></Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirmDel(v)}><Trash2 className="size-3.5" /></Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(v)}>
+                  <Pencil className="size-3.5" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmDel(v)}>
+                  <Trash2 className="size-3.5" />
+                </Button>
               </div>
             )}
           </div>
@@ -1093,7 +1387,12 @@ function VisitorsPanel({
       {(adding || editing) && farmId && (
         <VisitorDialog
           open
-          onOpenChange={(v) => { if (!v) { setAdding(false); setEditing(null); } }}
+          onOpenChange={(v) => {
+            if (!v) {
+              setAdding(false);
+              setEditing(null);
+            }
+          }}
           initial={editing}
           farmId={farmId}
           date={date}
@@ -1102,10 +1401,17 @@ function VisitorsPanel({
 
       <AlertDialog open={!!confirmDel} onOpenChange={(v) => !v && setConfirmDel(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Remove visitor entry?</AlertDialogTitle></AlertDialogHeader>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove visitor entry?</AlertDialogTitle>
+          </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive" onClick={() => delMut.mutate(confirmDel.id)}>Delete</AlertDialogAction>
+            <AlertDialogAction
+              className="bg-destructive"
+              onClick={() => delMut.mutate(confirmDel.id)}
+            >
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1122,60 +1428,133 @@ function fmtTime(t?: string | null) {
 }
 
 function VisitorDialog({
-  open, onOpenChange, initial, farmId, date,
+  open,
+  onOpenChange,
+  initial,
+  farmId,
+  date,
 }: {
-  open: boolean; onOpenChange: (v: boolean) => void;
-  initial?: any; farmId: string; date: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  initial?: any;
+  farmId: string;
+  date: string;
 }) {
-  const [f, setF] = useState(() => initial || {
-    visitor_name: "", visitor_type: "farmer", count: 1, description: "", start_time: "", end_time: "",
-  });
+  const [f, setF] = useState(
+    () =>
+      initial || {
+        visitor_name: "",
+        visitor_type: "farmer",
+        count: 1,
+        description: "",
+        start_time: "",
+        end_time: "",
+      },
+  );
   const upsert = useServerFn(upsertVisitor);
   const qc = useQueryClient();
   const mut = useMutation({
     mutationFn: () => {
       const { id, created_at, updated_at, ...rest } = f;
       const values = {
-        ...rest, farm_id: farmId, date, count: Number(rest.count) || 1,
+        ...rest,
+        farm_id: farmId,
+        date,
+        count: Number(rest.count) || 1,
         start_time: rest.start_time || null,
         end_time: rest.end_time || null,
       };
       return upsert({ data: { id, values } });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["visitors", farmId, date] }); onOpenChange(false); toast.success("Saved"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["visitors", farmId, date] });
+      onOpenChange(false);
+      toast.success("Saved");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
-  function set(k: string, v: any) { setF((p: any) => ({ ...p, [k]: v })); }
+  function set(k: string, v: any) {
+    setF((p: any) => ({ ...p, [k]: v }));
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif text-2xl">{initial ? "Edit visitor" : "Log a visitor"}</DialogTitle>
-          <DialogDescription>Anyone who came to the farm — farmers, officials, students, returning sevaks.</DialogDescription>
+          <DialogTitle className="font-serif text-2xl">
+            {initial ? "Edit visitor" : "Log a visitor"}
+          </DialogTitle>
+          <DialogDescription>
+            Anyone who came to the farm — farmers, officials, students, returning sevaks.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
-          <div><Label>Name / group *</Label><Input value={f.visitor_name} onChange={(e) => set("visitor_name", e.target.value)} placeholder="e.g. Krishi Vigyan Kendra team" /></div>
+          <div>
+            <Label>Name / group *</Label>
+            <Input
+              value={f.visitor_name}
+              onChange={(e) => set("visitor_name", e.target.value)}
+              placeholder="e.g. Krishi Vigyan Kendra team"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Type *</Label>
               <Select value={f.visitor_type} onValueChange={(v) => set("visitor_type", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {VISITOR_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  {VISITOR_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Number of people</Label><Input type="number" min={1} value={f.count} onChange={(e) => set("count", e.target.value)} /></div>
+            <div>
+              <Label>Number of people</Label>
+              <Input
+                type="number"
+                min={1}
+                value={f.count}
+                onChange={(e) => set("count", e.target.value)}
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Arrival time</Label><Input type="time" value={f.start_time ?? ""} onChange={(e) => set("start_time", e.target.value)} /></div>
-            <div><Label>Departure time</Label><Input type="time" value={f.end_time ?? ""} onChange={(e) => set("end_time", e.target.value)} /></div>
+            <div>
+              <Label>Arrival time</Label>
+              <Input
+                type="time"
+                value={f.start_time ?? ""}
+                onChange={(e) => set("start_time", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Departure time</Label>
+              <Input
+                type="time"
+                value={f.end_time ?? ""}
+                onChange={(e) => set("end_time", e.target.value)}
+              />
+            </div>
           </div>
-          <div><Label>Description</Label><Textarea rows={3} value={f.description || ""} onChange={(e) => set("description", e.target.value)} placeholder="Purpose of visit, notes…" /></div>
+          <div>
+            <Label>Description</Label>
+            <Textarea
+              rows={3}
+              value={f.description || ""}
+              onChange={(e) => set("description", e.target.value)}
+              placeholder="Purpose of visit, notes…"
+            />
+          </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending || !f.visitor_name}>
             {mut.isPending ? "Saving..." : "Save"}
           </Button>
@@ -1219,8 +1598,14 @@ function prettyRange(period: "weekly" | "monthly", start: string) {
 }
 
 function WorkLogPanel({
-  farmId, workers, canEdit,
-}: { farmId?: string; workers: any[]; canEdit: boolean }) {
+  farmId,
+  workers,
+  canEdit,
+}: {
+  farmId?: string;
+  workers: any[];
+  canEdit: boolean;
+}) {
   const today = new Date();
   const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
   const [weekStart, setWeekStart] = useState<string>(mondayOf(isoDate(today)));
@@ -1228,9 +1613,10 @@ function WorkLogPanel({
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`,
   );
   const periodStart = period === "weekly" ? weekStart : monthStart;
-  const periodEnd = period === "weekly"
-    ? addDays(weekStart, 6)
-    : isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+  const periodEnd =
+    period === "weekly"
+      ? addDays(weekStart, 6)
+      : isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
 
   // For monthly end-of-month calc using the selected month:
   const ms = new Date(monthStart + "T00:00:00");
@@ -1250,7 +1636,8 @@ function WorkLogPanel({
   const listFn = useServerFn(listWorkNotes);
   const notesQ = useQuery({
     queryKey: ["work-notes", farmId, period, periodStart],
-    queryFn: () => listFn({ data: { farmId: farmId!, period_type: period, period_start: periodStart } }),
+    queryFn: () =>
+      listFn({ data: { farmId: farmId!, period_type: period, period_start: periodStart } }),
     enabled: !!farmId,
   });
   const lookup = useMemo(() => {
@@ -1263,12 +1650,17 @@ function WorkLogPanel({
   const saveFn = useServerFn(upsertWorkNote);
   const saveMut = useMutation({
     mutationFn: (v: { worker_id: string; notes: string }) =>
-      saveFn({ data: {
-        worker_id: v.worker_id, farm_id: farmId!,
-        period_type: period, period_start: periodStart,
-        notes: v.notes,
-      } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["work-notes", farmId, period, periodStart] }),
+      saveFn({
+        data: {
+          worker_id: v.worker_id,
+          farm_id: farmId!,
+          period_type: period,
+          period_start: periodStart,
+          notes: v.notes,
+        },
+      }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["work-notes", farmId, period, periodStart] }),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -1312,9 +1704,13 @@ function WorkLogPanel({
       <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
         <div className="flex items-end gap-2 flex-wrap">
           <div className="flex flex-col gap-1">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Period</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Period
+            </Label>
             <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
@@ -1322,10 +1718,14 @@ function WorkLogPanel({
             </Select>
           </div>
           <div className="flex items-end gap-1">
-            <Button variant="outline" size="icon" onClick={() => shiftPeriod(-1)}><ChevronLeft className="size-4" /></Button>
+            <Button variant="outline" size="icon" onClick={() => shiftPeriod(-1)}>
+              <ChevronLeft className="size-4" />
+            </Button>
             {period === "weekly" ? (
               <div className="flex flex-col gap-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Week starting (Mon)</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Week starting (Mon)
+                </Label>
                 <Input
                   type="date"
                   value={weekStart}
@@ -1335,7 +1735,9 @@ function WorkLogPanel({
               </div>
             ) : (
               <div className="flex flex-col gap-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Month</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Month
+                </Label>
                 <Input
                   type="month"
                   value={monthStart.slice(0, 7)}
@@ -1344,8 +1746,12 @@ function WorkLogPanel({
                 />
               </div>
             )}
-            <Button variant="outline" size="icon" onClick={() => shiftPeriod(1)}><ChevronRight className="size-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={jumpToToday}>Today</Button>
+            <Button variant="outline" size="icon" onClick={() => shiftPeriod(1)}>
+              <ChevronRight className="size-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={jumpToToday}>
+              Today
+            </Button>
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={exportCsv}>
@@ -1354,7 +1760,8 @@ function WorkLogPanel({
       </div>
 
       <div className="text-sm text-muted-foreground italic mb-4">
-        {prettyRange(period, periodStart)} · {activeWorkers.length} sevak{activeWorkers.length === 1 ? "" : "s"} active
+        {prettyRange(period, periodStart)} · {activeWorkers.length} sevak
+        {activeWorkers.length === 1 ? "" : "s"} active
       </div>
 
       <div className="border rounded-xl overflow-hidden bg-card shadow-sm divide-y">
@@ -1378,10 +1785,20 @@ function WorkLogPanel({
 }
 
 function WorkNoteRow({
-  worker, current, canEdit, onSave,
-}: { worker: any; current: string; canEdit: boolean; onSave: (notes: string) => void }) {
+  worker,
+  current,
+  canEdit,
+  onSave,
+}: {
+  worker: any;
+  current: string;
+  canEdit: boolean;
+  onSave: (notes: string) => void;
+}) {
   const [val, setVal] = useState(current);
-  useEffect(() => { setVal(current); }, [current]);
+  useEffect(() => {
+    setVal(current);
+  }, [current]);
   return (
     <div className="px-4 py-3 grid md:grid-cols-[220px_1fr] gap-3 items-start">
       <div>
@@ -1394,7 +1811,9 @@ function WorkNoteRow({
         rows={3}
         value={val}
         onChange={(e) => setVal(e.target.value)}
-        onBlur={() => { if ((current ?? "") !== val) onSave(val); }}
+        onBlur={() => {
+          if ((current ?? "") !== val) onSave(val);
+        }}
         placeholder="Work done this period, achievements, areas of focus, things to note…"
         disabled={!canEdit}
         className="text-sm"

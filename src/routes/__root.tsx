@@ -50,9 +50,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           This page didn't load
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Something went wrong on our end.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -78,10 +76,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Internal farm management tool for AOL Permaculture." },
       { property: "og:title", content: "AOL Permaculture — Internal Farm Management" },
       { name: "twitter:title", content: "AOL Permaculture — Internal Farm Management" },
-      { property: "og:description", content: "Internal farm management tool for AOL Permaculture." },
-      { name: "twitter:description", content: "Internal farm management tool for AOL Permaculture." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/74c6169c-80b7-4964-8c7d-5a57dc22c0f1/id-preview-e8c12185--7fae7f56-609b-44da-81b3-9498bdcc02fe.lovable.app-1782985245453.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/74c6169c-80b7-4964-8c7d-5a57dc22c0f1/id-preview-e8c12185--7fae7f56-609b-44da-81b3-9498bdcc02fe.lovable.app-1782985245453.png" },
+      {
+        property: "og:description",
+        content: "Internal farm management tool for AOL Permaculture.",
+      },
+      {
+        name: "twitter:description",
+        content: "Internal farm management tool for AOL Permaculture.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/74c6169c-80b7-4964-8c7d-5a57dc22c0f1/id-preview-e8c12185--7fae7f56-609b-44da-81b3-9498bdcc02fe.lovable.app-1782985245453.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/74c6169c-80b7-4964-8c7d-5a57dc22c0f1/id-preview-e8c12185--7fae7f56-609b-44da-81b3-9498bdcc02fe.lovable.app-1782985245453.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],

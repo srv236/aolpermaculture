@@ -26,8 +26,8 @@ export const uploadToDrive = createServerFn({ method: "POST" })
     const enc = new TextEncoder();
     const head = enc.encode(
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
-      JSON.stringify(metadata) +
-      `\r\n--${boundary}\r\nContent-Type: ${data.mimeType}\r\n\r\n`,
+        JSON.stringify(metadata) +
+        `\r\n--${boundary}\r\nContent-Type: ${data.mimeType}\r\n\r\n`,
     );
     const tail = enc.encode(`\r\n--${boundary}--`);
     const body = new Uint8Array(head.length + bytes.length + tail.length);

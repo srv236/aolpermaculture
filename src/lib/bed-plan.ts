@@ -38,15 +38,16 @@ export function defaultBedConfig(): BedConfig {
     },
     border: { enabled: true, cropId: null, spacingIn: 12 },
     dripLines: [1, 2],
-
   };
 }
 
 // Category → default emoji icon
-export function iconForCrop(crop?: {
-  crop_name?: string | null;
-  crop_category?: string | null;
-} | null): string {
+export function iconForCrop(
+  crop?: {
+    crop_name?: string | null;
+    crop_category?: string | null;
+  } | null,
+): string {
   if (!crop) return "•";
   const name = (crop.crop_name || "").toLowerCase();
   if (/tomato/.test(name)) return "🍅";
@@ -75,9 +76,18 @@ export function iconForCrop(crop?: {
 // Deterministic marker (letter + color) to differentiate crops that share the
 // same category icon in the legend / preview.
 const MARKER_PALETTE = [
-  "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6",
-  "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16",
-  "#d946ef", "#0ea5e9",
+  "#ef4444",
+  "#f59e0b",
+  "#10b981",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
+  "#f97316",
+  "#6366f1",
+  "#84cc16",
+  "#d946ef",
+  "#0ea5e9",
 ];
 export function variantMarker(
   crop?: { id?: string; crop_name?: string | null; variety_name?: string | null } | null,
@@ -92,7 +102,12 @@ export function variantMarker(
 }
 
 export function colorForCrop(
-  crop?: { id?: string; crop_name?: string | null; variety_name?: string | null; crop_category?: string | null } | null,
+  crop?: {
+    id?: string;
+    crop_name?: string | null;
+    variety_name?: string | null;
+    crop_category?: string | null;
+  } | null,
 ): string {
   if (!crop) return "#fafaf9";
   // Distinct per-crop pastel derived from the variant marker color (~22% opacity)
