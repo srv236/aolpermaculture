@@ -16,6 +16,13 @@ import {
   Clock,
   RefreshCw,
   Sparkles,
+  Thermometer,
+  Droplets,
+  CalendarDays,
+  Check,
+  AlertCircle,
+  Layers,
+  Scale,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -51,8 +58,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ImageUploadSection } from "@/components/image-upload-section";
 import { SeedStorageView } from "@/components/seed-storage-tab";
-import { MonthCalendarPicker } from "@/components/month-calendar-picker";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -457,30 +464,207 @@ function CropsPage() {
 }
 
 // -------------------------------------------------------------
-// ADD / EDIT CROP FORM
-// Updated with modern card elements, sowing presets, germination,
-// and repeat harvest settings.
+// CONSTANTS & HELPERS FOR ADD / EDIT CROP FORM
 // -------------------------------------------------------------
-type CropFormState = {
-  id?: string;
-  crop_name: string;
-  variety_name: string;
-  crop_category: string;
-  yield_unit: string;
-  typical_yield_per_acre: string;
-  growing_days: string;
-  cultivation_season: string;
-  sowing_window: string;
-  harvesting_window: string;
-  optimal_temp: string;
-  water_requirement: string;
-  description: string;
-  is_active: boolean;
-  image_url: string | null;
-  germination_days: string;
-  is_repeat_harvest: boolean;
-  repeat_harvest_interval: string;
-};
+
+// Cultivation season presets
+const SEASONAL_CHIPS = ["Kharif", "Rabi", "Zaid"] as const;
+const OVERRIDE_CHIPS = ["Year-round", "Perennial"] as const;
+
+function parseCultivationSeason(val?: string | null): string[] {
+  if (!val) return [];
+  const trimmed = val.trim();
+  if (/perennial/i.test(trimmed)) return ["Perennial"];
+  if (/all\s*year|year[\s-]*round/i.test(trimmed)) return ["Year-round"];
+
+  const found: string[] = [];
+  if (/kharif/i.test(trimmed)) found.push("Kharif");
+  if (/rabi/i.test(trimmed)) found.push("Rabi");
+  if (/zaid/i.test(trimmed)) found.push("Zaid");
+
+  if (found.length > 0) return found;
+  return trimmed ? [trimmed] : [];
+}
+
+function serializeCultivationSeason(selected: string[]): string | null {
+  if (selected.includes("Year-round")) return "Year-round";
+  if (selected.includes("Perennial")) return "Perennial";
+  const canonicalOrder = ["Kharif", "Rabi", "Zaid"];
+  const ordered = canonicalOrder.filter((s) => selected.includes(s));
+  // Preserve any legacy custom season if present
+  selected.forEach((s) => {
+    if (!canonicalOrder.includes(s) && !ordered.includes(s)) ordered.push(s);
+  });
+  return ordered.length > 0 ? ordered.join(" / ") : null;
+}
+
+// Sowing window presets
+const SOWING_WINDOW_PRESETS = [
+  "Early Season",
+  "Mid Season",
+  "Late Season",
+  "All Season / Continuous",
+  "Year-round",
+] as const;
+
+// Harvesting window presets & units
+const HARVESTING_QUICK_PRESETS = [
+  "15 days",
+  "1-2 months",
+  "Single Harvest",
+  "Kharif",
+  "Rabi",
+  "Zaid",
+  "Year-round",
+] as const;
+
+const HARVESTING_PRESET_UNITS = ["Single Harvest", "Kharif", "Rabi", "Zaid", "Year-round"] as const;
+
+function parseHarvestingWindow(val?: string | null): { min: string; max: string; unit: string } {
+  if (!val) return { min: "", max: "", unit: "days" };
+  const trimmed = val.trim();
+  if (trimmed === "Single Harvest" || /single/i.test(trimmed)) {
+    return { min: "", max: "", unit: "Single Harvest" };
+  }
+  if (/year[\s-]*round/i.test(trimmed)) {
+    return { min: "", max: "", unit: "Year-round" };
+  }
+  if (/kharif/i.test(trimmed)) {
+    return { min: "", max: "", unit: "Kharif" };
+  }
+  if (/rabi/i.test(trimmed)) {
+    return { min: "", max: "", unit: "Rabi" };
+  }
+  if (/zaid/i.test(trimmed)) {
+    return { min: "", max: "", unit: "Zaid" };
+  }
+  // Try matching range: e.g. "1-2 months", "30-45 days", "30 - 45 days"
+  const rangeMatch = trimmed.match(
+    /^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(days?|weeks?|months?)/i,
+  );
+  if (rangeMatch) {
+    const rawUnit = rangeMatch[3].toLowerCase();
+    const unit = rawUnit.startsWith("month")
+      ? "months"
+      : rawUnit.startsWith("week")
+        ? "weeks"
+        : "days";
+    return { min: rangeMatch[1], max: rangeMatch[2], unit };
+  }
+  // Try matching single number: e.g. "15 days"
+  const singleMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*(days?|weeks?|months?)/i);
+  if (singleMatch) {
+    const rawUnit = singleMatch[2].toLowerCase();
+    const unit = rawUnit.startsWith("month")
+      ? "months"
+      : rawUnit.startsWith("week")
+        ? "weeks"
+        : "days";
+    return { min: singleMatch[1], max: "", unit };
+  }
+  // Fallback
+  return { min: "", max: "", unit: trimmed };
+}
+
+function serializeHarvestingWindow(min: string, max: string, unit: string): string | null {
+  if (!unit) return null;
+  if ((HARVESTING_PRESET_UNITS as readonly string[]).includes(unit)) {
+    return unit;
+  }
+  const cleanMin = min.trim();
+  const cleanMax = max.trim();
+  if (!cleanMin && !cleanMax) return null;
+  if (cleanMin && cleanMax) {
+    return `${cleanMin}-${cleanMax} ${unit}`;
+  }
+  if (cleanMin) {
+    return `${cleanMin} ${unit}`;
+  }
+  return `up to ${cleanMax} ${unit}`;
+}
+
+// Temperature presets & parser
+const TEMP_PRESETS = [
+  { label: "10-25°C (Cool)", min: "10", max: "25" },
+  { label: "15-25°C (Mild)", min: "15", max: "25" },
+  { label: "20-32°C (Warm)", min: "20", max: "32" },
+  { label: "25-35°C (Hot)", min: "25", max: "35" },
+] as const;
+
+function parseOptimalTemp(val?: string | null): { min: string; max: string; unit: string } {
+  if (!val) return { min: "", max: "", unit: "°C" };
+  const trimmed = val.trim();
+  const unit = trimmed.includes("°F") || /f$/i.test(trimmed) ? "°F" : "°C";
+  const rangeMatch = trimmed.match(/(\d+(?:\.\d+)?)\s*(?:°?[CF])?\s*[-–]\s*(\d+(?:\.\d+)?)/i);
+  if (rangeMatch) {
+    return { min: rangeMatch[1], max: rangeMatch[2], unit };
+  }
+  const singleMatch = trimmed.match(/(\d+(?:\.\d+)?)/);
+  if (singleMatch) {
+    return { min: singleMatch[1], max: "", unit };
+  }
+  return { min: "", max: "", unit: "°C" };
+}
+
+function serializeOptimalTemp(min: string, max: string, unit: string): string | null {
+  const cleanMin = min.trim();
+  const cleanMax = max.trim();
+  if (!cleanMin && !cleanMax) return null;
+  if (cleanMin && cleanMax) {
+    return `${cleanMin}-${cleanMax}${unit}`;
+  }
+  if (cleanMin) {
+    return `${cleanMin}${unit}`;
+  }
+  return `up to ${cleanMax}${unit}`;
+}
+
+// Yield units and conversion
+const YIELD_UNITS = ["tons/acre", "kg/acre", "quintals/acre", "bunches/acre"] as const;
+
+function normalizeInitialYieldUnit(unit?: string | null): string {
+  if (!unit) return "kg/acre";
+  const u = unit.toLowerCase().trim();
+  if (u === "kg" || u === "kg/acre") return "kg/acre";
+  if (u === "tons" || u === "ton" || u === "tons/acre") return "tons/acre";
+  if (u === "quintal" || u === "quintals" || u === "quintals/acre") return "quintals/acre";
+  if (u === "bunches" || u === "bunches/acre") return "bunches/acre";
+  return unit;
+}
+
+function convertYieldValue(val: number, fromUnit: string, toUnit: string): number {
+  if (fromUnit === toUnit) return val;
+  // Convert fromUnit to kg base if weight-based
+  let inKg: number | null = null;
+  if (fromUnit === "kg/acre" || fromUnit === "kg") inKg = val;
+  else if (fromUnit === "tons/acre" || fromUnit === "tons") inKg = val * 1000;
+  else if (fromUnit === "quintals/acre" || fromUnit === "quintal") inKg = val * 100;
+
+  if (inKg === null) {
+    return val;
+  }
+
+  let converted = inKg;
+  if (toUnit === "kg/acre" || toUnit === "kg") converted = inKg;
+  else if (toUnit === "tons/acre" || toUnit === "tons") converted = inKg / 1000;
+  else if (toUnit === "quintals/acre" || toUnit === "quintal") converted = inKg / 100;
+  else return val;
+
+  return Math.round(converted * 100) / 100;
+}
+
+// Standard Crop Categories
+const CROP_CATEGORIES = [
+  "vegetable",
+  "greens",
+  "fruit",
+  "herb",
+  "legume",
+  "perennial",
+  "other",
+  "grain",
+  "flower",
+] as const;
 
 function CropDialog({
   open,
@@ -491,98 +675,230 @@ function CropDialog({
   onOpenChange: (v: boolean) => void;
   initial?: CropRow | null;
 }) {
-  const [f, setF] = useState<CropFormState>(() =>
-    initial
-      ? {
-          id: initial.id,
-          crop_name: initial.crop_name || "",
-          variety_name: initial.variety_name || "",
-          crop_category: initial.crop_category || "vegetable",
-          yield_unit: initial.yield_unit || "kg",
-          typical_yield_per_acre:
-            initial.typical_yield_per_acre !== null && initial.typical_yield_per_acre !== undefined
-              ? String(initial.typical_yield_per_acre)
-              : "",
-          growing_days:
-            initial.growing_days !== null && initial.growing_days !== undefined
-              ? String(initial.growing_days)
-              : "",
-          cultivation_season: initial.cultivation_season || "",
-          sowing_window: initial.sowing_window || "",
-          harvesting_window: initial.harvesting_window || "",
-          optimal_temp: initial.optimal_temp || "",
-          water_requirement: initial.water_requirement || "Medium",
-          description: initial.description || "",
-          is_active: initial.is_active ?? true,
-          image_url: initial.image_url ?? null,
-          germination_days:
-            initial.germination_days !== null && initial.germination_days !== undefined
-              ? String(initial.germination_days)
-              : "",
-          is_repeat_harvest: !!initial.is_repeat_harvest,
-          repeat_harvest_interval: initial.repeat_harvest_interval || "",
-        }
-      : {
-          crop_name: "",
-          variety_name: "",
-          crop_category: "vegetable",
-          yield_unit: "kg",
-          typical_yield_per_acre: "",
-          growing_days: "",
-          cultivation_season: "",
-          sowing_window: "",
-          harvesting_window: "",
-          optimal_temp: "",
-          water_requirement: "Medium",
-          description: "",
-          is_active: true,
-          image_url: null,
-          germination_days: "",
-          is_repeat_harvest: false,
-          repeat_harvest_interval: "",
-        },
+  // Section 1: Crop Identity
+  const [cropName, setCropName] = useState<string>(initial?.crop_name || "");
+  const [varietyName, setVarietyName] = useState<string>(initial?.variety_name || "");
+  const [cropCategory, setCropCategory] = useState<string>(initial?.crop_category || "vegetable");
+  const [imageUrl, setImageUrl] = useState<string | null>(initial?.image_url ?? null);
+  const [isActive, setIsActive] = useState<boolean>(initial?.is_active ?? true);
+
+  // Section 2: Season & Harvest Windows
+  const [selectedSeasons, setSelectedSeasons] = useState<string[]>(() =>
+    parseCultivationSeason(initial?.cultivation_season),
+  );
+  const [sowingWindow, setSowingWindow] = useState<string>(initial?.sowing_window || "");
+
+  const parsedHarvest = parseHarvestingWindow(initial?.harvesting_window);
+  const [harvestMin, setHarvestMin] = useState<string>(parsedHarvest.min);
+  const [harvestMax, setHarvestMax] = useState<string>(parsedHarvest.max);
+  const [harvestUnit, setHarvestUnit] = useState<string>(parsedHarvest.unit || "days");
+
+  const [germinationDays, setGerminationDays] = useState<string>(
+    initial?.germination_days !== null && initial?.germination_days !== undefined
+      ? String(initial.germination_days)
+      : "",
+  );
+  const [isRepeatHarvest, setIsRepeatHarvest] = useState<boolean>(!!initial?.is_repeat_harvest);
+  const [repeatHarvestInterval, setRepeatHarvestInterval] = useState<string>(
+    initial?.repeat_harvest_interval || "",
   );
 
+  // Section 3: Agronomy & Yield
+  const [growingVal, setGrowingVal] = useState<string>(
+    initial?.growing_days !== null && initial?.growing_days !== undefined
+      ? String(initial.growing_days)
+      : "",
+  );
+  const [growingUnit, setGrowingUnit] = useState<"days" | "months">("days");
+
+  const parsedTemp = parseOptimalTemp(initial?.optimal_temp);
+  const [tempMin, setTempMin] = useState<string>(parsedTemp.min);
+  const [tempMax, setTempMax] = useState<string>(parsedTemp.max);
+  const [tempUnit, setTempUnit] = useState<string>(parsedTemp.unit || "°C");
+
+  const [waterRequirement, setWaterRequirement] = useState<string>(
+    initial?.water_requirement || "Medium",
+  );
+
+  const [yieldVal, setYieldVal] = useState<string>(
+    initial?.typical_yield_per_acre !== null && initial?.typical_yield_per_acre !== undefined
+      ? String(initial.typical_yield_per_acre)
+      : "",
+  );
+  const [yieldUnit, setYieldUnit] = useState<string>(() =>
+    normalizeInitialYieldUnit(initial?.yield_unit),
+  );
+
+  const [description, setDescription] = useState<string>(initial?.description || "");
+
+  // Server function & Query Client
   const upsert = useServerFn(upsertCrop);
   const qc = useQueryClient();
 
+  // Cultivation season toggle logic
+  function toggleSeason(season: string) {
+    setSelectedSeasons((prev) => {
+      // Clear mutually exclusive overrides if set
+      const withoutOverrides = prev.filter(
+        (s) => !OVERRIDE_CHIPS.includes(s as (typeof OVERRIDE_CHIPS)[number]),
+      );
+      if (withoutOverrides.includes(season)) {
+        return withoutOverrides.filter((s) => s !== season);
+      }
+      return [...withoutOverrides, season];
+    });
+  }
+
+  function toggleOverride(override: string) {
+    setSelectedSeasons((prev) => {
+      if (prev.includes(override)) {
+        return [];
+      }
+      return [override];
+    });
+  }
+
+  // Sowing window helper
+  function deriveSowingFromSeason() {
+    if (selectedSeasons.includes("Year-round") || selectedSeasons.includes("Perennial")) {
+      setSowingWindow("Year-round");
+    } else if (selectedSeasons.length > 0) {
+      setSowingWindow("Early Season");
+    } else {
+      setSowingWindow("All Season / Continuous");
+    }
+  }
+
+  // Harvesting window preset click handler
+  function applyHarvestPreset(preset: string) {
+    if (preset === "15 days") {
+      setHarvestMin("15");
+      setHarvestMax("");
+      setHarvestUnit("days");
+      if (!growingVal) setGrowingVal("15");
+    } else if (preset === "1-2 months") {
+      setHarvestMin("1");
+      setHarvestMax("2");
+      setHarvestUnit("months");
+      if (!growingVal) {
+        setGrowingVal("45");
+        setGrowingUnit("days");
+      }
+    } else {
+      setHarvestMin("");
+      setHarvestMax("");
+      setHarvestUnit(preset);
+    }
+  }
+
+  const isNumericHarvest = ["days", "weeks", "months"].includes(harvestUnit);
+  const harvestMinNum = harvestMin.trim() !== "" ? parseFloat(harvestMin) : null;
+  const harvestMaxNum = harvestMax.trim() !== "" ? parseFloat(harvestMax) : null;
+  const harvestError =
+    isNumericHarvest &&
+    harvestMinNum !== null &&
+    harvestMaxNum !== null &&
+    harvestMinNum > harvestMaxNum
+      ? "Min harvest duration cannot be greater than Max duration"
+      : null;
+
+  // Temperature preset click handler
+  function applyTempPreset(min: string, max: string) {
+    setTempMin(min);
+    setTempMax(max);
+    setTempUnit("°C");
+  }
+
+  const tempMinNum = tempMin.trim() !== "" ? parseFloat(tempMin) : null;
+  const tempMaxNum = tempMax.trim() !== "" ? parseFloat(tempMax) : null;
+  const tempError =
+    tempMinNum !== null && tempMaxNum !== null && tempMinNum > tempMaxNum
+      ? "Min temperature cannot be greater than Max temperature"
+      : null;
+
+  // Growing duration unit conversion
+  function handleGrowingUnitChange(newUnit: "days" | "months") {
+    if (newUnit === growingUnit) return;
+    if (growingVal.trim() !== "") {
+      const num = parseFloat(growingVal.trim());
+      if (!isNaN(num) && num > 0) {
+        if (newUnit === "months") {
+          const m = Math.round((num / 30) * 10) / 10;
+          setGrowingVal(String(m));
+        } else {
+          const d = Math.round(num * 30);
+          setGrowingVal(String(d));
+        }
+      }
+    }
+    setGrowingUnit(newUnit);
+  }
+
+  // Yield unit conversion
+  function handleYieldUnitChange(newUnit: string) {
+    if (newUnit === yieldUnit) return;
+    if (yieldVal.trim() !== "") {
+      const num = parseFloat(yieldVal.trim());
+      if (!isNaN(num)) {
+        const converted = convertYieldValue(num, yieldUnit, newUnit);
+        setYieldVal(String(converted));
+      }
+    }
+    setYieldUnit(newUnit);
+  }
+
+  // Sanitized computed values
+  const sanitizedSeason = serializeCultivationSeason(selectedSeasons);
+  const sanitizedHarvest = serializeHarvestingWindow(harvestMin, harvestMax, harvestUnit);
+  const sanitizedTemp = serializeOptimalTemp(tempMin, tempMax, tempUnit);
+
+  const sanitizedGrowingDays = (() => {
+    if (!growingVal.trim()) return null;
+    const num = parseFloat(growingVal.trim());
+    if (isNaN(num) || num <= 0) return null;
+    return growingUnit === "months" ? Math.round(num * 30) : Math.round(num);
+  })();
+
+  const sanitizedYieldValue = (() => {
+    if (!yieldVal.trim()) return null;
+    const num = parseFloat(yieldVal.trim());
+    if (isNaN(num) || num < 0) return null;
+    return Math.round(num * 100) / 100;
+  })();
+
+  const sanitizedGerminationDays = (() => {
+    if (!germinationDays.trim()) return null;
+    const num = parseInt(germinationDays.trim(), 10);
+    return isNaN(num) || num <= 0 ? null : num;
+  })();
+
+  // Validation
+  const isSaveDisabled = !cropName.trim() || !!tempError || !!harvestError;
+
+  // Mutation
   const mut = useMutation({
     mutationFn: () => {
-      const { id, ...rawValues } = f;
-
       const values: Record<string, unknown> = {
-        crop_name: rawValues.crop_name?.trim(),
-        variety_name: rawValues.variety_name?.trim() || null,
-        crop_category: rawValues.crop_category || null,
-        yield_unit: rawValues.yield_unit?.trim() || "kg",
-        typical_yield_per_acre:
-          rawValues.typical_yield_per_acre !== "" && rawValues.typical_yield_per_acre !== null
-            ? Number(rawValues.typical_yield_per_acre)
-            : null,
-        growing_days:
-          rawValues.growing_days !== "" && rawValues.growing_days !== null
-            ? parseInt(String(rawValues.growing_days), 10)
-            : null,
-        cultivation_season: rawValues.cultivation_season?.trim() || null,
-        sowing_window: rawValues.sowing_window?.trim() || null,
-        harvesting_window: rawValues.harvesting_window?.trim() || null,
-        optimal_temp: rawValues.optimal_temp?.trim() || null,
-        water_requirement: rawValues.water_requirement || null,
-        description: rawValues.description?.trim() || null,
-        is_active: rawValues.is_active ?? true,
-        image_url: rawValues.image_url || null,
-        // Germination and repeat harvest settings
-        germination_days:
-          rawValues.germination_days !== "" && rawValues.germination_days !== null
-            ? parseInt(String(rawValues.germination_days), 10)
-            : null,
-        is_repeat_harvest: Boolean(rawValues.is_repeat_harvest),
-        repeat_harvest_interval: rawValues.is_repeat_harvest
-          ? rawValues.repeat_harvest_interval?.trim() || null
-          : null,
+        crop_name: cropName.trim(),
+        variety_name: varietyName.trim() || null,
+        crop_category: cropCategory || null,
+        yield_unit: sanitizedYieldValue !== null ? yieldUnit : null,
+        typical_yield_per_acre: sanitizedYieldValue,
+        growing_days: sanitizedGrowingDays,
+        cultivation_season: sanitizedSeason,
+        sowing_window: sowingWindow?.trim() || null,
+        harvesting_window: sanitizedHarvest,
+        optimal_temp: sanitizedTemp,
+        water_requirement: waterRequirement || null,
+        description: description.trim() || null,
+        is_active: isActive,
+        image_url: imageUrl || null,
+        germination_days: sanitizedGerminationDays,
+        is_repeat_harvest: Boolean(isRepeatHarvest),
+        repeat_harvest_interval: isRepeatHarvest ? repeatHarvestInterval.trim() || null : null,
       };
 
-      return upsert({ data: { id, values } });
+      return upsert({ data: { id: initial?.id, values } });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crops"] });
@@ -592,14 +908,11 @@ function CropDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function set<K extends keyof CropFormState>(k: K, v: CropFormState[K]) {
-    setF((p) => ({ ...p, [k]: v }));
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col p-0 overflow-hidden">
+        {/* Header */}
+        <DialogHeader className="p-5 pb-3 border-b shrink-0 bg-background">
           <div className="flex items-center gap-2">
             <Wheat className="size-5 text-primary" />
             <DialogTitle className="font-serif text-2xl">
@@ -607,306 +920,424 @@ function CropDialog({
             </DialogTitle>
           </div>
           <DialogDescription className="text-xs text-muted-foreground">
-            Configure crop variety details, sowing and germination window, harvest cycle, and
-            growing conditions.
+            Configure crop variety details, seasonal calendar presets, sanitized harvest windows,
+            and agronomic growing conditions.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 pt-1">
-          {/* Section 1: Thumbnail Photo */}
-          <div>
-            <ImageUploadSection
-              imageUrl={f.image_url}
-              onChange={(url) => set("image_url", url)}
-              label="Crop photo"
-            />
+        {/* Scrollable Form Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {/* ========================================================= */}
+          {/* SECTION 1: CROP IDENTITY */}
+          {/* ========================================================= */}
+          <div className="rounded-lg border bg-card p-4 space-y-4 shadow-2xs">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <Sprout className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                  1. Crop Identity
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Basic name, cultivar variety, classification, and thumbnail photo.
+                </p>
+              </div>
+            </div>
+
+            {/* Thumbnail upload */}
+            <div>
+              <ImageUploadSection
+                imageUrl={imageUrl}
+                onChange={(url) => setImageUrl(url)}
+                label="Crop Thumbnail Photo"
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="text-xs font-medium h-5 flex items-center gap-1">
+                  Crop Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  value={cropName}
+                  onChange={(e) => setCropName(e.target.value)}
+                  placeholder="e.g. Tomato, Spinach, Basil"
+                  className="mt-1 text-sm bg-background"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium h-5 flex items-center">
+                  Variety / Cultivar
+                </Label>
+                <Input
+                  value={varietyName}
+                  onChange={(e) => setVarietyName(e.target.value)}
+                  placeholder="e.g. Local Green, Arka Rakshak"
+                  className="mt-1 text-sm bg-background"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <Label className="text-xs font-medium h-5 flex items-center">Crop Category</Label>
+                <Select value={cropCategory} onValueChange={(v) => setCropCategory(v)}>
+                  <SelectTrigger className="mt-1 text-sm bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CROP_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat} className="capitalize">
+                        {cat}
+                      </SelectItem>
+                    ))}
+                    {cropCategory &&
+                      !(CROP_CATEGORIES as readonly string[]).includes(cropCategory) && (
+                        <SelectItem value={cropCategory} className="capitalize">
+                          {cropCategory}
+                        </SelectItem>
+                      )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Active Toggle Switch */}
+            <div className="flex items-center justify-between p-3 rounded-md border bg-muted/20">
+              <div className="space-y-0.5">
+                <Label className="text-xs font-medium">Active in Catalogue</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Active crops appear in planting, sowing, and bed planning drop-downs.
+                </p>
+              </div>
+              <Switch checked={isActive} onCheckedChange={setIsActive} />
+            </div>
           </div>
 
-          {/* Section 2: Crop Identity */}
-          <div className="grid gap-3 sm:grid-cols-3 p-3.5 rounded-lg border bg-muted/20">
-            <div className="sm:col-span-2">
-              <Label className="text-xs font-medium">Crop Name *</Label>
-              <Input
-                value={f.crop_name}
-                onChange={(e) => set("crop_name", e.target.value)}
-                placeholder="e.g. Tomato, Spinach, Basil"
-                className="mt-1 text-sm"
-              />
+          {/* ========================================================= */}
+          {/* SECTION 2: SEASON & HARVEST WINDOWS */}
+          {/* ========================================================= */}
+          <div className="rounded-lg border bg-card p-4 space-y-4 shadow-2xs">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <CalendarDays className="size-4 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                  2. Season & Harvest Windows
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Cultivation season presets, sowing presets, harvest timeframe, and germination.
+                </p>
+              </div>
             </div>
-            <div>
-              <Label className="text-xs font-medium">Variety / Cultivar</Label>
-              <Input
-                value={f.variety_name}
-                onChange={(e) => set("variety_name", e.target.value)}
-                placeholder="e.g. Roma, Desi, Genovese"
-                className="mt-1 text-sm"
-              />
+
+            {/* Cultivation Season Toggle Chips */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <Label className="text-xs font-medium">Cultivation Season Presets</Label>
+                {sanitizedSeason && (
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    Format: <strong className="text-foreground">{sanitizedSeason}</strong>
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Select one or multiple seasonal presets (sorted canonically as Kharif &rarr; Rabi
+                &rarr; Zaid), or pick a mutually exclusive override.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {/* Seasonal Chips */}
+                {SEASONAL_CHIPS.map((season) => {
+                  const active = selectedSeasons.includes(season);
+                  return (
+                    <button
+                      key={season}
+                      type="button"
+                      onClick={() => toggleSeason(season)}
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs",
+                        active
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground/80 border-border hover:border-primary/50 hover:bg-muted/50",
+                      )}
+                    >
+                      {active && <Check className="size-3" />}
+                      {season}
+                    </button>
+                  );
+                })}
+
+                <span className="text-[10px] uppercase font-semibold text-muted-foreground/60 px-1">
+                  or
+                </span>
+
+                {/* Mutually Exclusive Overrides */}
+                {OVERRIDE_CHIPS.map((override) => {
+                  const active = selectedSeasons.includes(override);
+                  return (
+                    <button
+                      key={override}
+                      type="button"
+                      onClick={() => toggleOverride(override)}
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs",
+                        active
+                          ? "bg-emerald-600 text-white border-emerald-600 dark:bg-emerald-700"
+                          : "bg-background text-foreground/80 border-border hover:border-emerald-600/50 hover:bg-muted/50",
+                      )}
+                    >
+                      {active && <Check className="size-3" />}
+                      {override}
+                    </button>
+                  );
+                })}
+
+                {selectedSeasons.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSeasons([])}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 ml-2"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="sm:col-span-3">
-              <Label className="text-xs font-medium">Category</Label>
+
+            {/* Sowing Window (Optional Preset Dropdown) */}
+            <div className="space-y-1.5 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium">Sowing Window (Optional)</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={deriveSowingFromSeason}
+                  className="h-6 text-[11px] text-primary px-2"
+                  title="Auto-fill sowing preset based on selected cultivation season"
+                >
+                  <Sparkles className="size-3 mr-1" />
+                  Derive from season
+                </Button>
+              </div>
               <Select
-                value={f.crop_category || "vegetable"}
-                onValueChange={(v) => set("crop_category", v)}
+                value={sowingWindow || "__none__"}
+                onValueChange={(v) => setSowingWindow(v === "__none__" ? "" : v)}
               >
-                <SelectTrigger className="mt-1 text-sm">
-                  <SelectValue />
+                <SelectTrigger className="text-sm bg-background">
+                  <SelectValue placeholder="Select sowing preset or leave empty..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {[
-                    "vegetable",
-                    "greens",
-                    "fruit",
-                    "herb",
-                    "legume",
-                    "grain",
-                    "perennial",
-                    "flower",
-                    "other",
-                  ].map((c) => (
-                    <SelectItem key={c} value={c} className="capitalize">
-                      {c}
+                  <SelectItem value="__none__">None / Not specified</SelectItem>
+                  {SOWING_WINDOW_PRESETS.map((preset) => (
+                    <SelectItem key={preset} value={preset}>
+                      {preset}
                     </SelectItem>
                   ))}
+                  {sowingWindow &&
+                    !(SOWING_WINDOW_PRESETS as readonly string[]).includes(sowingWindow) && (
+                      <SelectItem value={sowingWindow}>{sowingWindow}</SelectItem>
+                    )}
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Section 3: Sowing & Germination (Sanitized: Month Calendar & Dropdowns) */}
-          <div className="p-3.5 rounded-lg border bg-muted/20 space-y-3.5">
-            {/* Month Calendar Picker for Sowing Window (strictly months/presets, no days or years) */}
-            <MonthCalendarPicker
-              value={f.sowing_window || ""}
-              onChange={(v) => set("sowing_window", v)}
-              label="Sowing Window"
-            />
+            {/* Harvesting Window (Quick Presets + Range + Unit Dropdown) */}
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <Label className="text-xs font-medium">Harvesting Window</Label>
+                {sanitizedHarvest && (
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    Format: <strong className="text-foreground">{sanitizedHarvest}</strong>
+                  </span>
+                )}
+              </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 pt-1 border-t">
-              <div>
-                <Label className="text-xs font-medium">Cultivation Season</Label>
-                <Select
-                  value={f.cultivation_season || ""}
-                  onValueChange={(v) => set("cultivation_season", v)}
-                >
-                  <SelectTrigger className="mt-1 text-sm bg-background">
-                    <SelectValue placeholder="Select cultivation season..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      "Kharif (Monsoon)",
-                      "Rabi (Winter)",
-                      "Zaid (Summer)",
-                      "Kharif & Rabi",
-                      "All Year Round",
-                      "Perennial",
-                      "Spring / Summer",
-                      "Autumn / Winter",
-                    ].map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                    {f.cultivation_season &&
-                      ![
-                        "Kharif (Monsoon)",
-                        "Rabi (Winter)",
-                        "Zaid (Summer)",
-                        "Kharif & Rabi",
-                        "All Year Round",
-                        "Perennial",
-                        "Spring / Summer",
-                        "Autumn / Winter",
-                      ].includes(f.cultivation_season) && (
-                        <SelectItem value={f.cultivation_season}>{f.cultivation_season}</SelectItem>
+              {/* Quick Preset Chips */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground mr-1">Quick presets:</span>
+                {HARVESTING_QUICK_PRESETS.map((preset) => {
+                  const isActiveChip =
+                    preset === "15 days"
+                      ? harvestMin === "15" && !harvestMax && harvestUnit === "days"
+                      : preset === "1-2 months"
+                        ? harvestMin === "1" && harvestMax === "2" && harvestUnit === "months"
+                        : harvestUnit === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => applyHarvestPreset(preset)}
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors cursor-pointer",
+                        isActiveChip
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted/40 text-muted-foreground border-border/80 hover:bg-muted hover:text-foreground",
                       )}
-                  </SelectContent>
-                </Select>
+                    >
+                      {preset}
+                    </button>
+                  );
+                })}
               </div>
 
-              <div>
-                <Label className="text-xs font-medium">Germination Period (Days)</Label>
-                <div className="relative mt-1">
-                  <Input
-                    type="number"
-                    min="1"
-                    value={f.germination_days}
-                    onChange={(e) => set("germination_days", e.target.value)}
-                    placeholder="e.g. 7"
-                    className="text-sm pr-12 bg-background"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
-                    days
-                  </span>
+              {/* Number Range + Unit Inputs */}
+              <div className="grid gap-2 sm:grid-cols-3 pt-1">
+                {isNumericHarvest ? (
+                  <>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">Min duration</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={harvestMin}
+                        onChange={(e) => setHarvestMin(e.target.value)}
+                        placeholder="e.g. 15 or 1"
+                        className="mt-1 text-sm bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">
+                        Max duration (optional)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={harvestMax}
+                        onChange={(e) => setHarvestMax(e.target.value)}
+                        placeholder="e.g. 30 or 2"
+                        className="mt-1 text-sm bg-background"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="sm:col-span-2 flex items-center px-3 rounded-md border bg-muted/30 text-xs text-muted-foreground">
+                    <span>
+                      Preset selected: <strong className="text-foreground">{harvestUnit}</strong>{" "}
+                      (no numeric duration required)
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Unit / Preset</Label>
+                  <Select value={harvestUnit} onValueChange={(v) => setHarvestUnit(v)}>
+                    <SelectTrigger className="mt-1 text-sm bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="days">days</SelectItem>
+                      <SelectItem value="weeks">weeks</SelectItem>
+                      <SelectItem value="months">months</SelectItem>
+                      <SelectItem value="Single Harvest">Single Harvest</SelectItem>
+                      <SelectItem value="Kharif">Kharif (Season)</SelectItem>
+                      <SelectItem value="Rabi">Rabi (Season)</SelectItem>
+                      <SelectItem value="Zaid">Zaid (Season)</SelectItem>
+                      <SelectItem value="Year-round">Year-round</SelectItem>
+                      {harvestUnit &&
+                        ![
+                          "days",
+                          "weeks",
+                          "months",
+                          "Single Harvest",
+                          "Kharif",
+                          "Rabi",
+                          "Zaid",
+                          "Year-round",
+                        ].includes(harvestUnit) && (
+                          <SelectItem value={harvestUnit}>{harvestUnit}</SelectItem>
+                        )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+
+              {harvestError && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive pt-0.5">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  <span>{harvestError}</span>
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* Section 4: Growing & Harvest Schedule (Sanitized: Dropdowns for harvesting & intervals) */}
-          <div className="p-3.5 rounded-lg border bg-muted/20 space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+            {/* Germination Period (Optional but visible with separate numeric and days unit) */}
+            <div className="grid gap-3 sm:grid-cols-2 pt-2 border-t">
               <div>
-                <Label className="text-xs font-medium">Growing Days (Numeric)</Label>
-                <div className="relative mt-1">
-                  <Input
-                    type="number"
-                    min="1"
-                    value={f.growing_days}
-                    onChange={(e) => set("growing_days", e.target.value)}
-                    placeholder="e.g. 75"
-                    className="text-sm pr-12 bg-background"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
-                    days
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium">
-                  Harvesting Window (Range of Dates / Months)
+                <Label className="text-xs font-medium h-5 flex items-center">
+                  Germination Period
                 </Label>
-                <Select
-                  value={f.harvesting_window || ""}
-                  onValueChange={(v) => {
-                    set("harvesting_window", v);
-                    const match = v.match(/^(\d+)\s*-\s*(\d+)\s*days/);
-                    if (match && (!f.growing_days || f.growing_days === "")) {
-                      const avg = Math.round((parseInt(match[1], 10) + parseInt(match[2], 10)) / 2);
-                      set("growing_days", String(avg));
-                    }
-                  }}
-                >
-                  <SelectTrigger className="mt-1 text-sm bg-background">
-                    <SelectValue placeholder="Select harvest window or duration..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    <SelectItem value="30 - 45 days (1 - 1.5 months)">
-                      30 - 45 days (1 - 1.5 months)
-                    </SelectItem>
-                    <SelectItem value="45 - 60 days (1.5 - 2 months)">
-                      45 - 60 days (1.5 - 2 months)
-                    </SelectItem>
-                    <SelectItem value="60 - 75 days (2 - 2.5 months)">
-                      60 - 75 days (2 - 2.5 months)
-                    </SelectItem>
-                    <SelectItem value="75 - 90 days (2.5 - 3 months)">
-                      75 - 90 days (2.5 - 3 months)
-                    </SelectItem>
-                    <SelectItem value="90 - 120 days (3 - 4 months)">
-                      90 - 120 days (3 - 4 months)
-                    </SelectItem>
-                    <SelectItem value="120 - 150 days (4 - 5 months)">
-                      120 - 150 days (4 - 5 months)
-                    </SelectItem>
-                    <SelectItem value="150 - 180 days (5 - 6 months)">
-                      150 - 180 days (5 - 6 months)
-                    </SelectItem>
-                    <SelectItem value="6 - 9 months">6 - 9 months</SelectItem>
-                    <SelectItem value="9 - 12 months">9 - 12 months</SelectItem>
-                    <SelectItem value="Over 1 year (Perennial)">Over 1 year (Perennial)</SelectItem>
-                    <SelectItem value="Jan - Feb">Jan - Feb</SelectItem>
-                    <SelectItem value="Feb - Mar">Feb - Mar</SelectItem>
-                    <SelectItem value="Mar - Apr">Mar - Apr</SelectItem>
-                    <SelectItem value="Apr - May">Apr - May</SelectItem>
-                    <SelectItem value="May - Jun">May - Jun</SelectItem>
-                    <SelectItem value="Jun - Jul">Jun - Jul</SelectItem>
-                    <SelectItem value="Jul - Aug">Jul - Aug</SelectItem>
-                    <SelectItem value="Aug - Sep">Aug - Sep</SelectItem>
-                    <SelectItem value="Sep - Oct">Sep - Oct</SelectItem>
-                    <SelectItem value="Oct - Nov">Oct - Nov</SelectItem>
-                    <SelectItem value="Nov - Dec">Nov - Dec</SelectItem>
-                    <SelectItem value="Dec - Jan">Dec - Jan</SelectItem>
-                    <SelectItem value="Sep - Nov (Kharif Harvest)">
-                      Sep - Nov (Kharif Harvest)
-                    </SelectItem>
-                    <SelectItem value="Feb - Apr (Rabi Harvest)">
-                      Feb - Apr (Rabi Harvest)
-                    </SelectItem>
-                    <SelectItem value="May - Jun (Zaid Harvest)">
-                      May - Jun (Zaid Harvest)
-                    </SelectItem>
-                    <SelectItem value="All year round">All year round (Continuous)</SelectItem>
-                    {f.harvesting_window &&
-                      ![
-                        "30 - 45 days (1 - 1.5 months)",
-                        "45 - 60 days (1.5 - 2 months)",
-                        "60 - 75 days (2 - 2.5 months)",
-                        "75 - 90 days (2.5 - 3 months)",
-                        "90 - 120 days (3 - 4 months)",
-                        "120 - 150 days (4 - 5 months)",
-                        "150 - 180 days (5 - 6 months)",
-                        "6 - 9 months",
-                        "9 - 12 months",
-                        "Over 1 year (Perennial)",
-                        "Jan - Feb",
-                        "Feb - Mar",
-                        "Mar - Apr",
-                        "Apr - May",
-                        "May - Jun",
-                        "Jun - Jul",
-                        "Jul - Aug",
-                        "Aug - Sep",
-                        "Sep - Oct",
-                        "Oct - Nov",
-                        "Nov - Dec",
-                        "Dec - Jan",
-                        "Sep - Nov (Kharif Harvest)",
-                        "Feb - Apr (Rabi Harvest)",
-                        "May - Jun (Zaid Harvest)",
-                        "All year round",
-                      ].includes(f.harvesting_window) && (
-                        <SelectItem value={f.harvesting_window}>{f.harvesting_window}</SelectItem>
-                      )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Repeat Harvest Toggle */}
-            <div className="pt-2 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label className="text-xs font-medium">Repeated Harvest?</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Can this crop produce multiple harvests (e.g. greens, herbs, chillies, tomatoes)?
+                <div className="relative mt-1">
+                  <Input
+                    type="number"
+                    min="1"
+                    value={germinationDays}
+                    onChange={(e) => setGerminationDays(e.target.value)}
+                    placeholder="e.g. 7"
+                    className="text-sm pr-14 bg-background"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
+                    days
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Expected time from sowing until seedling emergence (optional).
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={!!f.is_repeat_harvest}
-                  onCheckedChange={(v) => set("is_repeat_harvest", v)}
-                />
-                <span className="text-xs font-medium">{f.is_repeat_harvest ? "Yes" : "No"}</span>
-              </div>
-            </div>
 
-            {f.is_repeat_harvest && (
-              <div className="pt-2 border-t space-y-1.5 animate-in fade-in-50 duration-200">
-                <Label className="text-xs font-medium">Repeat Harvest Interval</Label>
-                <Select
-                  value={f.repeat_harvest_interval || ""}
-                  onValueChange={(v) => set("repeat_harvest_interval", v)}
+              {/* Repeated Harvest */}
+              <div className="relative flex flex-col justify-start">
+                <div
+                  className={cn(
+                    "transition-all duration-300 ease-in-out",
+                    isRepeatHarvest ? "translate-y-0" : "sm:translate-y-6 translate-y-0",
+                  )}
                 >
-                  <SelectTrigger className="text-sm bg-background">
-                    <SelectValue placeholder="Select repeat harvest interval..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      "Every 3-5 days",
-                      "Every 5-7 days",
-                      "Weekly (Every 7 days)",
-                      "Every 10 days",
-                      "Every 2 weeks (Bi-weekly)",
-                      "Every 3 weeks",
-                      "Monthly (Every 30 days)",
-                      "Seasonal flush",
-                    ].map((interval) => (
-                      <SelectItem key={interval} value={interval}>
-                        {interval}
-                      </SelectItem>
-                    ))}
-                    {f.repeat_harvest_interval &&
-                      ![
+                  <div className="flex items-center justify-between p-2 rounded-md border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div
+                      className="space-y-0.5 select-none cursor-pointer"
+                      onClick={() => setIsRepeatHarvest(!isRepeatHarvest)}
+                    >
+                      <Label className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                        <RefreshCw
+                          className={cn(
+                            "size-3.5 transition-transform duration-300",
+                            isRepeatHarvest ? "text-primary rotate-180" : "text-muted-foreground",
+                          )}
+                        />
+                        Repeated Harvest?
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-tight">
+                        Produces continuous flushes (greens, chillies).
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={isRepeatHarvest} onCheckedChange={setIsRepeatHarvest} />
+                      <span className="text-xs font-semibold w-7 text-right text-foreground">
+                        {isRepeatHarvest ? "Yes" : "No"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dropdown with smooth expand/collapse transition */}
+                <div
+                  className={cn(
+                    "overflow-hidden transition-all duration-300 ease-in-out",
+                    isRepeatHarvest
+                      ? "max-h-24 opacity-100 mt-2 translate-y-0"
+                      : "max-h-0 opacity-0 mt-0 pointer-events-none -translate-y-2",
+                  )}
+                >
+                  <Label className="text-[11px] text-muted-foreground font-medium mb-1 block">
+                    Repeat Harvest Interval
+                  </Label>
+                  <Select
+                    value={repeatHarvestInterval}
+                    onValueChange={(v) => setRepeatHarvestInterval(v)}
+                  >
+                    <SelectTrigger className="text-sm bg-background">
+                      <SelectValue placeholder="Select repeat interval..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
                         "Every 3-5 days",
                         "Every 5-7 days",
                         "Weekly (Every 7 days)",
@@ -915,148 +1346,384 @@ function CropDialog({
                         "Every 3 weeks",
                         "Monthly (Every 30 days)",
                         "Seasonal flush",
-                      ].includes(f.repeat_harvest_interval) && (
-                        <SelectItem value={f.repeat_harvest_interval}>
-                          {f.repeat_harvest_interval}
+                      ].map((interval) => (
+                        <SelectItem key={interval} value={interval}>
+                          {interval}
                         </SelectItem>
-                      )}
-                  </SelectContent>
-                </Select>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Section 5: Growth Conditions & Yield (Sanitized: Dropdowns for temp, water, yield unit) */}
-          <div className="grid gap-3 sm:grid-cols-2 p-3.5 rounded-lg border bg-muted/20">
-            <div>
-              <Label className="text-xs font-medium">Optimal Temperature</Label>
-              <Select value={f.optimal_temp || ""} onValueChange={(v) => set("optimal_temp", v)}>
-                <SelectTrigger className="mt-1 text-sm bg-background">
-                  <SelectValue placeholder="Select optimal temperature..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {[
-                    "10°C - 18°C (Cool season)",
-                    "15°C - 22°C (Mild cool)",
-                    "20°C - 25°C (Moderate)",
-                    "20°C - 30°C (Warm moderate)",
-                    "25°C - 35°C (Warm / Tropical)",
-                    "30°C - 40°C (Hot / Heat tolerant)",
-                  ].map((temp) => (
-                    <SelectItem key={temp} value={temp}>
-                      {temp}
-                    </SelectItem>
-                  ))}
-                  {f.optimal_temp &&
-                    ![
-                      "10°C - 18°C (Cool season)",
-                      "15°C - 22°C (Mild cool)",
-                      "20°C - 25°C (Moderate)",
-                      "20°C - 30°C (Warm moderate)",
-                      "25°C - 35°C (Warm / Tropical)",
-                      "30°C - 40°C (Hot / Heat tolerant)",
-                    ].includes(f.optimal_temp) && (
-                      <SelectItem value={f.optimal_temp}>{f.optimal_temp}</SelectItem>
-                    )}
-                </SelectContent>
-              </Select>
+          {/* ========================================================= */}
+          {/* SECTION 3: AGRONOMY & YIELD */}
+          {/* ========================================================= */}
+          <div className="rounded-lg border bg-card p-4 space-y-4 shadow-2xs">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <Thermometer className="size-4 text-amber-600 dark:text-amber-400" />
+              <div>
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                  3. Agronomy & Yield
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Growing duration, temperature tolerance, water requirement, and normalized yield.
+                </p>
+              </div>
             </div>
 
-            <div>
-              <Label className="text-xs font-medium">Water Requirement</Label>
-              <Select
-                value={f.water_requirement || "Medium"}
-                onValueChange={(v) => set("water_requirement", v)}
-              >
-                <SelectTrigger className="mt-1 text-sm bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {["Low", "Medium", "High"].map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Growing Duration (Days / Months conversion) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium">Growing Duration</Label>
+                {sanitizedGrowingDays !== null && (
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    Stored in DB as:{" "}
+                    <strong className="text-foreground">{sanitizedGrowingDays} days</strong>
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    step={growingUnit === "months" ? "0.1" : "1"}
+                    value={growingVal}
+                    onChange={(e) => setGrowingVal(e.target.value)}
+                    placeholder={growingUnit === "months" ? "e.g. 2.5" : "e.g. 75"}
+                    className="text-sm bg-background"
+                  />
+                </div>
+                <div>
+                  <Select
+                    value={growingUnit}
+                    onValueChange={(v: "days" | "months") => handleGrowingUnitChange(v)}
+                  >
+                    <SelectTrigger className="text-sm bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="days">days</SelectItem>
+                      <SelectItem value="months">months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Values in months automatically convert to days (×30) upon save.
+              </p>
             </div>
 
-            <div>
-              <Label className="text-xs font-medium">Yield Unit</Label>
-              <Select value={f.yield_unit || "kg"} onValueChange={(v) => set("yield_unit", v)}>
-                <SelectTrigger className="mt-1 text-sm bg-background">
-                  <SelectValue placeholder="Select yield unit..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                  <SelectItem value="g">Grams (g)</SelectItem>
-                  <SelectItem value="quintal">Quintals (q / 100 kg)</SelectItem>
-                  <SelectItem value="tons">Metric Tons (t)</SelectItem>
-                  <SelectItem value="bunches">Bunches</SelectItem>
-                  <SelectItem value="crates">Crates</SelectItem>
-                  <SelectItem value="count">Count / Pieces</SelectItem>
-                  <SelectItem value="boxes">Boxes</SelectItem>
-                  <SelectItem value="lbs">Pounds (lbs)</SelectItem>
-                  {f.yield_unit &&
-                    ![
-                      "kg",
-                      "g",
-                      "quintal",
-                      "tons",
-                      "bunches",
-                      "crates",
-                      "count",
-                      "boxes",
-                      "lbs",
-                    ].includes(f.yield_unit) && (
-                      <SelectItem value={f.yield_unit}>{f.yield_unit}</SelectItem>
-                    )}
-                </SelectContent>
-              </Select>
+            {/* Optimum Temperature Range + Quick Presets */}
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <Label className="text-xs font-medium">Optimum Temperature Range</Label>
+                {sanitizedTemp && (
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    Format: <strong className="text-foreground">{sanitizedTemp}</strong>
+                  </span>
+                )}
+              </div>
+
+              {/* Quick Presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground mr-1">Quick presets:</span>
+                {TEMP_PRESETS.map((p) => {
+                  const isActivePreset =
+                    tempMin === p.min && tempMax === p.max && tempUnit === "°C";
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => applyTempPreset(p.min, p.max)}
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors cursor-pointer",
+                        isActivePreset
+                          ? "bg-amber-600 text-white border-amber-600 dark:bg-amber-700"
+                          : "bg-muted/40 text-muted-foreground border-border/80 hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Number Range + Unit */}
+              <div className="grid grid-cols-5 gap-2 pt-1">
+                <div className="col-span-2">
+                  <Label className="text-[11px] text-muted-foreground">Min Temp</Label>
+                  <Input
+                    type="number"
+                    value={tempMin}
+                    onChange={(e) => setTempMin(e.target.value)}
+                    placeholder="e.g. 20"
+                    className="mt-1 text-sm bg-background"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-[11px] text-muted-foreground">Max Temp</Label>
+                  <Input
+                    type="number"
+                    value={tempMax}
+                    onChange={(e) => setTempMax(e.target.value)}
+                    placeholder="e.g. 32"
+                    className="mt-1 text-sm bg-background"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Unit</Label>
+                  <Select value={tempUnit} onValueChange={(v) => setTempUnit(v)}>
+                    <SelectTrigger className="mt-1 text-sm bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="°C">°C</SelectItem>
+                      <SelectItem value="°F">°F</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {tempError && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive pt-0.5">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  <span>{tempError}</span>
+                </div>
+              )}
             </div>
 
-            <div>
-              <Label className="text-xs font-medium">Typical Yield / Acre</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={f.typical_yield_per_acre}
-                onChange={(e) => set("typical_yield_per_acre", e.target.value)}
-                placeholder="e.g. 500"
-                className="mt-1 text-sm bg-background"
+            {/* Water Requirement (Segmented Selector) */}
+            <div className="space-y-1.5 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium">Water Requirement</Label>
+                <span className="text-[11px] text-muted-foreground">
+                  Current: <strong className="text-foreground">{waterRequirement}</strong>
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/40 rounded-lg border">
+                {(["Low", "Medium", "High"] as const).map((level) => {
+                  const active = waterRequirement === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setWaterRequirement(level)}
+                      className={cn(
+                        "py-1.5 px-3 rounded-md text-xs font-medium transition-all text-center cursor-pointer flex items-center justify-center gap-1.5",
+                        active
+                          ? "bg-background text-foreground shadow-2xs border border-border/80 font-semibold"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+                      )}
+                    >
+                      <Droplets className={cn("size-3", active ? "text-blue-500" : "opacity-50")} />
+                      {level}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Typical Yield per Acre (Normalized Number + Unit Dropdown) */}
+            <div className="space-y-1.5 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium">Typical Yield / Acre</Label>
+                {sanitizedYieldValue !== null && (
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    Stored in DB:{" "}
+                    <strong className="text-foreground">
+                      {sanitizedYieldValue} {yieldUnit}
+                    </strong>
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={yieldVal}
+                    onChange={(e) => setYieldVal(e.target.value)}
+                    placeholder="e.g. 5.5"
+                    className="text-sm bg-background"
+                  />
+                </div>
+                <div>
+                  <Select value={yieldUnit} onValueChange={handleYieldUnitChange}>
+                    <SelectTrigger className="text-sm bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {YIELD_UNITS.map((u) => (
+                        <SelectItem key={u} value={u}>
+                          {u}
+                        </SelectItem>
+                      ))}
+                      {yieldUnit && !(YIELD_UNITS as readonly string[]).includes(yieldUnit) && (
+                        <SelectItem value={yieldUnit}>{yieldUnit}</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Switching units automatically normalizes values (e.g. 5.5 tons/acre &harr; 5,500
+                kg/acre &harr; 55 quintals/acre).
+              </p>
+            </div>
+
+            {/* Description & Agronomy Notes */}
+            <div className="space-y-1.5 pt-2 border-t">
+              <Label className="text-xs font-medium">Description & Agronomy Notes</Label>
+              <Textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Plant spacing, companion planting benefits, soil preferences, root depth..."
+                className="text-sm resize-y bg-background"
               />
             </div>
           </div>
 
-          {/* Section 6: Description */}
-          <div>
-            <Label className="text-xs font-medium">Description & Notes</Label>
-            <Textarea
-              rows={3}
-              value={f.description}
-              onChange={(e) => set("description", e.target.value)}
-              placeholder="e.g. Plant spacing, soil preferences, companion planting benefits..."
-              className="mt-1 text-sm resize-y"
-            />
-          </div>
-
-          {/* Section 7: Active Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-lg border">
-            <div>
-              <Label className="text-xs font-medium">Active in Catalogue</Label>
-              <p className="text-[11px] text-muted-foreground">
-                Active crops appear in planting, sowing, and bed planning drop-downs.
-              </p>
+          {/* ========================================================= */}
+          {/* COMPACT SUMMARY PREVIEW BAR */}
+          {/* ========================================================= */}
+          <div className="rounded-lg border border-border/80 bg-muted/40 p-3.5 space-y-2 text-xs">
+            <div className="flex items-center justify-between font-medium">
+              <span className="flex items-center gap-1.5 text-primary font-semibold">
+                <Sparkles className="size-3.5" />
+                Sanitized Database Values Preview
+              </span>
+              <Badge
+                variant={isActive ? "secondary" : "outline"}
+                className={cn(
+                  "text-[10px] h-4.5 px-2 font-medium",
+                  isActive
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                    : "",
+                )}
+              >
+                {isActive ? "Active in Catalogue" : "Inactive"}
+              </Badge>
             </div>
-            <Switch checked={!!f.is_active} onCheckedChange={(v) => set("is_active", v)} />
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-muted-foreground pt-1.5 border-t border-border/60">
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Crop & Variety
+                </span>
+                <span className="text-foreground truncate block font-medium">
+                  {cropName.trim() || <span className="text-muted-foreground/60 italic">—</span>}
+                  {varietyName.trim() ? ` (${varietyName.trim()})` : ""}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Category
+                </span>
+                <span className="capitalize text-foreground font-medium">{cropCategory}</span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Cultivation Season
+                </span>
+                <span className="text-foreground font-medium truncate block">
+                  {sanitizedSeason || <span className="text-muted-foreground/60 italic">—</span>}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Sowing Window
+                </span>
+                <span className="text-foreground font-medium truncate block">
+                  {sowingWindow || <span className="text-muted-foreground/60 italic">—</span>}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Harvest Window
+                </span>
+                <span className="text-foreground font-medium truncate block">
+                  {sanitizedHarvest || <span className="text-muted-foreground/60 italic">—</span>}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Germination
+                </span>
+                <span className="text-foreground font-medium">
+                  {sanitizedGerminationDays !== null ? (
+                    `${sanitizedGerminationDays} days`
+                  ) : (
+                    <span className="text-muted-foreground/60 italic">—</span>
+                  )}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Growing Days
+                </span>
+                <span className="text-foreground font-medium">
+                  {sanitizedGrowingDays !== null ? (
+                    `${sanitizedGrowingDays} days`
+                  ) : (
+                    <span className="text-muted-foreground/60 italic">—</span>
+                  )}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Optimum Temp
+                </span>
+                <span className="text-foreground font-medium">
+                  {sanitizedTemp || <span className="text-muted-foreground/60 italic">—</span>}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Water Requirement
+                </span>
+                <span className="text-foreground font-medium">{waterRequirement}</span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-foreground/70 block">
+                  Typical Yield / Acre
+                </span>
+                <span className="text-foreground font-medium font-mono">
+                  {sanitizedYieldValue !== null ? (
+                    `${sanitizedYieldValue} ${yieldUnit}`
+                  ) : (
+                    <span className="text-muted-foreground/60 italic">—</span>
+                  )}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <DialogFooter className="pt-3">
+        {/* Footer */}
+        <DialogFooter className="p-4 border-t bg-muted/20 shrink-0 flex items-center justify-between sm:justify-between">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending || !f.crop_name?.trim()}>
+          <Button
+            onClick={() => mut.mutate()}
+            disabled={isSaveDisabled || mut.isPending}
+            className="font-medium"
+          >
             {mut.isPending ? "Saving..." : initial ? "Save changes" : "Add crop"}
           </Button>
         </DialogFooter>
